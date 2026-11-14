@@ -11,11 +11,13 @@ PRIVATE_SUFFIXES = {'.pyc', '.db', '.sqlite', '.sqlite3', '.keystore', '.jks', '
 
 def source_files(root):
     root = Path(root)
-    for group in ('app', 'android-client', 'review', 'tools'):
+    for group in ('app', 'android-client', 'review', 'tools', 'docs'):
         for path in sorted((root / group).rglob('*')):
             relative = path.relative_to(root)
             if not path.is_file() or path.is_symlink() or set(relative.parts) & SKIP:
                 continue
+            if group == 'docs' and path.suffix.lower() != '.md':
+                continue  # Frozen verification records are not shipped as source.
             if (path.name == 'local.properties' or path.name.endswith('.tencent-mirror')
                     or path.suffix.lower() in PRIVATE_SUFFIXES):
                 continue

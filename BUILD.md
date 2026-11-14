@@ -66,4 +66,4 @@ sudo bash /private/stage_release.sh execute 0.2.4.28
 
 `execute` waits for a fresh encrypted off-host backup, then invokes the canonical guarded deploy. It does not substitute an old embedded deployment tool. Ensure Caddy treats `/api/analyze/<id>/renew` as worker-only alongside result/trace/release; validate its configuration before a reload. Preserve every other site's configuration and the live model router.
 
-Confirm public release/schema/cache/assets, API and both worker services, private-route 404s, no open transaction journal and the verified rollback snapshot. Follow [PHONE-ACCEPTANCE-0259.md](PHONE-ACCEPTANCE-0259.md) for owner device checks. See the canonical runbook for interrupted publication recovery; never restore database/photos independently.
+Confirm public release/schema/cache/assets, API and both worker services, private-route 404s, no open transaction journal and the verified rollback snapshot. Follow [docs/releases/v0.2.4.19-phone-acceptance.md](docs/releases/v0.2.4.19-phone-acceptance.md) for owner device checks. See the canonical runbook for interrupted publication recovery; never restore database/photos independently.

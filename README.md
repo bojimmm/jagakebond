@@ -1,53 +1,75 @@
-# JagaKebond 0.2.4.28
+# JagaKebond
 
-JagaKebond records crop photos, their location and history, and an initial AI assessment that farmers can inspect and correct. The web app and Android app share the same field interface. A photo assessment is a hypothesis from visible evidence, not a confirmed field diagnosis.
+Crop observation app for smallholder farmers: photograph a plant, keep its history,
+record where it grows, and get an initial AI assessment the farmer can inspect and
+correct. Indonesian-language web app plus a Capacitor Android client sharing one field
+interface.
 
-This source package contains the application and build/recovery instructions. It intentionally excludes accounts, photos, databases, credentials, signing keys and machine-specific configuration. Installation data remains on the production server and its encrypted backups.
+**Live:** production release `0.2.4.28` at `jagake.bond` · API compatibility `2.1.0` ·
+schema `11` · offline cache `jk-v68` · Android `versionCode 56`.
 
-Peta uses green Sehat, yellow Waspada, and red Kritis pins. Close zoom shows a white-bordered crop thumbnail that grows as the user zooms in. Overlapping plants use a stack of up to three pin layers with the full count. Tap a stack to choose any crop.
+A photo assessment is a hypothesis from visible evidence, not a confirmed field
+diagnosis. Application/treatment eligibility stays closed and no unverified dose is
+shown. See [docs/ai-evaluation.md](docs/ai-evaluation.md) for the evidence that would be
+required before claiming diagnostic accuracy.
 
-## Stack and directories
+## Repository layout
 
-| Directory | Responsibility |
+| Path | Responsibility |
 | --- | --- |
-| `app/frontend/` | HTML, JavaScript and CSS field app, separate admin console, public legal pages and offline shell |
-| `app/backend/` | Python FastAPI API, authentication, account approval, SQLite records, plots, queue, media and administration |
-| `app/worker/` | Independent normal/fast queue consumers calling an OpenAI-compatible model gateway |
+| `app/frontend/` | HTML, JavaScript and CSS field app, separate admin console, public legal pages, offline shell |
+| `app/backend/` | Python FastAPI API: auth, account approval, SQLite records, plots, queue, media, admin |
+| `app/worker/` | Normal and fast queue consumers calling an OpenAI-compatible model gateway |
 | `app/reference/` | Shared problem vocabulary and preliminary nutrient/product references |
-| `app/deploy/` | Canonical systemd sources, guarded release/recovery tool and staging verifier |
-| `android-client/` | Capacitor Android project, native camera/location/offline/HTTP integrations and asset synchronization |
-| `review/` | Synthetic browser and integration test harnesses, pinned browser/UI build dependencies |
-| `tools/` | Regression runner, source inventory, Android build/package checks, vocabulary generator and offline expert evaluator |
+| `app/deploy/` | systemd units, guarded release/recovery tooling, staging verifier |
+| `android-client/` | Capacitor Android project, native camera/location/offline/HTTP bridges |
+| `review/` | Synthetic browser and integration harnesses, pinned UI build dependencies |
+| `tools/` | Regression runner, source inventory, Android build/package gates, evaluators |
+| `docs/` | Design, architecture, operations, evidence notes and the release-note archive |
 
-The backend is a **modular monolith**: related modules run in one FastAPI process and share SQLite. Normal and fast workers are separate processes in the same application deployment. Caddy terminates HTTPS and proxies the API; systemd manages all three processes. Production currently runs without Docker. External model routing is a separately managed service and must not be restarted by this application's release.
+The backend is a **modular monolith**: related modules run in one FastAPI process
+sharing SQLite, with normal and fast workers as separate processes in the same
+deployment. Full component, data-flow and AI-pipeline detail is in
+[docs/architecture.md](docs/architecture.md).
 
-The frontend uses plain JavaScript, local Tailwind output, shared CSS tokens, local fonts and Lucide icons. Leaflet, Geoman and Turf support maps/plot editing; EXIFR and photo helpers support import/export. These features load on demand from bundled assets. Map tiles and geographic lookup services still require connectivity; the offline shell is not an offline basemap.
+## Build and verify
 
-Android uses Capacitor, Java, CameraX, WorkManager, location/EXIF support and Google Credential Manager. Native hooks preserve locally queued photos and use the same API ownership and account rules as the browser. No provider API key belongs in the APK.
+Prerequisites: Python 3.12, Node 22, Java 21 and an Android SDK. Nothing in the build
+needs production credentials, live farmer data or paid model requests.
 
-## Main workflows
+```sh
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r app/requirements.txt -c app/requirements-tested.txt
+npm ci --prefix review/browser-tools && npm ci --prefix android-client
 
-1. Sign in using the configured password or Google workflow; account approval and administration remain server-side.
-2. Capture/import a photo. Keep the original separate from the display timestamp. Gallery photos can receive a manually pinned location; a current-location button recentres the map without silently moving that pin.
-3. Submit an idempotent job. The server assigns the daily fast allowance: 20 admitted jobs for regular accounts, 50 for priority; later jobs use the paced normal lane. Administrators have the existing unlimited allowance. Admission, rather than successful diagnosis, consumes this allowance.
-4. A worker claims a renewable, fenced lease. Triage checks usability, then diagnosis produces a strict structured result. Invalid results cannot replace the saved assessment. A validated result can retry its commit without repeating inference.
-5. Riwayat groups observations by plant; Peta and plot summaries describe recorded observations and coverage. Re-analysis updates the same photo/plant record and preserves the prior result on failure. Farmer corrections remain separate from AI output.
-6. Full analysis presents short coexisting pest/disease labels, inspection steps, findings, possible causes, descriptive nutrient information, monitoring and escalation. Daily notes summarize the day's uploaded observations; upload dates alone do not establish biological improvement.
+.venv/bin/python -B tools/run-regression.py     # 88 suites, source hashed before and after
+```
 
-The server creates a bounded, oriented JPEG inference derivative (currently up to 1024 px). The model receives minimized supporting context and same-plant history, not exact GPS/account/plot identifiers. Router aliases are configurable in the admin console; the legacy worker filename does not require a Gemini model. Provenance records provider-reported model identifiers when supplied, request metadata and input/prompt/reference hashes.
+Follow [BUILD.md](BUILD.md) for the ordered commands, the Android build and the
+packaging gates. A green build alone does not verify the signer: packaging checks the
+APK signer certificate, `versionCode`, non-debuggable flag, asset parity and a
+fresh-extraction test run before an immutable release folder is published.
 
-## Recommendation and evidence limits
+## Documentation
 
-Model-generated application/treatment text is replaced with controlled, relevant inspection tasks. Detailed findings and possible causes remain available; uncertainty does not reduce observed urgency. The chemical/fertilizer flow is consent-gated and derives targets from active recorded problems, not from alternative diagnoses or editable browser targets. Optional fields do not create a prescription.
+| | |
+| --- | --- |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [docs/architecture.md](docs/architecture.md) | Components, data flow, AI pipeline, limits |
+| [docs/design.md](docs/design.md) | Interface direction and interaction contracts |
+| [docs/operations/deployment.md](docs/operations/deployment.md) | Production layout, release and rollback |
+| [docs/releases/](docs/releases/) | Release-note archive, 0.2.2.0 → 0.2.4.19 |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [SECURITY.md](SECURITY.md) | Reporting a vulnerability, secret-handling rules |
 
-The Indonesian product catalog contains preliminary references, not a verified registration/label database. Application eligibility remains closed; no unverified dose is provided. Firecrawl was used for research, not as a live tool in every crop analysis. Expert-labelled diagnostic benchmarking, reviewed treatment guidance and physical Android acceptance remain separate evidence requirements. See [AI-EVALUATION.md](AI-EVALUATION.md).
+## What is never in this repository
 
-## Build, operate and recover
+Accounts, farmer photos, databases, signing keys, provider API keys and
+machine-specific configuration. Only `app/.env.example` is tracked. `.gitignore`
+blocks `.env*`, `data/`, keystores, APKs and build output; `tools/package-release.py`
+additionally refuses to package any source file matching a credential-shaped pattern.
 
-Start with [BUILD.md](BUILD.md), then [app/README.md](app/README.md) for development and [app/deploy/RELEASE-RUNBOOK.md](app/deploy/RELEASE-RUNBOOK.md) for operations. Use [DESIGN.md](DESIGN.md) for interface contracts and [QUALITY-0259.md](QUALITY-0259.md) for this release's changes and audit disposition.
+## License
 
-Release identity is 0.2.4.28, Android versionCode 56, API compatibility 2.1.0, schema 11 and offline cache `jk-v68`. The schema migration requeues pre-existing claimed jobs so old workers cannot publish unfenced results. Deploy API and both workers together through the guarded transaction.
-
-Production uses real directories under `/srv/sites/jagake.bond/`: `app`, immutable `runtime/venvs/sha256-<id>`, immutable `releases/<version>` and `ops`. Only application `data/` is writable by the service account. Before deployment, finish a fresh encrypted off-host backup. Publication recovery differs from snapshot restore; restoring a snapshot can discard later submissions and requires owner reconciliation/authorization.
-
-`VERIFICATION.json` in a packaged release records actual artifact checks. It deliberately does not certify deployment, expert accuracy or phone acceptance. Production readback and rollback identifiers belong in the separate delivery record. Install APK updates over the existing app without uninstalling or clearing data.
+Proprietary, all rights reserved — see [LICENSE](LICENSE). Bundled third-party front-end
+dependencies and fonts keep their own licenses under `app/frontend/vendor/`.

@@ -128,7 +128,7 @@ def main():
                   'source_hashes': hashes}
         files = {name: path.read_bytes() for name, path in source_files(root)}
         files['VERIFICATION.json'] = (json.dumps(checks, indent=2) + '\n').encode()
-        require(all(name in files for name in ['README.md', 'BUILD.md', 'PHONE-ACCEPTANCE-0259.md',
+        require(all(name in files for name in ['README.md', 'BUILD.md', 'docs/releases/v0.2.4.19-phone-acceptance.md',
                                                 'app/deploy/stage_release.sh', 'tools/run-regression.py']),
                 'Required release documentation/tooling missing')
         secret_pattern = rb'-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY|\bibssh_[A-Za-z0-9]+@|\bibk_[a-z0-9]{30,}|\bsk-[A-Za-z0-9]{32,}\b|\bgh[pousr]_[A-Za-z0-9]{36,}\b'
@@ -161,8 +161,9 @@ def main():
                 extracted.append({'command': command, 'exit_code': run.returncode})
                 require(run.returncode == 0, 'Fresh extraction check failed: ' + repr(command) + '\n' + (run.stdout + run.stderr)[-2500:])
         require(source_hashes(root) == hashes, 'Source changed during packaging')
-        for name in ['README.md', 'BUILD.md', 'PHONE-ACCEPTANCE-0259.md', 'QUALITY-0259.md']:
-            shutil.copy2(root / name, output / name)
+        for name in ['README.md', 'BUILD.md', 'docs/releases/v0.2.4.19-phone-acceptance.md',
+                     'docs/releases/v0.2.4.19-quality-changes.md']:
+            shutil.copy2(root / name, output / Path(name).name)
         (output / 'VERIFICATION.json').write_text(json.dumps(checks, indent=2) + '\n')
         (output / 'SOURCE-EXTRACTION-TESTS.json').write_text(json.dumps({'source_sha256': sha(source.read_bytes()),
             'manifest_files_verified': len(files), 'checks': extracted}, indent=2) + '\n')

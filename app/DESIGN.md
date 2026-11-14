@@ -27,3 +27,8 @@ The Tailwind config scans index.html, app.js (including template-literal utility
 ## Offline and map limits
 
 Bundling boot dependencies removes runtime CDN dependence, but does not itself guarantee offline operation. The versioned HTML and all boot dependencies are included in the service-worker install cache; dynamically fetched map tiles and account/API data are separate network dependencies. Do not pre-cache map tiles or claim offline maps. The current basemap is OpenStreetMap standard with linked attribution. The service worker does not cache or prefetch tiles. No geographic metrics or diagnosis efficacy claims are added by this layout work.
+
+## See also
+
+`../docs/design.md` holds the product-level interface direction: identity, workflow
+hierarchy, interaction ownership and content boundaries.

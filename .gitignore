@@ -17,3 +17,13 @@ venv/
 *.apk
 *.aab
 *.log
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+Thumbs.db
+*.iml
+.idea/
+dist/
+evidence/
+*.zip

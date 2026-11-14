@@ -1,6 +1,6 @@
 # Build instructions — JagaKebond MVP from zero
 
-Companion to `PRD.md` (the what) and `MASTER-PROMPT.md` (the copy-paste build prompt). This is the ordered how. Build in the order below; each step ends with a check before moving on.
+Companion to `PRD.md` (the what). This is the ordered how. Build in the order below; each step ends with a check before moving on.
 
 ## 0. Prerequisites
 

@@ -3,7 +3,7 @@
 Run:  cd app && python tests/test_google_0230.py
 
 Tokens are signed with an RSA key generated here and served through a patched JWKS fetch, so no
-request ever leaves the machine. A throwaway SQLite file is used. Covers CONTRACT-0230-google.md:
+request ever leaves the machine. A throwaway SQLite file is used. Covers docs/releases/v0.2.3.0-google-signin-contract.md:
 disabled mode, linked login, e-mail linking, pending/rejected/approved registrations, every claim
 check (signature, aud, iss, exp, iat, email_verified, nonce missing/reused/expired), inactive
 accounts, the 200-request cap, the nonce cap, the per-IP throttle, the JWKS cache and refetch,

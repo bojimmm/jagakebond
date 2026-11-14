@@ -1,6 +1,6 @@
 """Sign in with Google (0.2.3.0): ID-token verification, sign-in nonces and registration requests.
 
-Flow (CONTRACT-0230-google.md):
+Flow (docs/releases/v0.2.3.0-google-signin-contract.md):
   1. the client reads GET /api/auth/google/config and asks POST /api/auth/google/nonce for a
      single-use nonce (10 minutes, stored server-side);
   2. Google Identity Services (web) or Credential Manager (Android) returns an ID token that
