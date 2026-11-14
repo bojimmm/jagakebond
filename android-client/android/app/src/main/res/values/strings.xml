@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">JagaKebond</string>
+    <string name="title_activity_main">JagaKebond</string>
+    <string name="package_name">jagake.bond.app</string>
+    <string name="custom_url_scheme">jagake.bond.app</string>
+</resources>

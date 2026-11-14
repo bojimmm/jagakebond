@@ -1,0 +1,65 @@
+/* Shared JagaKebond design tokens. Component styles consume these values. */
+:root {
+  /* colours */
+  --jk-green-50: #f0fdf4;
+  --jk-green-100: #dcfce7;
+  --jk-green-200: #bbf7d0;
+  --jk-green-600: #16a34a;
+  --jk-green-700: #15803d;
+  --jk-green-800: #166534;
+  --jk-green-900: #14532d;
+  --jk-ink: #0f172a;
+  --jk-text: #1e293b;
+  --jk-muted: #475569;
+  --jk-border: #dbe3e8;
+  --jk-border-strong: #94a3b8;
+  --jk-surface: #ffffff;
+  --jk-surface-soft: #f8fafc;
+  --jk-red-600: #dc2626;
+  --jk-red-700: #b91c1c;
+  --jk-amber-500: #f59e0b;
+  --jk-amber-600: #d97706;
+  /* Semantic surfaces shared by field, sign-in, legal and admin screens. */
+  --jk-warning-bg: #fffbeb;
+  --jk-warning-text: #92400e;
+  --jk-danger-bg: #fef2f2;
+  --jk-info-bg: #eff6ff;
+  --jk-info-text: #1e40af;
+  /* spacing scale: 4 / 8 / 12 / 16 / 24 / 32 only */
+  --jk-s1: 4px;
+  --jk-s2: 8px;
+  --jk-s3: 12px;
+  --jk-s4: 16px;
+  --jk-s6: 24px;
+  --jk-s8: 32px;
+  /* radii: 12 / 8 rule. Cards, tiles, photos, big buttons, sheets and dialogs 12px; buttons, fields, tabs, chips and badges 8px */
+  --jk-radius-control: 8px;
+  --jk-radius-card: 12px;
+  /* control heights */
+  --jk-h-lg: 56px;
+  --jk-h-md: 48px;
+  --jk-h-sm: 44px;
+  /* layering: map tools < header/nav < toast < modals < confirm < viewer < auth */
+  --jk-z-map-tools: 400;
+  --jk-z-bars: 30;
+  --jk-z-toast: 40;
+  --jk-z-modal: 50;
+  --jk-z-confirm: 60;
+  --jk-z-viewer: 80;
+  --jk-z-auth: 2000;
+  /* 0.2.4.16 (audit F13): every page-level layer has a name; values unchanged. Inside the map view: controls 20 <
+     notes 21 < action bars 22 < menus 25 < panels 30 < sheets 35. Above the app: analysis dialogs 90 < guide 1000 <
+     workflow modal = auth gate 2000. Small values inside a component (0-5) only order its own children. */
+  --jk-z-map-controls: 20;
+  --jk-z-map-notes: 21;
+  --jk-z-map-bars: 22;
+  --jk-z-menu: 25;
+  --jk-z-map-panel: 30;
+  --jk-z-map-sheet: 35;
+  --jk-z-dialog: 90;
+  --jk-z-tour: 1000;
+  --jk-z-workflow: 2000;
+  --jk-shadow-card:
+    0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.06);
+  --jk-shadow-raised: 0 10px 25px -12px rgba(15, 23, 42, 0.35);
+}

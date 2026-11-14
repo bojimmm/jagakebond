@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only what Capacitor's camera capture needs: BridgeWebChromeClient writes its photo to
+     getExternalFilesDir(DIRECTORY_PICTURES) and shares it through this provider. Nothing else is exposed. -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="camera_pictures" path="Pictures/" />
+</paths>

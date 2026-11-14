@@ -1,0 +1,19 @@
+# secrets and local state must never be committed
+.env
+.env.*
+!.env.example
+data/
+*.keystore
+*.jks
+*.p12
+keystore-password.txt
+*.pyc
+__pycache__/
+node_modules/
+.gradle/
+build/
+venv/
+.venv/
+*.apk
+*.aab
+*.log

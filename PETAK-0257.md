@@ -1,0 +1,60 @@
+# 0.2.4.17 — Petak: Ringkasan petak, plot sheet Ubah/X, species and date correction
+
+Owner request (2026-11-03): an edit button for the plot when tapping its polygon, an X icon instead of "Tutup",
+a per-plot summary (elevation, condition of every plant, species ↔ pest/disease correlation, management advice)
+reachable from the polygon and from Riwayat, manual correction of a crop's species/date/location, the summary
+refreshing on every change, the guide updated, and the summary tiles in the Beranda card style.
+
+## Plot sheet (Peta → tap a polygon)
+
+`#farm-crops-sheet` header: plot name, `#farm-crops-edit` ("Ubah", calls `openFarmEdit` on the sheet's
+`data-farm-id`) and an X icon (`closeFarmCrops`). Below it `#farm-crops-summary`, a teaser button
+(`JagaPlotSummary.teaserHtml`) showing plant count, Kritis/Waspada counts and the plot status.
+The sheet re-renders itself on the `history-shown` hook while open.
+
+## Ringkasan petak (`app/frontend/plot-summary.js`, dialog `#modal-plot-summary`)
+
+- Computed on the phone from `farmRecords` with `farmId` = the plot (membership already reconciled by
+  `farm-membership.js`). No AI call, offline, no quota.
+- Status: Perlu tindakan (any Kritis) / Perlu dipantau / Baik / Belum ada data. Tiles reuse `.stat-tile`
+  (`stat-severe`, `stat-moderate`, new `stat-healthy`) from Beranda.
+- Elevation: median of the plot photos' `elevation`; bands < 400 rendah, 400–700 menengah, > 700 tinggi, each with
+  a general note. Common ranges for Kopi arabika 1.000–2.000, Kopi robusta 400–800, Teh 800–2.000, Cabai 0–1.400 m dpl;
+  only a clear mismatch (150 m below / 300 m above) is flagged, as general guidance.
+- Species × problems: the latest record of each plant; labels from `JagaAssessment.label`; kind Hama / Penyakit /
+  Hara / Lainnya by label pattern.
+- Findings: the same problem on ≥ 2 plants (spreading; across species when > 1 species), one species clearly
+  worse than the rest (≥ 2 plants, ≥ 60 % with a problem, 30 points above every other), pests on several species,
+  nutrient symptoms on ≥ 2 plants (soil), highland + disease, lowland + sucking pests, elevation out of range,
+  worsened / improved since the previous photo.
+- Advice: general only — no chemicals, no doses (no verified Indonesian catalogue); the caveat says so.
+  Plants have no names, so lists count per species ("1 tanaman Cabai").
+- Live: `JagaHooks.run('history-shown')` at the end of `refreshAllHistoryViews()` and the farms reload; the open
+  dialog redraws when `recordsSig()` + plot fields change, keeps its scroll, and closes if the plot disappears.
+- Entry points: plot sheet teaser; Riwayat → Petak card button "Ringkasan dan saran petak"
+  (`JagaPlotSummary.open`); "Lihat di peta" in the dialog when not already on Peta.
+
+## Ubah jenis dan tanggal (`#modal-record-edit`)
+
+- Entry: Riwayat → plant → Lainnya → "Ubah jenis dan tanggal"; map plant sheet "Ubah data" (`#sheet-edit-record`,
+  replaces the sheet's "Ubah lokasi"; location is inside the form via `openLocationEditor('record', id)`).
+- Sends only changed fields to `PUT /api/records/{id}`: `correctedCrop` (by default for every photo of the plant;
+  `applyToPlant: false` when unticked) and `correctedTimestampMs` (the chosen day, same time of day).
+- Server (`api_app._record_correction`, `_corrected_extra`): allowed on AI records (unlike `crop`); diagnosis fields
+  untouched; `extra_json.aiCrop`, `originalTimestampMs`, `corrected` (["crop","date"]), `captureTimeSource: manual`;
+  choosing the AI species again clears the mark; audit `record.correct` ("jenis: A → B (+n foto lain); tanggal: …").
+  Dates before 2000 or more than 36 h ahead are refused.
+- `queue._apply_reanalysis_result` keeps a farmer-corrected species; `create_record` gives a later photo of the
+  same plant the corrected species (the AI's own answer stays in `aiCrop`).
+- Records expose `correctedFields` and `aiCrop`; the timeline shows "Jenis diubah oleh Anda (AI: …)".
+- After a species change on a re-analysable AI record the app offers "Analisis ulang dengan jenis baru?".
+
+## Guide
+
+Step `petak` (after `plant`, only when the account has plots) highlights `#tab-log-petak`; the plant step tip
+points to Lainnya → Ubah jenis dan tanggal; the plots tip says a tapped plot shows its plants, Ringkasan and Ubah.
+
+## Tests
+
+`app/tests/test_petak_0257.py` (22 assertions), `review/browser-tools/petak-0257.cjs` (35 checks, strict CSP,
+exempt from the auto-dismiss tour fixture because it opens the guide itself).

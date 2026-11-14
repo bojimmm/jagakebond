@@ -1,0 +1,167 @@
+# JagaKebond 0.2.2.0 — UX/UI brief (lead, from the owner's answers + the "before" screenshots)
+
+Screenshots reviewed: `E:/Agent/Claude/VPS Management/jagakebond-0220/pulled/work-web/tmp-run1/review/screenshots/ux-before/*.png`
+(harness `review/browser-tools/ux-screens-0220.cjs`). Re-shoot "after" with the same harness and compare.
+
+## Who and why (owner, 2026-10-21)
+Farm workers on low-end Android phones (the APK; same web UI inside Capacitor), often offline in the plantation, with
+limited reading time. Every flow matters: Scan -> AI result -> tree timeline; Map & plots; Riwayat & daily log;
+Beranda. The owner's complaints: TOO MANY STEPS, HARD TO FIND THINGS, UNCLEAR TEXT/RESULTS, SLOW OR BUGGY FEEL.
+Keep the identity: green/white field journal, Google Sans, leaf logo, four tabs (Beranda, Peta, Kamera FAB, Riwayat),
+the "Dengarkan" (text-to-speech) feature. No new dependencies. Phone (390x844 and 360x780) first; tablet/desktop must
+still work (the desktop rail layout stays).
+
+## Global rules
+- G1 Copy: simple everyday Bahasa Indonesia, short sentences, no jargon. Replace e.g. "Asia/Jakarta", "WGS84",
+  "vertex", "sinkronkan/sinkronisasi", "Draf / proses, belum diagnosis", "Belum terikat riwayat tanaman",
+  "Ringkasan faktual", "Status terakhir server: 2 dari 3 mode cepat tersisa Reset 00:00 WIB; mode normal tidak
+  memakai kuota cepat." Suggested vocabulary: "Kirim sekarang", "Foto belum terkirim", "Sedang dianalisa",
+  "Gagal terkirim — coba lagi", "Perlu dicek", "Tanaman baru", "Lokasi belum terbaca". Dates in Indonesian format
+  ("Senin, 20 Okt 2026", "Kemarin", "Hari ini 14.05"), never ISO dates or time-zone names in the UI.
+- G2 Readability: body text >= 15 px, secondary text >= 13 px, no 10-11 px text for meaningful info; contrast >= 4.5:1.
+- G3 Targets: >= 44 px everywhere, primary actions 48-56 px tall; one clear primary action per screen/state.
+- G4 Toasts: never cover modals, sheets or primary buttons; one at a time; short; position above the bottom nav; never
+  announce something that has not happened yet (see S5).
+- G5 Layering bug: map tool buttons currently paint ON TOP of modals/sheets (screenshot 18-modal-farm). Fix the
+  z-index stack: modals/sheets > toasts > map tools.
+- G6 Images: every thumbnail has a placeholder (leaf icon) when missing or failing to load (no broken-image icon —
+  screenshot 20, "Teh").
+- G7 Feel: instant tab switches (no full re-render when nothing changed), skeleton/placeholder while loading, lazy-init
+  the Leaflet map on the first Peta visit, scoped `lucide.createIcons`, lists re-render only the changed items,
+  haptic tick (`navigator.vibrate(20)` if available) on the shutter.
+- G8 Header on phones: compact (smaller logo/title, ~56 px) to give the content more room; add a status chip in the
+  header: "Offline" / "3 foto belum terkirim" (tap -> drafts) replacing the current wide sync banner wording.
+- G9 Bottom nav: badge on Riwayat when results arrived that the user has not seen yet and/or drafts are waiting.
+- G10 Android back button (native part by AND): the web layer listens for a `jagaBack` document event; it closes the
+  top-most modal/sheet/viewer first, else goes back to Beranda from another tab, else asks the native side to exit.
+
+## Design system — buttons, composition, consistency, layout (owner, explicit)
+UX creates ONE shared stylesheet `app/frontend/ui-kit.css` (tokens + components) loaded by `index.html` AND
+`admin.html` (ADM adds the link; WEB adds it to the service-worker shell assets); everybody uses it for every button
+they add or touch. Today the screenshots show many sizes and styles side by side (h-9/h-10/h-11/h-12/h-14 buttons,
+thin-bordered pills next to filled blocks, a 3-button row with one button taller, text wrapping inside buttons).
+- Buttons: `.btn` + one variant: `.btn-primary` (farm-700 filled, white text), `.btn-secondary` (white, slate-300
+  border, slate-800 text), `.btn-ghost` (no border, farm-700 text, for tertiary/links), `.btn-danger` (white, red-600
+  border/text; filled red only for the final confirm of a destructive action), `.btn-warning` only where amber is
+  semantically needed (Cepat). Sizes: `.btn-lg` 56 px (one main action per screen), default 48 px, `.btn-sm` 44 px
+  (minimum, dense rows/cards). Icon-only `.btn-icon` 44x44 with an accessible label. Same corner radius for all
+  controls (DESIGN.md: compact 6 px for controls, 12 px for cards/sheets), 20 px icons in buttons with 8 px gap,
+  15-16 px semibold label, sentence case (no ALL CAPS on buttons), labels never wrap to 2+ lines on 360 px (shorten
+  the copy or stack the buttons full-width instead).
+- Rows of buttons: equal heights; either equal widths (grid) or primary-wide + secondary; max 3 per row on phones,
+  otherwise stack; the primary sits on the right in dialogs (Batal | Simpan) and full-width at the bottom of sheets.
+- Spacing scale 4/8/12/16/24/32 px only; screen padding 16 px; card padding 16 px; gap between cards 12 px;
+  section titles 13-14 px semibold slate-600 with 8 px below.
+- Composition: one clear primary action per screen/state, visually dominant; secondary actions quieter; destructive
+  actions separated and never primary-styled by default; consistent placement of the same action across screens
+  (e.g. "Foto lagi" always the same style and position in tree cards/timeline/detail sheet).
+- Chips/badges: one style for status badges (Kritis red-600/white, Waspada amber-500/slate-900, Sehat green-700/white,
+  Belum dinilai slate-200/slate-800), 28 px tall when non-interactive; interactive filter chips 44 px.
+- Cards, inputs: one card style (white, slate-200 border, 12 px radius, subtle shadow), inputs 48 px tall, 16 px text,
+  visible focus ring.
+- Layout: no horizontal overflow at 360 px, nothing hidden behind the bottom nav or the FAB, sticky action bars keep
+  primary actions reachable, safe-area insets respected (Android: viewport-fit=contain stays), modals/sheets above
+  map tools, consistent alignment to a 16 px grid.
+- Verification (UX harness, also run by WEB/ADM for their screens): for every screen in ux-screens-0220.cjs collect
+  all visible buttons and report height, radius, font-size, padding and whether the label wraps; fail on: height < 44,
+  wrapped labels, siblings in one row with different heights, font-size < 15 px on a button, any element overflowing
+  the viewport. Then look at the after-screenshots yourself for composition and fix what looks off.
+
+## Scan flow (owner's #1) — owned by WEB
+- S1 Live camera (screenshot 06) is fine; keep gallery + flip. Show a small location chip under the viewfinder:
+  "Lokasi: Ciomas ±8 m" (fresh fix) or "Lokasi belum terbaca" (stale/none, ties to the stale-GPS fix).
+- S2 Photo review (screenshots 07): the preview currently fills the screen and the Analisa button is below the fold.
+  In review/progress/result states show the photo as a compact preview (<= ~38 % of the viewport height) and keep the
+  primary action visible WITHOUT scrolling (sticky action bar above the nav). Controls are full width (the current
+  layoutScanFrame width-sync makes them a narrow ~300 px column with 3-line button text — screenshots 08, 10).
+- S3 One primary button "Analisa" (normal mode). "Cepat" stays as a clearly secondary option with plain text
+  "Cepat · sisa 2 hari ini" (or "Cepat habis hari ini"). Crop hint collapses into a small "Tambah jenis tanaman
+  (opsional)" link that expands the field. "Atur lokasi / petak" appears prominently only when location is missing
+  or stale ("Lokasi belum terbaca — pilih petak atau titik"); otherwise it is a small "Ubah lokasi" link.
+- S4 Do not make the farmer wait on this screen. After the upload is accepted show: "Foto terkirim. Hasil biasanya
+  muncul dalam beberapa menit." with primary "Ambil foto berikutnya" and secondary "Lihat di Riwayat". Progress keeps
+  running in the background; when a result arrives: a short non-blocking notice + Riwayat badge; if the user is still
+  on the scan screen, show the result there. Offline: "Tersimpan di HP — dikirim otomatis saat ada sinyal."
+- S5 Tree assignment: if the capture started from a tree ("Foto tanaman ini"), never ask again. Otherwise replace the
+  "Tanaman yang Sama?" modal + premature toast (screenshot 11: the toast "Timeline tanaman baru…" shows while the
+  modal still asks) with an inline card in the result: "Simpan ke tanaman:" nearest candidates (thumbnail, name,
+  distance, last status) with the closest preselected, plus "Tanaman baru"; one tap; then confirm with a short notice.
+  Keep the existing tree-continuity rules and data model exactly.
+- S6 Result (screenshot 10): full-width card. Status badge (Kritis/Waspada/Sehat/Belum dinilai) + plain diagnosis +
+  "Yang perlu dilakukan" (the safe action text) + confidence in words ("AI cukup yakin" / "AI kurang yakin — sebaiknya
+  dicek petugas atau foto ulang") with the % small; needs_review -> chip "Perlu dicek petugas"; "Dengarkan" button
+  here too. Actions: primary "Ambil foto berikutnya"; secondary row "Simpan foto", "Bagikan", "Lihat di peta".
+- S7 Failure states: plain reason + the right next step ("Coba lagi" for server/network, "Foto ulang" for a rejected
+  photo), never raw English errors.
+
+## Drafts / sync — owned by WEB
+- D1 Riwayat currently opens with a large "Draf & analisa" block that pushes the history down (screenshot 19). Replace
+  with a compact strip "3 foto belum terkirim · Kirim sekarang" that expands to the list. Each draft row: thumbnail,
+  tree name or "Belum dipilih tanamannya", ONE status chip ("Menunggu sinyal", "Sedang dikirim", "Sedang dianalisa",
+  "Gagal — coba lagi", "Perlu dipilih tanamannya") and ONE primary action; rare actions (Ubah lokasi, Simpan ke galeri,
+  Hapus) in an overflow "⋯" menu. Never show raw coordinates as the main text.
+
+## Beranda — owned by UX
+- B1 Top: "Perlu perhatian" — trees with latest status Kritis/Waspada or needs review, newest first (thumbnail, name,
+  status, when), tap -> that tree's timeline; empty state "Semua tanaman terakhir terlihat sehat."
+- B2 The big dark location card takes half the first screen (screenshot 04). Compress it to one compact row/card
+  (place, temperature/humidity with a short plain hint like "Lembap — waspada jamur", elevation as small text) so the
+  "Foto tanaman" action and "Perlu perhatian" are visible without scrolling on 390x844.
+- B3 Stat tiles (Total/Kritis/Waspada) are tappable -> Riwayat filtered by that status.
+- B4 Primary action "Foto tanaman" (big); "Buka peta" secondary.
+- B5 Daily note card: at most 3 short lines + "Lihat semua". The auto summary is too long and technical (screenshot
+  05: 15 lines, "menurut waktu Asia/Jakarta", "Catatan ini belum cukup untuk menyimpulkan…"). Rewrite the generator
+  output (in `daily-log.js`/`app.js`, keep its factual content and safety meaning): e.g. "Kemarin (Senin, 20 Okt):
+  1 tanaman difoto. Kopi pohon depan: Waspada — karat daun. Saran: periksa tanaman yang Waspada/Kritis dan foto lagi
+  tanaman yang sama." Keep "Dengarkan".
+- B6 First-use empty state (screenshot 31): friendly guidance "Mulai dengan memotret satu tanaman" with the camera
+  button, instead of zero tiles.
+
+## Peta (map & plots) — owned by UX
+- M1 Satellite layer (owner said yes): toggle "Peta jalan" / "Satelit" using Esri World Imagery
+  `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` (maxZoom 19, maxNativeZoom 18),
+  attribution "Citra © Esri, Maxar, Earthstar Geographics"; remember the choice (localStorage, per-viewer
+  convenience); online only (never cached by the service worker); show a small note when offline that map imagery
+  needs signal. Replace the stub `toggleSatelliteMode()`.
+- M2 Tool buttons on the right: add short visible labels or a clear first-use hint ("Gambar petak", "Jalan keliling",
+  "Lokasi saya"); they must not overlap the detail sheet (screenshot 15 shows a button peeking at the right edge).
+- M3 Drawing a plot (screenshot 17): translate Geoman tooltips to plain Bahasa (no "vertex"/"Klik"); add a bottom
+  action bar while drawing: "Hapus titik terakhir", "Batal", "Selesai" + live "3 titik · ±6.146 m²". GPS walking
+  mode: show points, distance and GPS accuracy, big "Selesai jalan" / "Batal".
+- M4 Point detail sheet: add "Lihat riwayat tanaman ini" (opens the tree timeline in Riwayat) and "Foto tanaman ini";
+  move "Ubah koordinat / petak tanaman" into a less prominent "Ubah lokasi" button styled like the others.
+- M5 Filter chips show counts ("Kritis 1", "Waspada 2", "Sehat 3").
+- M6 Farm save modal (screenshot 18): fine after the z-index fix; area in plain units ("0,6 ha (6.146 m²)").
+
+## Riwayat (history & daily log) — owned by UX (except the drafts strip, WEB)
+- R1 Tree list (screenshot 20): compact cards — tapping the card opens the timeline; one small primary action "Foto
+  lagi"; "Ubah lokasi" goes into the timeline/overflow, not on every card; consistent spacing (no tall empty gaps).
+- R2 Quick filter chips above the list: Semua / Kritis / Waspada / Sehat / Perlu dicek (+ counts), plus search
+  (debounced). Default sort: needs attention first, then most recent.
+- R3 Tree timeline: newest first, each entry: photo, status, Indonesian date, short diagnosis, "Dengarkan"; header with
+  the tree name, plot, last status and "Foto lagi".
+- R4 Daily tab (screenshot 22): Indonesian dates, no "(Asia/Jakarta)", no "2 sumber catatan" jargon; simple cards.
+- R5 Daily note form (screenshot 25): one "Catatan" textarea (title optional, auto "Catatan 20 Okt"), the auto summary
+  offered as a short suggestion with "Pakai ringkasan" instead of a huge dark block; "Tindakan" collapsed (optional).
+- R6 "Ekspor" is rare for farmers: move it into the account menu.
+
+## Modals and login — owned by UX
+- Location modal (screenshot 26): plain copy ("Titik dari peta/petak, bukan GPS"), coordinates under an "Atur
+  koordinat manual" disclosure; keep the honesty about manual positions.
+- Login: fine; shorten helper texts; error messages plain.
+
+## Ownership split for this UX work (both edit the field app at the same time)
+- WEB: everything in "Scan flow" and "Drafts / sync", plus its reliability list. In `app.js`: boot/auth/api/sync,
+  drafts, camera, GPS/telemetry logic, the scan flow functions (snapshot, review, analysis, polling, result, tree
+  assignment) and `workflow-ui.js`. In `index.html`: `#view-scan`, `#modal-crop-assign`, the sync banner/header status
+  chip, `#offline-drafts`.
+- UX: Global rules G1-G10 (except where they touch WEB's areas — apply them there via a note to WEB), Beranda, Peta,
+  Riwayat lists/timeline/daily, other modals, login, `styles.css`, `daily-log.js`, the Tailwind rebuild.
+  In `app.js`: home/dashboard rendering, history carousel, log/timeline/daily rendering and filters, map init/layers/
+  markers/draw UI/farm panel, detail sheet, viewer, toast/confirm helpers.
+- `styles.css`: UX owns; WEB appends its own rules only at the end inside a block commented `/* WEB 0.2.2.0 */`.
+- Read the file immediately before each Edit (the other implementer may have changed it). If you need a change in a
+  function the other owns, describe it in your report instead.
+- Tests: keep the existing browser harnesses green; when a harness asserts old copy/markup that you intentionally
+  changed, update that assertion in the same spirit (never delete a check) and list it in your report. Re-shoot the
+  ux-screens harness "after" set to `pulled/<your-work>/after/` and compare with "before".

@@ -1,0 +1,27 @@
+# Coexisting crop findings and structured daily suggestions (0.2.4.3)
+
+A photo assessment may now identify a disease and a pest at the same time. The
+diagnosis prompt asks for up to three `active_conditions` only when the photo
+supports each finding. Active findings are separate from the explanatory
+`possible_causes` list, so an unsupported alternative is never promoted into a
+card title.
+
+`JagaAssessment.label()` now joins the short active names with `·`, for example
+`Antraknosa · Ulat`. Every existing card, list, map sheet, scan result and photo
+viewer uses that same value. Low-confidence results clear `active_conditions`.
+Legacy records without the field retain their existing first-cause behavior, so
+no stored diagnosis is rewritten.
+
+Catatan Harian's **Saran ringkasan** now uses a structured, multiline layout:
+
+- the day and photo count;
+- the two highest-priority plant observations;
+- a separate **Saran** block with bulleted next steps;
+- an optional **Catatan** block for records whose upload time is unknown.
+
+The suggested text remains editable and is stored as the farmer's own note only
+after they accept it.
+
+Release 0.2.4.3 / Android versionCode 31 / cache `jk-v36` / protocol 2.1.0 /
+schema 10. The `active_conditions` JSON field is additive; there is no database
+migration. No Google, DNS, signing or farmer-data changes.

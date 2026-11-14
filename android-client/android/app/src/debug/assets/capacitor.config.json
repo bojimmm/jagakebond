@@ -1,0 +1,29 @@
+{
+  "appId": "jagake.bond.app",
+  "appName": "JagaKebond",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "appendUserAgent": "JagaKebond/2.1 (+https://jagake.bond)",
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "native",
+      "hidden": false,
+      "style": "DARK"
+    }
+  },
+  "loggingBehavior": "debug",
+  "cordova": {
+    "accessOrigins": [
+      "https://jagake.bond"
+    ]
+  }
+}

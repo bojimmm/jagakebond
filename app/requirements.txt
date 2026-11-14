@@ -1,0 +1,9 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.18
+httpx>=0.27
+pillow>=10.0
+# Used only to encrypt operator API keys at rest (AES-GCM). Password hashing stays on
+# the standard library (hashlib.scrypt). If this package is missing the app still runs,
+# but secrets are stored unencrypted and the admin console says so.
+cryptography>=42

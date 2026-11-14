@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light">
+<title>Konsol Admin — JagaKebond</title>
+<link rel="icon" type="image/png" href="/icons/favicon-32.png?v=3">
+<!-- Everything is served from this origin (strict CSP: script-src 'self', no CDN, no web fonts). -->
+<link rel="stylesheet" href="design-tokens.css?v=1">
+  <link rel="stylesheet" href="/vendor/tailwind.generated.css?v=26">
+<link rel="stylesheet" href="/ui-kit.css?v=4">
+<style>
+  /* Admin-only layout. Buttons, badges, chips, cards, inputs and notices come from /ui-kit.css. */
+  @font-face { font-family: 'Google Sans'; font-style: normal; font-weight: 100 900; font-display: swap;
+    src: url('/vendor/fonts/google-sans/GoogleSans-latin.woff') format('woff'); }
+  /* If any stylesheet fails to load, hidden views must stay hidden (never all views at once). */
+  [hidden] { display: none !important; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: #f1f5f9; color: var(--jk-text, #1e293b); font-size: 15px; line-height: 1.5;
+    font-family: 'Google Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body.modal-open { overflow: hidden; }
+  h1, h2, h3, p, ul, dl, dd, figure { margin: 0; }
+  ul { padding: 0; list-style: none; }
+  button, input, select, textarea { font-family: inherit; }
+  a { color: var(--jk-green-700, #15803d); }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+  /* layout helpers (4 / 8 / 12 / 16 / 24 / 32 only) */
+  .a-wrap { width: 100%; max-width: 1152px; margin: 0 auto; padding: 16px; }
+  .a-stack { display: flex; flex-direction: column; gap: 12px; }
+  .a-stack-8 { display: flex; flex-direction: column; gap: 8px; }
+  .a-stack-16 { display: flex; flex-direction: column; gap: 16px; }
+  .a-row { display: flex; align-items: center; gap: 12px; }
+  .a-row-8 { display: flex; align-items: center; gap: 8px; }
+  .a-wrapline { flex-wrap: wrap; }
+  .a-between { justify-content: space-between; }
+  .a-start { align-items: flex-start; }
+  .a-grow { flex: 1 1 0; min-width: 0; }
+  .a-none { flex: none; }
+  .a-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .a-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .mt1 { margin-top: 4px; } .mt2 { margin-top: 8px; } .mt3 { margin-top: 12px; } .mt4 { margin-top: 16px; } .mt6 { margin-top: 24px; }
+  .break { overflow-wrap: anywhere; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .bold { font-weight: 700; }
+  .t-bad { color: #991b1b; }
+  @media (min-width: 768px) {
+    .a-wrap { padding: 24px 16px; }
+    .a-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .a-grid4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .a-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  /* views */
+  .a-center { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .a-narrow { width: 100%; max-width: 400px; }
+  .brand { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--jk-green-700, #15803d); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; }
+  .a-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .a-header h1 { font-size: 17px; line-height: 1.2; font-weight: 700; color: var(--jk-ink, #0f172a); }
+  /* phones: one compact header row (title on one line, the email shortened instead of broken mid-word) */
+  .a-header h1, .a-header #me-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 479px) { .a-header .brand { display: none; } .a-header { padding: 12px 16px; } }
+
+  /* tabs (navigation: icon above the label on phones, side by side from 640px) */
+  .tabs { position: sticky; top: 8px; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
+    padding: 4px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: var(--jk-shadow-card); }
+  @media (max-width: 479px) { .tabs { gap: 0; } }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 56px; min-width: 0;
+    padding: 0 2px; border: 0; border-radius: 8px; background: transparent; color: #334155; font-size: 15px; font-weight: 600;
+    line-height: 1.2; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .tab > svg { width: 20px; height: 20px; flex: none; }
+  .tab:hover { background: #f1f5f9; }
+  .tab:focus-visible { outline: 3px solid var(--jk-green-700, #15803d); outline-offset: 2px; }
+  .tab[aria-selected="true"] { background: var(--jk-green-700, #15803d); color: #fff; }
+  @media (min-width: 640px) { .tab { flex-direction: row; gap: 8px; min-height: 48px; } }
+
+  /* health headline */
+  .health { border-width: 2px; }
+  .health-ok { border-color: #86efac; background: #f0fdf4; }
+  .health-warn { border-color: #fcd34d; background: #fffbeb; }
+  .health-bad { border-color: #fca5a5; background: #fef2f2; }
+  .health-icon { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
+  .health-ok .health-icon { background: var(--jk-green-700, #15803d); }
+  .health-warn .health-icon { background: #b45309; }
+  .health-bad .health-icon { background: var(--jk-red-700, #b91c1c); }
+  .health-icon > svg { width: 24px; height: 24px; }
+  .issues > li { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid rgba(15, 23, 42, 0.1); }
+  .issues > li:first-child { margin-top: 12px; }
+  @media (min-width: 640px) { .issues > li { flex-direction: row; align-items: center; justify-content: space-between; } }
+
+  /* tiles and key/value lists */
+  .tile-value { display: block; font-size: 28px; line-height: 1.15; font-weight: 800; color: var(--jk-ink, #0f172a); margin-top: 4px; }
+  .tile-value.tile-word { font-size: 20px; line-height: 1.4; }
+  .kv > div { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid #eef2f6; }
+  .kv > div:first-child { border-top: 0; }
+  .kv dt { color: var(--jk-muted, #475569); font-size: 14px; }
+  .kv dd { margin: 0; font-weight: 600; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+
+  /* responsive tables: a table from 768px, stacked cards below */
+  .rtable { width: 100%; border-collapse: collapse; }
+  .rtable th { text-align: left; padding: 8px 12px 8px 0; font-size: 13px; font-weight: 600; color: var(--jk-muted, #475569);
+    border-bottom: 1px solid var(--jk-border, #dbe3e8); white-space: nowrap; }
+  .rtable td { padding: 12px 12px 12px 0; vertical-align: top; border-top: 1px solid #eef2f6; font-size: 15px; }
+  .rtable tbody tr:first-child td { border-top: 0; }
+  .rtable td.acts { min-width: 240px; padding-right: 0; }
+  .sm-only { display: none; }
+  @media (max-width: 767px) {
+    .rtable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+    .rtable, .rtable tbody { display: block; }
+    .rtable tr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 12px; margin-top: 8px;
+      border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+    .rtable tbody tr:first-child { margin-top: 0; }
+    .rtable td { display: block; flex: 1 1 100%; min-width: 0; padding: 0; border: 0; }
+    .rtable tbody tr:first-child td { border: 0; }
+    .rtable td.fit { flex: 0 0 auto; }
+    .rtable td.acts { margin-top: 8px; min-width: 0; }
+    .sm-only { display: inline; }
+    .md-only { display: none; }
+  }
+
+  /* settings */
+  .setting + .setting { margin-top: 16px; padding-top: 16px; border-top: 1px solid #eef2f6; }
+  .check { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .check input { width: 24px; height: 24px; flex: none; accent-color: var(--jk-green-700, #15803d); }
+  .pw-row { display: flex; align-items: stretch; gap: 8px; }
+  .pw-row > .input { flex: 1 1 0; min-width: 0; }
+  .settings-bar { display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid var(--jk-border, #dbe3e8); }
+  @media (min-width: 768px) { .settings-bar { flex-direction: row; align-items: flex-end; justify-content: space-between; } .settings-bar .bar-fields { flex: 1 1 0; max-width: 420px; } }
+
+  /* toolbars */
+  .toolbar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  @media (min-width: 640px) { .toolbar { grid-template-columns: minmax(0, 1fr) 200px auto; align-items: stretch; } }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* registration inbox (0.2.3.0) */
+  .reg-list > li { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid #eef2f6; }
+  .reg-list > li:first-child { border-top: 0; padding-top: 0; }
+  @media (min-width: 640px) { .reg-list > li { flex-direction: row; align-items: center; justify-content: space-between; } .reg-list .btn-row { flex: none; width: 240px; } }
+
+  /* dialog, toast */
+  .modal-backdrop { position: fixed; inset: 0; z-index: var(--jk-z-modal, 50); display: flex; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(15, 23, 42, 0.6); }
+  .dialog { width: 100%; max-width: 480px; max-height: min(90vh, 760px); overflow-y: auto; box-shadow: var(--jk-shadow-raised); }
+  .dialog:focus { outline: none; }
+  .toast-region { position: fixed; top: 16px; left: 16px; right: 16px; z-index: var(--jk-z-toast, 40); display: flex; justify-content: center; pointer-events: none; }
+  /* Phones: toasts at the bottom, never over Aplikasi / Keluar (0.2.4.15). */
+  @media (max-width: 767px) { .toast-region { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); } }
+  .toast { pointer-events: auto; max-width: 480px; padding: 12px 16px; border-radius: 12px; font-size: 15px; font-weight: 600; line-height: 1.4;
+    box-shadow: var(--jk-shadow-raised); background: var(--jk-ink, #0f172a); color: #fff; }
+  .toast-error { background: var(--jk-red-700, #b91c1c); }
+  .toast-ok { background: var(--jk-green-700, #15803d); }
+  .toast-warn { background: var(--jk-amber-500, #f59e0b); color: var(--jk-ink, #0f172a); }
+
+  /* loading */
+  .sk { height: 20px; margin-top: 8px; } .sk-lg { height: 72px; margin-top: 12px; }
+  .btn[aria-busy="true"] { cursor: progress; }
+  .btn[aria-busy="true"]::after { content: ''; flex: none; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; animation: a-spin 0.8s linear infinite; }
+  @keyframes a-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .btn[aria-busy="true"]::after { animation: none; } }
+.brand { background:#fff; } .brand img { display:block; width:36px; height:36px; object-fit:contain; }
+</style>
+<script src="/vendor/lucide-0.468.0.umd.min.js" defer></script>
+<script src="/admin.js?v=2" defer></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===================== LOADING (until the script decides which view to show) ===================== -->
+  <div id="boot-view" class="a-center" role="status">
+    <p class="t-body t-muted">Memuat konsol admin…<br><span class="t-meta">Jika layar ini tidak berubah, muat ulang halaman.</span></p>
+  </div>
+
+  <!-- ===================== LOGIN ===================== -->
+  <main id="login-view" class="a-center" hidden>
+    <div class="card a-narrow">
+      <div class="a-row">
+        <div class="brand" aria-hidden="true"><img src="/icons/logo-256.png?v=3" alt="" width="36" height="36"></div>
+        <div>
+          <h1 class="t-title">Konsol Admin</h1>
+          <p class="t-meta">JagaKebond</p>
+        </div>
+      </div>
+      <form id="login-form" class="a-stack-16 mt4" data-form="login" novalidate>
+        <div id="login-notice" class="notice notice-info" role="status" hidden></div>
+        <div>
+          <label class="label" for="login-email">Email</label>
+          <input id="login-email" class="input" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required>
+        </div>
+        <div>
+          <label class="label" for="login-password">Kata sandi</label>
+          <div class="pw-row">
+            <input id="login-password" class="input" type="password" autocomplete="current-password" required>
+            <button type="button" class="btn btn-secondary" data-action="toggle-password" data-target="login-password" aria-controls="login-password" aria-pressed="false">Tampilkan</button>
+          </div>
+        </div>
+        <div id="login-error" class="notice notice-error" role="alert" hidden></div>
+        <button type="submit" class="btn btn-primary btn-block">Masuk</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- ===================== DENIED ===================== -->
+  <main id="denied-view" class="a-center" hidden>
+    <div class="card a-narrow a-stack-16">
+      <div>
+        <h1 class="t-title">Akses ditolak</h1>
+        <p class="t-body mt2">Halaman ini hanya untuk admin. Akun Anda masuk sebagai pengguna biasa.</p>
+      </div>
+      <div class="btn-stack">
+        <a class="btn btn-primary" href="/">Buka aplikasi petani</a>
+        <button type="button" class="btn btn-secondary" data-action="logout">Keluar</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== CONSOLE ===================== -->
+  <div id="console-view" class="a-wrap a-stack" hidden>
+    <header class="card a-header">
+      <div class="a-row a-grow">
+        <div class="brand" aria-hidden="true"><img src="/icons/logo-256.png?v=3" alt="" width="36" height="36"></div>
+        <div class="a-grow">
+          <h1>Konsol Admin</h1>
+          <p class="t-meta break" id="me-label">—</p>
+        </div>
+      </div>
+      <div class="a-row-8 a-none">
+        <a class="btn btn-secondary btn-sm" href="/">Aplikasi</a>
+        <button type="button" class="btn btn-secondary btn-sm" data-action="logout">Keluar</button>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Menu konsol admin">
+      <button type="button" class="tab" role="tab" id="tab-overview" data-action="tab" data-tab="overview" aria-controls="panel-overview" aria-selected="true"><i data-lucide="house" aria-hidden="true"></i><span>Beranda</span></button>
+      <button type="button" class="tab" role="tab" id="tab-accounts" data-action="tab" data-tab="accounts" aria-controls="panel-accounts" aria-selected="false" tabindex="-1"><i data-lucide="users" aria-hidden="true"></i><span>Akun</span></button>
+      <button type="button" class="tab" role="tab" id="tab-settings" data-action="tab" data-tab="settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1"><i data-lucide="settings" aria-hidden="true"></i><span>Setelan</span></button>
+      <button type="button" class="tab" role="tab" id="tab-queue" data-action="tab" data-tab="queue" aria-controls="panel-queue" aria-selected="false" tabindex="-1"><i data-lucide="list-ordered" aria-hidden="true"></i><span>Antrean</span></button>
+      <button type="button" class="tab" role="tab" id="tab-audit" data-action="tab" data-tab="audit" aria-controls="panel-audit" aria-selected="false" tabindex="-1"><i data-lucide="scroll-text" aria-hidden="true"></i><span>Audit</span></button>
+    </nav>
+
+    <main id="main" class="a-stack" tabindex="-1">
+      <section id="panel-overview" class="a-stack" role="tabpanel" aria-labelledby="tab-overview" tabindex="0"></section>
+      <section id="panel-accounts" class="a-stack" role="tabpanel" aria-labelledby="tab-accounts" tabindex="0" hidden></section>
+      <section id="panel-settings" class="a-stack" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden></section>
+      <section id="panel-queue" class="a-stack" role="tabpanel" aria-labelledby="tab-queue" tabindex="0" hidden></section>
+      <section id="panel-audit" class="a-stack" role="tabpanel" aria-labelledby="tab-audit" tabindex="0" hidden></section>
+    </main>
+  </div>
+
+  <noscript>
+    <div class="a-center"><p class="notice notice-error">Konsol admin membutuhkan JavaScript. Aktifkan JavaScript lalu muat ulang halaman.</p></div>
+  </noscript>
+</div>
+
+<!-- Dialogs and toasts live outside #app so the page behind a dialog can be made inert. -->
+<div id="modal" class="modal-backdrop" hidden></div>
+<div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+
+</body>
+</html>

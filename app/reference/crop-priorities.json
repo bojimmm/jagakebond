@@ -1,0 +1,50 @@
+{
+  "version": "2026-10-30.1",
+  "method": "Coverage priorities, not a statistical rank or an estimate of home-garden prevalence. National crop groups use different metrics; no tonnage comparison across groups.",
+  "first_wave": [
+    "padi",
+    "jagung",
+    "cabai",
+    "bawang_merah",
+    "tomat",
+    "pisang"
+  ],
+  "next_horticulture": [
+    "kentang",
+    "bawang_putih",
+    "wortel",
+    "jeruk",
+    "mangga",
+    "durian",
+    "nanas",
+    "manggis"
+  ],
+  "plantation_research_queue": [
+    "kelapa_sawit",
+    "kelapa",
+    "kopi",
+    "kakao",
+    "karet"
+  ],
+  "sources": [
+    {
+      "url": "https://www.bps.go.id/en/publication/2026/06/12/43da5ec30fc7d87985e108a5/statistik-hortikultura-2025.html",
+      "data_year": 2025,
+      "published": "2026-06-12",
+      "evidence": "Official final national horticulture figures; contents independently retrieved through Firecrawl PDF parsing, including chili, shallot, tomato, banana and the next horticulture cohort."
+    },
+    {
+      "url": "https://www.bps.go.id/en/news/2026/01/05/836/indonesia-s-balance-of-trade-continues-to-record-a-surplus.html",
+      "evidence": "BPS national paddy/maize release discovered in research; no final full-year totals or rank asserted here."
+    },
+    {
+      "url": "https://ditjenbun.pertanian.go.id/pojok-media/publikasi/",
+      "evidence": "Official plantation publication series; retrieval blocked, quantitative plantation comparisons remain incomplete."
+    }
+  ],
+  "limitations": [
+    "Crop prioritization is a product coverage decision, not a claim of household prevalence.",
+    "The broader statistical research stopped at its credit cap; official BPS horticulture summary and contents were subsequently retrieved directly. No unverified numerical ranking is used.",
+    "Chemical product coverage requires separate crop-target label and current-registration checks, regardless of crop priority."
+  ]
+}

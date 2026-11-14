@@ -1,0 +1,1642 @@
+/* ==========================================================================
+   JagaKebond — design system layer
+   Locally compiled Tailwind utilities; this file owns tokens, component states,
+   animations, and third-party overrides.
+   ========================================================================== */
+
+/* Tokens, buttons, chips, badges, cards and inputs live in ui-kit.css (loaded before this file). */
+
+/* ---------- Base ---------- */
+@font-face {
+  font-family: 'Google Sans';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('vendor/fonts/google-sans/GoogleSans-latin.woff') format('woff');
+}
+body {
+  font-family: 'Google Sans', system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: text;
+}
+
+button, summary, nav, .leaflet-container { user-select: none; }
+
+button, input, select, textarea, .leaflet-container, .leaflet-control-attribution {
+  font-family: 'Google Sans', system-ui, -apple-system, sans-serif;
+}
+
+input,
+textarea,
+select {
+  user-select: text;
+}
+
+:focus-visible {
+  outline: 2px solid var(--jk-green-600);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--jk-green-700);
+  outline-offset: 1px;
+}
+
+.field {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  color: var(--jk-ink);
+  background: var(--jk-surface);
+  border: 1px solid var(--jk-muted);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+}
+textarea.field { padding: 12px; min-height: 96px; }
+
+.field::placeholder { color: var(--jk-muted); }
+.field:focus { border-color: var(--jk-green-700); }
+
+/* ---------- Scrollbars ---------- */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.25);
+  border-radius: 9999px;
+}
+
+/* ---------- Utilities ---------- */
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------- View switching ---------- */
+.menu-view.hidden {
+  display: none !important;
+}
+
+#view-scan:not(.hidden) {
+  display: flex;
+}
+
+@media (max-width: 1023px) {
+  #app-shell > main > #view-scan,
+  #app-shell > main > #view-log,
+  #app-shell > main > #view-home { padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px)); }
+  #view-log, #view-home { scroll-padding-bottom: 128px; }
+}
+
+#farm-sheet[hidden] { display: none !important; }
+.capture-tree-context { color:var(--jk-green-900); background:var(--jk-green-50); border:1px solid var(--jk-green-200); padding:8px 12px; font-size:13px; border-radius:8px; }
+.capture-tree-context[hidden] { display:none; }
+
+#scan-frame {
+  width: auto;
+  height: auto;
+}
+
+/* Review scrolls instead of shrinking the photo around the form and sync banner. */
+#view-scan.photo-review-mode {
+  overflow-y: auto;
+  scroll-padding-block: 1rem 7rem;
+}
+
+#home-accuracy-tag.accuracy-dot { display:inline-block; width:10px; height:10px; padding:0; border-radius:50%; background:var(--jk-border-strong); }
+#home-accuracy-tag[data-accuracy="good"] { background:#22c55e; }
+#home-accuracy-tag[data-accuracy="fair"] { background:#eab308; }
+#home-accuracy-tag[data-accuracy="poor"] { background:#ef4444; }
+#home-accuracy-tag[data-accuracy="unknown"] { background:var(--jk-border-strong); }
+.workflow-draft { display:flex; flex-direction:column; align-items:stretch; gap:10px; }
+.workflow-draft-body { min-width:0; overflow-wrap:anywhere; }
+.workflow-draft-body p { margin:4px 0; font-size:13px; }
+.workflow-draft-body small { color:var(--jk-muted); }
+.workflow-tree-group { background:var(--jk-surface); border:1px solid var(--jk-border); border-radius:12px; padding:12px; }
+.workflow-tree-group + .workflow-tree-group { margin-top:10px; }
+.workflow-tree-group summary { cursor:pointer; min-height:56px; padding:4px; color:var(--jk-ink); display:flex; gap:12px; align-items:center; }
+.workflow-tree-group summary::after { content:'+'; margin-left:auto; color:var(--jk-muted); font-size:20px; }
+.workflow-tree-group[open] summary::after { content:'−'; }
+.workflow-tree-group .draft-tree-photo { flex:0 0 56px; height:56px; display:grid; place-items:center; border-radius:8px; overflow:hidden; background:#f1f5f9; color:var(--jk-muted); }
+.draft-tree-photo img { width:100%; height:100%; object-fit:cover; }
+.workflow-tree-group .draft-tree-copy { flex:1; min-width:0; margin:0; }
+.workflow-tree-group summary strong { font-size:14px; }
+.workflow-tree-group summary span,.workflow-tree-group summary small { display:block; margin-top:4px; color:var(--jk-muted); font-size:13px; }
+.workflow-tree-group summary small { color:#92400e; }
+.workflow-draft-timeline { display:grid; gap:10px; border-top:1px solid var(--jk-border); padding-top:12px; margin-top:8px; }
+.workflow-draft-timeline .workflow-draft { background:var(--jk-surface-soft); border-radius:8px; padding:10px; }
+.workflow-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.workflow-actions button,.capture-location-tools button,#sync-open-history { min-height:44px; padding:8px 12px; border:1px solid var(--jk-border-strong); border-radius:8px; background:var(--jk-surface); color:var(--jk-green-900); font-size:13px; font-weight:600; }
+.capture-location-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:10px; }
+.capture-location-tools small { flex:1 1 170px; color:var(--jk-muted); font-size:13px; }
+.workflow-modal { position:fixed; inset:0; z-index:var(--jk-z-workflow); background:#0f172ab8; padding:12px; display:flex; justify-content:center; align-items:center; overscroll-behavior:contain; }
+.workflow-modal.hidden { display:none; }
+.workflow-dialog { width:100%; max-width:560px; max-height:min(88dvh,760px); overflow-y:auto; overscroll-behavior:contain; background:white; color:var(--jk-ink); padding:18px; border:1px solid var(--jk-border); border-radius:12px; box-shadow:0 24px 70px #0f172a55; }
+.workflow-dialog header { position:sticky; top:-18px; z-index:2; padding:8px 0; background:white; }
+.workflow-dialog header button { min-width:44px; min-height:44px; border-radius:8px; background:#f1f5f9; color:#334155; }
+.workflow-dialog #location-save { min-height:48px; border:0; border-radius:12px; font-weight:700; }
+.workflow-dialog header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.workflow-dialog h2 { font-size:18px; font-weight:700; }
+.workflow-dialog p { font-size:13px; margin:8px 0; color:var(--jk-muted); }
+.workflow-dialog label { display:flex; flex-direction:column; gap:4px; font-size:13px; margin:10px 0; }
+.workflow-dialog [hidden] { display:none !important; }
+.workflow-dialog input,.workflow-dialog select { min-width:0; width:100%; min-height:44px; padding:8px; border:1px solid var(--jk-border-strong); border-radius:8px; color:var(--jk-ink); background:white; }
+.workflow-dialog button { min-height:44px; padding:8px 12px; border:1px solid var(--jk-border-strong); border-radius:8px; font-size:13px; }
+#location-save { background:var(--jk-green-800); color:white; width:100%; }
+#location-error { color:#991b1b; }
+#location-map { height:200px; width:100%; margin-top:12px; background:var(--jk-border); }
+.workflow-coordinate-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+.workflow-dialog #location-map { border-radius:12px; overflow:hidden; isolation:isolate; z-index:0; }
+.workflow-dialog :focus-visible { outline:2px solid var(--jk-green-700); outline-offset:2px; }
+@media(min-width:700px) { .workflow-draft { flex-direction:row; align-items:center; justify-content:space-between; } .workflow-actions { flex-shrink:0; } #location-map { height:260px; } }
+@media(max-height:500px) { #location-map { height:140px; } .workflow-modal { align-items:flex-start; } }
+/* Manual-location map: one current-location tool beside Leaflet's +/- zoom buttons. */
+.location-locate { border-radius:8px; overflow:hidden; }
+.workflow-dialog .location-locate-btn { display:flex; align-items:center; justify-content:center; width:44px; height:44px; min-height:44px; padding:0; border:0; border-radius:0; background:var(--jk-surface); color:var(--jk-green-800); cursor:pointer; }
+.workflow-dialog .location-locate-btn:hover, .workflow-dialog .location-locate-btn:focus-visible { background:var(--jk-green-50); }
+.workflow-dialog .location-locate-btn[disabled] { color:var(--jk-border-strong); }
+
+#view-scan.photo-review-mode #scan-stage {
+  flex: 0 0 auto;
+  align-self: center;
+  width: min(100%, 420px);
+  height: auto;
+  aspect-ratio: 3 / 4;
+}
+
+#view-scan.photo-review-mode #scan-controls {
+  flex: 0 0 auto;
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* ---------- Home history carousel ---------- */
+#home-history-carousel {
+  scroll-padding-left: 1rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#home-history-carousel::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.history-card {
+  flex: 0 0 calc((100% - 0.5rem) / 1.5);
+}
+
+/* ---------- Scan: result mode ---------- */
+/* Once a diagnosis is on screen the result is what matters, so the viewfinder gives up
+   its space instead of pushing the result into a scroll region — which is what cut the
+   action row off at the bottom and clipped the right button. */
+#view-scan.result-mode #scan-stage {
+  flex: 0 0 auto;
+  height: 24vh;
+}
+
+#view-scan.result-mode #scan-controls {
+  flex: 1 1 auto;
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* ---------- Bottom navigation ---------- */
+.nav-tab {
+  position: relative;
+  min-height: 56px;
+  color: var(--jk-muted);
+  transition: color 0.2s ease;
+}
+
+.nav-tab .nav-label { font-size: 15px; line-height: 1.2; letter-spacing: 0; }
+
+/* Small count on a nav tab (unseen results / waiting photos). */
+.nav-badge {
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 6px);
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 11px;
+  background: var(--jk-red-600);
+  color: var(--jk-surface);
+  border: 2px solid var(--jk-surface);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+.nav-badge.hidden { display: none; }
+
+.nav-tab svg {
+  stroke-width: 2;
+  transition: stroke-width 0.2s ease;
+}
+
+.nav-tab .nav-label {
+  font-weight: 600;
+}
+
+.nav-tab.is-active {
+  color: var(--jk-green-700);
+}
+
+.nav-tab.is-active svg {
+  stroke-width: 2.4;
+}
+
+.nav-tab.is-active .nav-label {
+  font-weight: 700;
+}
+
+#nav-btn-scan .nav-fab {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 5px solid white;
+  background: var(--jk-green-600);
+  margin-top: -24px;
+  box-shadow: 0 5px 12px #0f172a26;
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+#nav-btn-scan .nav-fab svg { width: 30px; height: 30px; }
+#nav-btn-scan .nav-label { color: var(--jk-green-800); }
+
+.workflow-actions button::before, .capture-location-tools button::before {
+  content:''; position:absolute; z-index:-1; inset:6px 0; border-radius:8px;
+  background:#f1f5f9; border:1px solid var(--jk-border-strong); pointer-events:none;
+}
+.workflow-actions button, .capture-location-tools button {
+  position:relative; isolation:isolate; min-height:44px; padding:4px 10px;
+  border:0; border-radius:8px; background:transparent; line-height:1.3;
+}
+/* .btn buttons (ui-kit.css) inside the workflow action rows keep their own look. */
+.workflow-actions button.btn::before, .capture-location-tools button.btn::before { content:none; }
+.workflow-actions button.btn, .capture-location-tools button.btn { position:static; isolation:auto; }
+
+#nav-btn-scan.is-active .nav-fab {
+  box-shadow:
+    0 0 0 4px var(--jk-green-100),
+    0 12px 22px -8px rgba(21, 128, 61, 0.5);
+}
+
+/* ---------- Segmented tabs (Riwayat, login) ---------- */
+.map-load-status { position:absolute; left:16px; right:16px; top:112px; z-index:var(--jk-z-map-panel); padding:16px; border:1px solid var(--jk-border); border-radius:var(--jk-radius-card); background:var(--jk-surface); color:var(--jk-text); font-size:14px; line-height:1.5; box-shadow:var(--jk-shadow-card); }
+.map-load-status p { margin:0; }
+.map-load-status .btn { margin-top:12px; }
+.seg { display: flex; gap: 4px; padding: 4px; background: var(--jk-border); border-radius: 12px; }
+.seg > button, .seg > .seg-item {
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 8px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; border-radius: 8px; background: transparent; color: #334155;
+  font: inherit; font-size: 15px; font-weight: 600; line-height: 1.2; white-space: nowrap; cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.seg > button.hidden { display: none; }
+.seg > button svg { width: 20px; height: 20px; flex: none; }
+.seg > button.is-active { background: var(--jk-surface); color: var(--jk-ink); font-weight: 700; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
+
+/* ---------- Map filter chips (severity dot + count) ---------- */
+.map-filter-btn::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--jk-border-strong); }
+.map-filter-btn[data-sev="all"]::before { display: none; }
+.map-filter-btn[data-sev="Severe"]::before { background: var(--jk-red-600); }
+.map-filter-btn[data-sev="Moderate"]::before { background: var(--jk-amber-500); }
+.map-filter-btn[data-sev="Healthy"]::before { background: var(--jk-green-700); }
+.map-filter-btn.is-active::before { box-shadow: 0 0 0 2px var(--jk-surface); }
+.map-float { box-shadow: 0 2px 8px rgba(15, 23, 42, 0.22); }
+
+/* ---------- Leaflet overrides ---------- */
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 0.75rem;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ---------- Animations ---------- */
+@keyframes jk-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes jk-sheet-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes jk-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes jk-pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.animate-overlay-fade {
+  animation: jk-fade-in 0.18s ease-out both;
+}
+
+.animate-sheet-up {
+  animation: jk-sheet-up 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-toast-in {
+  animation: jk-toast-in 0.2s ease-out both;
+}
+
+.animate-pulse-subtle {
+  animation: jk-pulse-subtle 2.5s ease-in-out infinite;
+}
+
+/* ---------- Responsive workspace and sync surfaces ---------- */
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: block;
+  padding: 0;
+  background: var(--jk-surface);
+}
+
+#app-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  min-height: 480px;
+  overflow: hidden;
+  background: var(--jk-surface);
+}
+
+#desktop-nav { display: none; }
+.desktop-page-title { display: none; }
+
+.auth-form-panel { background: var(--jk-surface); }
+.auth-form-panel .text-slate-400 { color: var(--jk-muted); }
+.auth-form-panel .text-farm-600 { color: var(--jk-green-800); }
+.auth-form-panel .text-farm-700 { color: var(--jk-green-800); }
+.auth-form-panel .text-farm-800 { color: var(--jk-green-900); }
+.auth-form-panel .text-slate-500 { color: var(--jk-muted); }
+.auth-form-panel .text-slate-600 { color: #334155; }
+.auth-form-panel .text-farm-500 { color: var(--jk-green-800); }
+.auth-form-panel #auth-tab-register { color: var(--jk-green-900); }
+.bg-white .text-slate-400 { color: var(--jk-muted); }
+.text-farm-500 { color: var(--jk-green-800); }
+.text-farm-600 { color: var(--jk-green-800); }
+.text-red-500 { color: var(--jk-red-700); }
+.text-amber-600 { color: #b45309; }
+.text-farm-100\/90 { color: var(--jk-surface); }
+
+#scan-frame {
+  aspect-ratio: 3 / 4;
+  max-height: 100%;
+  max-width: 100%;
+}
+
+#scan-controls button, #scan-controls label { min-height: 44px; }
+
+#auth-gate {
+  position: fixed;
+  z-index: var(--jk-z-auth);
+  inset: 0;
+}
+
+#auth-gate.hidden { display: none !important; }
+
+/* ---------------------------------------------------------------- 0.2.3.0 Sign in with Google (google-signin.js) */
+/* The block, its button and its notice are switched with the hidden attribute; .btn / .notice set a display. */
+#google-signin[hidden], #google-signin [hidden] { display: none !important; }
+.google-signin { display: flex; flex-direction: column; gap: 12px; }
+.google-divider { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--jk-muted, var(--jk-muted)); font-size: 13px; font-weight: 600; }
+.google-divider::before, .google-divider::after { content: ''; flex: 1 1 0; height: 1px; background: var(--jk-border); }
+/* Google draws its own button (an iframe) in here; keep the row as tall as our large buttons. */
+.google-button { display: flex; justify-content: center; min-height: 44px; }
+.google-button:empty { display: none; }
+#google-native-button > svg { width: 20px; height: 20px; }
+
+#app-shell > header { min-height: 56px; position: relative; z-index: var(--jk-z-bars); }
+#app-shell > header .header-brand { flex: 1 1 auto; }
+#app-shell > header .account-btn { flex: none; }
+.account-btn { max-width: 10rem; }
+.account-btn .btn-label { max-width: 6.5rem; }
+
+/* main is its own stacking context: map controls (z-index up to 1000 inside Leaflet and the
+   map sheets) can never paint above the modals, toast or header that live outside it. */
+#app-shell > main {
+  min-height: 0;
+  flex: 1 1 auto;
+  isolation: isolate;
+}
+
+#app-shell > main > .menu-view {
+  padding-bottom: 6rem;
+}
+
+#app-shell > nav {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  min-height: 64px;
+  padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
+  background: rgba(255,255,255,.97);
+  border-top: 1px solid var(--jk-border);
+  backdrop-filter: blur(12px);
+}
+
+.desktop-brand { display: none; }
+
+.sync-banner {
+  z-index: var(--jk-z-bars);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.4rem 1rem;
+  color: var(--jk-green-900);
+  background: var(--jk-green-50);
+  border-bottom: 1px solid var(--jk-green-200);
+  font-size: 0.75rem;
+}
+
+.sync-banner[hidden] { display: none !important; }
+
+#app-shell > main > #view-map {
+  padding: 0;
+  min-height: 0;
+  flex: 1 1 0;
+  height: 100%;
+}
+
+.sync-status {
+  min-width: 0;
+  font-weight: 600;
+}
+
+.sync-pending-label {
+  flex: none;
+  color: #334155;
+}
+
+#sync-retry {
+  flex: none;
+  min-height: 40px;
+  padding: 0.45rem 0.75rem;
+  color: var(--jk-surface);
+  background: var(--jk-green-800);
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#sync-retry:hover,
+#sync-retry:focus-visible {
+  background: var(--jk-green-900);
+}
+
+.offline-drafts {
+  padding: 0.85rem 1rem;
+  color: var(--jk-ink);
+  background: var(--jk-surface-soft);
+  border: 1px solid var(--jk-border);
+  border-radius: 8px;
+}
+
+.offline-drafts h3 {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.offline-drafts p {
+  margin-top: 0.25rem;
+  color: var(--jk-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 380px) {
+  .sync-banner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.6rem;
+  }
+
+  .sync-status {
+    flex-basis: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  #app-shell {
+    width: 100%;
+    height: 100dvh;
+    min-height: min(500px, 100dvh);
+    margin: 0;
+    padding: 0;
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  #app-shell > header {
+    padding: 0.8rem clamp(1.5rem, 4vw, 4rem);
+  }
+
+  #app-shell > main > .menu-view {
+    padding-left: clamp(1.5rem, 5vw, 5rem);
+    padding-right: clamp(1.5rem, 5vw, 5rem);
+    margin: 0;
+  }
+
+  #view-home:not(.hidden),
+  #view-log:not(.hidden) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    align-items: start;
+    gap: 1rem;
+    margin: 0;
+    padding-top: 1.5rem;
+    padding-bottom: 6rem;
+  }
+
+  #view-home > *,
+  #view-log > * {
+    min-width: 0;
+  }
+
+  #view-log:not(.hidden) { grid-template-columns: minmax(0, 1fr); }
+  #home-place-card, #home-tiles, #home-empty, #home-recent,
+  #offline-drafts, #log-tabs {
+    grid-column: 1 / -1;
+  }
+  #home-attention, #home-daily { grid-column: span 1; }
+
+  #app-shell > nav {
+    position: absolute;
+    width: 100%;
+    padding: 0.55rem clamp(1.5rem, 4vw, 4rem);
+    margin: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  #nav-btn-scan .nav-fab {
+    margin-top: 0;
+    width: 3rem;
+    height: 3rem;
+  }
+
+  #view-scan:not(.hidden) {
+    width: min(100%, 980px);
+    align-self: center;
+  }
+
+  #app-shell > header, .sync-banner { margin: 0; }
+}
+
+@media (min-width: 1024px) {
+  body { overflow: hidden; }
+
+  #app-shell {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "sidebar header"
+      "sidebar sync"
+      "sidebar main";
+    margin: 0;
+    padding: 0;
+  }
+
+  #desktop-nav {
+    grid-area: sidebar;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.25rem 0.85rem;
+    background: var(--jk-surface-soft);
+    border-right: 1px solid var(--jk-border);
+  }
+
+  .desktop-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 48px;
+    margin: 0 0 1.2rem;
+    padding: 0 0.55rem;
+    color: var(--jk-ink);
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .desktop-brand img { width: 34px; height: 34px; object-fit: contain; }
+
+  #desktop-nav > button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0 0.7rem;
+    color: #334155;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  #desktop-nav > button:hover,
+  #desktop-nav > button:focus-visible,
+  #desktop-nav > button.is-active {
+    color: var(--jk-green-900);
+    background: var(--jk-green-100);
+  }
+
+  #desktop-nav > button svg { width: 22px; height: 22px; }
+
+  #app-shell > header {
+    grid-area: header;
+    padding: 0.7rem clamp(1.5rem, 3vw, 3rem);
+    background: var(--jk-surface);
+  }
+  #app-shell > header .header-brand { display: none; }
+  #app-shell > .sync-banner { grid-area: sync; }
+  #app-shell > main { grid-area: main; }
+  #app-shell > nav { display: none; }
+
+  .desktop-page-title {
+    display: block;
+    color: var(--jk-ink);
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .sync-banner {
+    padding-left: clamp(1.5rem, 3vw, 3rem);
+    padding-right: clamp(1.5rem, 3vw, 3rem);
+  }
+
+  #app-shell > main > .menu-view {
+    padding-left: clamp(1.5rem, 3vw, 3rem);
+    padding-right: clamp(1.5rem, 3vw, 3rem);
+    padding-top: 1.5rem;
+    margin: 0;
+  }
+
+  #view-home:not(.hidden) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #home-place-card { grid-column: span 2; }
+  #home-attention { grid-column: 1 / span 2; grid-row: 3; }
+  #home-recent { grid-column: 1 / span 2; grid-row: 4; }
+  #home-daily { grid-column: 3; grid-row: 3 / span 2; }
+  #view-home:has(#home-empty:not(.hidden)) #home-daily { grid-column: 1 / -1; grid-row: auto; }
+
+  /* Riwayat desktop: each section uses the full main-content width, in DOM order. */
+  #view-log:not(.hidden) {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+  #offline-drafts, #log-tabs, #log-filter-wrap, #logs-container,
+  #farm-logs-container, #daily-container {
+    grid-column: 1 / -1;
+  }
+  #log-filter-wrap, #logs-container { grid-row: auto; }
+  #view-log.timeline-open #logs-container { grid-column: 1 / -1; }
+
+  #view-home:not(.hidden), #view-log:not(.hidden) { gap: 16px; }
+  #view-home > *, #view-log > * { margin-top: 0; margin-bottom: 0; }
+
+  #app-shell > main > .menu-view { padding-bottom: 2rem; }
+}
+
+@media (min-width: 1024px) and (max-height: 700px) {
+  #app-shell > header { padding-block: 0.5rem; }
+}
+
+#view-home .py-8 > .font-medium,
+#view-log .py-10 > .font-medium {
+  color: var(--jk-muted);
+}
+
+/* Map hint is the black instructional card shown while drawing, GPS tracing, or focusing a farm. Keep it in the clear central map band, away from both floating tool stacks. */
+.map-hint-box { position:absolute; top:112px; left:12px; right:12px; max-width:32rem; pointer-events:none; }
+.map-hint-box > div { max-width:100%; }
+.farm-edit-toolbar { position:absolute; left:12px; right:12px; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); display:flex; gap:8px; padding:12px; background:var(--jk-surface); border:1px solid var(--jk-border-strong); border-radius:12px; box-shadow:0 8px 24px rgba(15,23,42,.25); }
+.farm-edit-toolbar.hidden { display:none; }
+.farm-edit-toolbar > .btn { flex:1 1 0; min-width:0; }
+/* Toast: below modals and sheets (z-index token), above map tools and the nav; one at a time. */
+#toast-notification { top:auto; bottom:calc(112px + env(safe-area-inset-bottom, 0px)); z-index:var(--jk-z-toast); pointer-events:none; font-size:15px; line-height:1.4; padding:12px 16px; max-width:32rem; margin:0 auto; background-color:var(--jk-ink); color:var(--jk-surface); }
+/* Slide only: the toast is fully opaque from its first frame (no opacity fade), so its contrast never dips. */
+@keyframes jk-toast-slide { from { transform: translateY(8px); } to { transform: translateY(0); } }
+#toast-notification.animate-toast-in { animation: jk-toast-slide 0.2s ease-out both; }
+@media (min-width:1024px) { #toast-notification { bottom:24px; left:264px; right:24px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-overlay-fade,
+  .animate-sheet-up,
+  .animate-toast-in,
+  .animate-pulse-subtle {
+    animation: none;
+  }
+}
+
+/* GPS accuracy dot styles are scoped above. */
+.home-place-search { min-width:0; flex:1; min-height:42px; padding:8px 10px; border:1px solid var(--jk-muted); border-radius:8px; background:var(--jk-text); color:white; }
+.home-place-submit { min-height:42px; padding:0 14px; border-radius:8px; background:var(--jk-green-800); color:white; font-weight:700; }
+.camera-loading { position:absolute; inset:0; display:grid; place-items:center; padding:24px; text-align:center; color:var(--jk-border); background:#111827; z-index:1; }
+.camera-loading.hidden { display:none; }
+#camera-stream { z-index:2; }
+#camera-stream::-webkit-media-controls,
+#camera-stream::-webkit-media-controls-start-playback-button { display:none !important; }
+.farm-crops-sheet { position:absolute; z-index:var(--jk-z-map-sheet); left:12px; right:12px; max-width:420px; bottom:calc(112px + env(safe-area-inset-bottom,0px)); max-height:min(55dvh,460px); overflow:auto; overscroll-behavior:contain; padding:16px; background:white; border:1px solid var(--jk-border-strong); border-radius:12px; box-shadow:0 16px 36px #0f172a44; }
+.farm-crops-sheet header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.farm-crops-sheet header h3 { font-size:17px; font-weight:700; color:var(--jk-ink); }
+.farm-crops-heading { min-width: 0; flex: 1; }
+/* 0.2.4.13: the plot sheet lists plants as the Beranda cards (photo, condition, status, date). */
+#farm-crops-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+#farm-crops-list .att-item { width:100%; text-align:left; }
+#farm-crops-sheet[data-mode="nearby"] :is(#farm-crops-edit, #farm-crops-summary) { display: none; }
+.map-nearby-plant { gap: 8px; min-height: 48px; text-align: left; }
+.map-nearby-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.map-nearby-photo {
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--jk-green-50);
+  color: var(--jk-green-900);
+}
+.leaflet-interactive:focus { outline:none; }
+.leaflet-interactive:focus-visible { stroke:var(--jk-green-900); stroke-width:6; stroke-dasharray:none; }
+
+/* ==========================================================================
+   UX 0.2.2.0 — Beranda, Peta, Riwayat, modals, viewer (components come from ui-kit.css).
+   Spacing 4/8/12/16/24/32, cards 12 px radius, controls 8 px, text >= 13 px.
+   ========================================================================== */
+
+/* Phone views: 16 px gutter and 12 px between cards. */
+#view-home:not(.hidden), #view-log:not(.hidden) { gap: 12px; }
+#view-home > section, #view-log > * { min-width: 0; }
+
+/* ---------- Beranda: place + weather in one compact row ---------- */
+.home-place { padding: 12px 12px 12px 16px; }
+.home-place-row { display: flex; align-items: center; gap: 12px; }
+.home-place-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.home-place-name { color: var(--jk-ink); font-size: 16px; font-weight: 700; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-place-weather { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; color: var(--jk-text); font-size: 15px; line-height: 1.4; }
+.home-temp { font-weight: 700; color: var(--jk-ink); }
+.home-sep { color: var(--jk-border-strong); }
+.home-weather-note { color: #92400e; font-weight: 600; }
+.home-place-elev { color: var(--jk-muted); font-size: 13px; line-height: 1.4; }
+.home-place-elev > #home-accuracy-tag { margin-left: 6px; vertical-align: middle; }
+.home-place-weather.is-empty > #home-temp-val, .home-place-weather.is-empty > #home-rh-val, .home-place-weather.is-empty > .home-sep { display: none; }
+.home-place-weather.is-empty > .home-weather-note { color: var(--jk-muted); font-weight: 400; }
+/* Layout classes below set display, so they must lose to .hidden (Tailwind loads first). */
+#view-home > .hidden, #view-log > .hidden, .btn-row.hidden, .btn-stack.hidden, .home-tiles.hidden { display: none !important; }
+#home-accuracy-tag.accuracy-dot { flex: none; }
+
+/* Main actions: the camera is the wide primary, the map the quieter secondary. */
+
+
+/* Stat tiles: each opens Riwayat with that filter. */
+.home-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat-tile {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
+  min-height: 72px; padding: 8px 12px; box-sizing: border-box;
+  background: var(--jk-surface); border: 1px solid var(--jk-border); border-radius: var(--jk-radius-card); box-shadow: var(--jk-shadow-card);
+  font: inherit; text-align: left; color: var(--jk-text); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.stat-tile:active { background: var(--jk-surface-soft); }
+.stat-tile:focus-visible { outline: 3px solid var(--jk-green-700); outline-offset: 2px; }
+.stat-num { font-size: 24px; font-weight: 800; line-height: 1.1; color: var(--jk-ink); }
+.stat-label { font-size: 14px; font-weight: 600; color: var(--jk-muted); }
+.stat-severe { border-left: 4px solid var(--jk-red-600); }
+.stat-severe .stat-num { color: var(--jk-red-700); }
+.stat-moderate { border-left: 4px solid var(--jk-amber-500); }
+.stat-moderate .stat-num { color: #b45309; }
+
+.home-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-bottom: 4px; }
+.home-section-head > .section-title { margin: 0; }
+.home-section-head > .btn { margin-right: -12px; }
+
+/* Perlu perhatian rows */
+button.card-tap.att-item { display: flex; align-items: center; gap: 12px; padding: 12px; min-height: 64px; }
+.att-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.att-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.att-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--jk-ink); font-size: 16px; font-weight: 700; }
+.att-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--jk-text); font-size: 15px; }
+.att-when { color: var(--jk-muted); font-size: 13px; }
+#home-attention-list > .notice { font-size: 15px; }
+
+/* First use */
+.home-empty, .empty-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 16px; text-align: center; }
+.home-empty-icon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--jk-green-50); color: var(--jk-green-700); }
+.home-empty-icon svg { width: 28px; height: 28px; }
+.empty-card > .btn { max-width: 360px; }
+
+/* Foto terbaru carousel */
+#home-history-carousel { padding-bottom: 4px; }
+.history-card {
+  position: relative; flex: 0 0 160px; height: 196px; padding: 0; overflow: hidden;
+  border: 1px solid var(--jk-border); border-radius: var(--jk-radius-card); cursor: pointer; text-align: left; font: inherit;
+}
+.history-card:focus-visible { outline: 3px solid var(--jk-green-700); outline-offset: 2px; }
+.history-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0) 35%, rgba(15,23,42,.82) 100%); pointer-events: none; }
+.history-badge { position: absolute; top: 8px; left: 8px; }
+.history-count { position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 12px; background: rgba(15,23,42,.78); color: var(--jk-surface); font-size: 13px; font-weight: 600; }
+.history-text { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px; color: var(--jk-surface); }
+.history-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 700; }
+.history-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--jk-border); }
+
+/* Catatan harian on Beranda: 3 lines at most */
+.daily-home { display: flex; flex-direction: column; gap: 8px; }
+.daily-home-head { margin: 0; }
+.daily-narrative { color: var(--jk-text); font-size: 15px; line-height: 1.5; white-space: pre-line; }
+.daily-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.daily-home > .btn-row, .daily-item > .btn-row { margin-top: 4px; }
+
+/* ---------- Peta ---------- */
+#view-map { position: relative; overflow: hidden; }
+#map-container { position: absolute !important; inset: 0; }
+.map-toolbar { position: absolute; z-index: var(--jk-z-map-controls); top: 12px; left: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.map-toolbar > * { pointer-events: auto; }
+.map-filter-row { display: flex; gap: 8px; overflow-x: auto; margin: -4px -12px; padding: 4px 12px 6px; scrollbar-width: none; }
+.map-filter-row::-webkit-scrollbar { display: none; }
+.map-filter-row > .chip { flex: none; }
+.map-layer-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none; }
+.map-layer-row > * { pointer-events: auto; }
+.map-layer-switch { display: flex; gap: 0; border-radius: var(--jk-radius-control); box-shadow: 0 2px 8px rgba(15,23,42,.22); }
+.map-layer-switch > .chip { box-shadow: none; }
+.map-layer-switch > .chip:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.map-layer-switch > .chip:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-width: 0; }
+.map-layer-row > .btn { flex: none; }
+.map-tools { position: absolute; z-index: var(--jk-z-map-controls); right: 12px; bottom: calc(136px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.map-tools > .btn { justify-content: flex-start; }
+/* Leaflet's attribution (OSM / Esri credit) must stay visible above the bottom nav. */
+#view-map .leaflet-bottom { bottom: calc(108px + env(safe-area-inset-bottom, 0px)); }
+#view-map.is-drawing .map-hint-box { top: 68px; }
+#view-map.sheet-open .map-tools, #view-map.is-drawing .map-tools { display: none; }
+#view-map.is-drawing .map-layer-row { display: none; }
+@media (max-width: 1023px) { #view-map.sheet-open .map-layer-row { display: none; } }
+/* 0.2.4.15: photos without a location are counted on the map; the hint row pushes the notes down. */
+.map-unlocated-row { display: flex; }
+.map-unlocated-row[hidden] { display: none; }
+.map-unlocated { min-height: 44px; gap: 6px; background: var(--jk-surface); border-color: #fcd34d; color: #92400e; font-size: 14px; }
+#view-map.has-unlocated .map-note, #view-map.has-unlocated .map-hint-box { top: 168px; }
+.map-note { position: absolute; z-index: var(--jk-z-map-notes); top: 116px; left: 12px; right: 12px; max-width: 32rem; padding: 8px 12px; border: 1px solid #fcd34d; border-radius: var(--jk-radius-control); background: var(--jk-warning-bg); color: #78350f; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(15,23,42,.18); }
+.map-note.hidden { display: none; }
+.map-hint-box { z-index: var(--jk-z-map-notes); top: 116px; }
+.map-hint-box.hidden { display: none; }
+#view-map:has(#map-offline-note:not(.hidden)) .map-hint-box { top: 168px; }
+.map-hint { display: flex; align-items: flex-start; gap: 8px; padding: 12px; border-radius: var(--jk-radius-card); background: rgba(15,23,42,.92); color: var(--jk-surface); font-size: 15px; line-height: 1.4; box-shadow: 0 6px 18px rgba(15,23,42,.3); }
+.map-hint svg { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+.draw-bar { position: absolute; z-index: var(--jk-z-map-bars); left: 12px; right: 12px; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--jk-surface); border: 1px solid var(--jk-border-strong); border-radius: var(--jk-radius-card); box-shadow: 0 8px 24px rgba(15,23,42,.25); }
+.draw-bar.hidden { display: none; }
+.draw-stats { margin: 0; text-align: center; color: var(--jk-ink); font-size: 16px; font-weight: 700; }
+.farm-edit-toolbar { z-index: var(--jk-z-map-bars); bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+.custom-farm-pin { background: none; border: 0; }
+#view-map.is-drawing .custom-farm-pin { pointer-events: none; }
+.map-pin {
+  --pin-status: #205745;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 48px;
+  height: 58px;
+  transform: translateX(-50%) scale(var(--pin-scale));
+  transform-origin: bottom center;
+  font-size: calc(14px / var(--pin-scale));
+  font-weight: 800;
+  line-height: 1;
+}
+
+.map-pin-body {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: var(--pin-status);
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transform-origin: top center;
+}
+
+.map-pin-stack .map-pin-body:not(:nth-last-child(2)) {
+  --pin-status: #3c755f;
+  transform: translateY(-6px) scale(.93);
+}
+.map-pin-stack .map-pin-body:first-child:nth-last-child(4) {
+  --pin-status: #62917c;
+  transform: translateY(-12px) scale(.86);
+}
+
+.map-pin-circle {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.map-pin-circle.has-photo { background: #fff; }
+.map-pin-count {
+  color: #1c483a;
+  background: #edf7ef;
+}
+.map-pin-count-long { font-size: calc(11px / var(--pin-scale)); }
+
+.map-pin-circle img, .map-nearby-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.map-pin-circle img {
+  inset: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+}
+.leaflet-control-attribution { font-size: 12px; }
+.leaflet-tooltip { font-size: 13px; }
+
+/* Sheets: the tree detail (inside the map) and the plot list (outside main). Above the nav and the FAB. */
+.map-sheet {
+  position: absolute; z-index: var(--jk-z-map-panel); left: 12px; right: 12px; bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+  max-height: calc(100% - 136px - env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain;
+  box-sizing: border-box; padding: 8px 16px 16px; background: var(--jk-surface); border: 1px solid var(--jk-border);
+  border-radius: var(--jk-radius-card); box-shadow: 0 12px 32px rgba(15,23,42,.3);
+}
+#farm-sheet.map-sheet { z-index: var(--jk-z-map-sheet); max-height: min(70dvh, calc(100dvh - 200px)); display: flex; flex-direction: column; gap: 12px; padding-top: 16px; }
+.sheet-handle { width: 40px; height: 4px; margin: 0 auto 8px; border-radius: 2px; background: var(--jk-border-strong); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sheet-head > .btn-icon { margin-right: -8px; }
+.sheet-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sheet-media { display: flex; align-items: flex-start; gap: 12px; margin: 8px 0; }
+.sheet-media .thumb.thumb-lg { width: 64px; height: 64px; }
+.sheet-media .thumb img { cursor: pointer; }
+.sheet-condition { margin: 0 0 4px; color: var(--jk-ink); font-size: 16px; font-weight: 700; }
+.sheet-info { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding: 12px; border: 1px solid var(--jk-border); border-radius: var(--jk-radius-control); background: var(--jk-surface-soft); }
+.info-action { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--jk-border); color: var(--jk-text); font-size: 15px; line-height: 1.45; }
+.info-action > b { color: var(--jk-muted); font-size: 14px; font-weight: 600; }
+.info-row.hidden { display: none; }
+.farm-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; }
+.farm-info { flex: 1 1 auto; min-width: 0; min-height: 44px; display: flex; flex-direction: column; gap: 2px; padding: 4px 0; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.farm-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--jk-ink); font-size: 16px; font-weight: 700; }
+.farm-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--jk-muted); font-size: 13px; }
+.farm-empty { margin: 0; }
+.farm-crops-sheet { bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+
+/* ---------- Riwayat ---------- */
+.log-filter-wrap { display: flex; flex-direction: column; gap: 12px; }
+.log-filter-wrap.hidden { display: none; }
+#log-search-wrap { position: relative; }
+.log-search-icon { position: absolute; left: 12px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); color: var(--jk-muted); pointer-events: none; }
+.input.log-search-input { padding-left: 44px; }
+.log-chips { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; margin: 0; padding: 0 0 4px; }
+.log-chips::-webkit-scrollbar { display: none; }
+.log-chips > .chip { flex: none; }
+
+.tree-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: auto auto; gap: 4px 12px; padding: 12px; }
+.tree-thumb { grid-column: 1; grid-row: 1 / 3; align-self: start; cursor: pointer; }
+.tree-main { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 0; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.tree-main:focus-visible { outline: 3px solid var(--jk-green-700); outline-offset: 2px; border-radius: var(--jk-radius-control); }
+.tree-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tree-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tree-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--jk-ink); font-size: 16px; font-weight: 700; }
+.tree-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--jk-text); font-size: 15px; }
+.tree-when { color: var(--jk-muted); font-size: 13px; }
+.tree-chev { flex: none; width: 20px; height: 20px; color: var(--jk-muted); }
+.tree-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.tree-card > .tree-actions { grid-column: 2; grid-row: 2; justify-content: space-between; margin-top: 0; }
+.tree-actions > .tree-when { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-actions > .btn { flex: none; }
+
+.tl-head { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.tl-back { align-self: flex-start; margin-left: -12px; }
+.tl-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; }
+.tl-hero > .tl-hero-top { flex: 1 1 260px; min-width: 0; }
+.tl-hero > .tree-actions { margin-top: 0; margin-left: auto; }
+.tl-hero-top { display: flex; align-items: center; gap: 12px; }
+.tl-title { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+.tl-hero-status { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.tl-list { display: flex; flex-direction: column; margin-top: 16px; }
+.tl-entry { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; }
+.tl-rail { display: flex; flex-direction: column; align-items: center; }
+.tl-dot { flex: none; width: 14px; height: 14px; margin-top: 18px; border: 2px solid var(--jk-surface); border-radius: 50%; background: var(--jk-border-strong); box-shadow: 0 0 0 1px var(--jk-border-strong); }
+.tl-dot.bg-red-500 { background: var(--jk-red-600); }
+.tl-dot.bg-amber-400 { background: var(--jk-amber-500); }
+.tl-dot.bg-emerald-500 { background: var(--jk-green-700); }
+/* One continuous rail line through the entries; the dot sits on it. */
+.tl-entry { padding-bottom: 12px; }
+.tl-entry:not(:last-child) > .tl-rail { margin-bottom: -12px; background: linear-gradient(var(--jk-border-strong), var(--jk-border-strong)) center top / 2px 100% no-repeat; }
+.tl-entry:not(:last-child) { margin-bottom: 0; }
+.tl-line { display: none; }
+.tl-card { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+/* Extra buttons that workflow-ui.js adds under the photo viewer caption: same look as the viewer buttons. */
+.viewer-foot .workflow-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.viewer-foot .workflow-actions button { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 12px; border: 1px solid rgba(255,255,255,.35); border-radius: var(--jk-radius-control); background: rgba(255,255,255,.14); color: var(--jk-surface); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.viewer-foot .workflow-actions button::before { content: none; }
+.tl-top { display: flex; align-items: flex-start; gap: 12px; }
+.tl-meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.tl-condition { margin: 4px 0 0; color: var(--jk-ink); font-size: 16px; font-weight: 700; line-height: 1.35; }
+.tl-action { margin: 0; color: var(--jk-text); font-size: 15px; line-height: 1.5; }
+.tl-action > b { font-weight: 600; }
+.tl-more.hidden { display: none; }
+
+.farm-log-card { padding: 12px 16px; }
+.farm-log-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.farm-rec { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 8px 0; border: 0; border-top: 1px solid #f1f5f9; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.farm-rec:first-of-type { border-top: 0; }
+.farm-rec-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.farm-rec-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--jk-ink); font-size: 15px; font-weight: 700; }
+.farm-rec-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--jk-muted); font-size: 13px; }
+
+.daily-item { display: flex; flex-direction: column; gap: 12px; }
+.daily-action { display: flex; align-items: flex-start; gap: 8px; color: var(--jk-text); font-size: 15px; line-height: 1.45; }
+.daily-action svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--jk-green-700); }
+
+/* ---------- Modals (bottom sheet on phones, centred card from 640 px) ---------- */
+.modal-sheet {
+  display: flex; flex-direction: column; gap: 16px; box-sizing: border-box;
+  width: 100%; max-width: 480px; max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--jk-surface);
+  border-radius: var(--jk-radius-card) var(--jk-radius-card) 0 0; box-shadow: 0 -8px 32px rgba(15,23,42,.3);
+}
+@media (min-width: 640px) { .modal-sheet { border-radius: var(--jk-radius-card); padding-bottom: 16px; } }
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.modal-head > .btn-icon { margin: -8px -8px 0 0; }
+.modal-head .t-meta { margin-top: 4px; }
+.confirm-message { margin-top: 8px; }
+.modal-fold-top { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; border-top: 1px solid var(--jk-border); }
+.modal-fold-top > .label { margin-top: 12px; }
+details.fold > summary.btn { width: auto; }
+details.fold > summary.btn-block { width: 100%; }
+.daily-suggest { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border: 1px solid var(--jk-green-200); border-radius: var(--jk-radius-control); background: var(--jk-green-50); }
+.daily-suggest-label { margin: 0; color: var(--jk-green-900); font-weight: 600; }
+#daily-draft-summary { color: var(--jk-text); line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+#status-choice-grid > .btn { justify-content: flex-start; }
+#modal-account .info-row > span:last-child { overflow-wrap: anywhere; }
+
+/* Location editor (built by workflow-ui.js): same sizes as every other dialog. */
+.workflow-dialog { padding: 16px; border-radius: var(--jk-radius-card); }
+.workflow-dialog header { top: -16px; }
+.workflow-dialog h2 { font-size: 18px; }
+.workflow-dialog p { font-size: 14px; line-height: 1.45; }
+.workflow-dialog label { font-size: 15px; font-weight: 600; color: var(--jk-text); }
+.workflow-dialog input, .workflow-dialog select { min-height: 48px; padding: 0 12px; border-color: var(--jk-muted); border-radius: var(--jk-radius-control); font-size: 16px; }
+.workflow-dialog button { min-height: 48px; border-radius: var(--jk-radius-control); font-size: 15px; font-weight: 600; }
+.workflow-dialog header button { min-height: 44px; border: 0; }
+.workflow-dialog #location-save { border-radius: var(--jk-radius-control); font-size: 16px; }
+.workflow-dialog button.btn { border-color: transparent; }
+.workflow-dialog button.btn-secondary { border-color: var(--jk-border-strong); }
+.loc-manual { margin: 12px 0; }
+
+/* ---------- Photo viewer ---------- */
+.viewer-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; }
+.viewer-title { color: var(--jk-surface); font-size: 17px; font-weight: 700; }
+.viewer-sub { color: var(--jk-border-strong); font-size: 14px; }
+.viewer-stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px 16px; }
+.viewer-foot { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.viewer-caption { color: var(--jk-border); font-size: 15px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ---------- Toast placement ----------
+   Above the nav by default. When a sheet, the drawing bar or the camera's sticky action bar sits at the
+   bottom of the screen, the toast moves under the header so it never covers those primary buttons. */
+#app-shell:has(#view-map:not(.hidden).sheet-open) #toast-notification,
+#app-shell:has(#view-map:not(.hidden).is-drawing) #toast-notification,
+#app-shell:has(#farm-sheet:not([hidden])) #toast-notification,
+#app-shell:has(#view-scan:not(.hidden)) #toast-notification { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; }
+@keyframes jk-toast-slide-down { from { transform: translateY(-8px); } to { transform: translateY(0); } }
+
+/* ---------- Tablet / desktop ---------- */
+@media (min-width: 1024px) {
+  .map-toolbar { top: 16px; left: 16px; right: 16px; flex-direction: row; align-items: flex-start; justify-content: space-between; }
+  .map-filter-row { margin: 0; padding: 0; overflow: visible; flex-wrap: wrap; }
+  .map-tools { right: 16px; bottom: 32px; }
+  .map-sheet { left: auto; right: 16px; bottom: 24px; width: 400px; max-height: calc(100% - 96px); }
+  #farm-sheet.map-sheet { right: 24px; bottom: 24px; max-height: calc(100dvh - 140px); }
+  .farm-crops-sheet { left: 256px; bottom: 24px; }
+  .draw-bar, .farm-edit-toolbar { left: 16px; right: auto; width: 420px; bottom: 24px; }
+  .map-note, .map-hint-box { top: 72px; left: 16px; }
+  .log-chips { margin: 0; padding: 0; flex-wrap: wrap; overflow: visible; }
+  #view-log.timeline-open #log-filter-wrap { display: none; }
+  .history-card { flex-basis: 180px; }
+  #app-shell:has(#view-map:not(.hidden).sheet-open) #toast-notification,
+  #app-shell:has(#view-map:not(.hidden).is-drawing) #toast-notification,
+  #app-shell:has(#farm-sheet:not([hidden])) #toast-notification,
+  #app-shell:has(#view-scan:not(.hidden)) #toast-notification { top: 80px; bottom: auto; }
+}
+
+/* Leaflet zoom buttons (location editor map): 44 px touch targets like every other control. */
+.leaflet-touch .leaflet-bar a { width: 44px; height: 44px; line-height: 44px; font-size: 22px; }
+@media (min-width: 1024px) { #view-map .leaflet-bottom { bottom: 0; } }
+
+/* On Peta the top band holds the filter/layer toolbar: the toast goes just below it (and below the drawing hint). */
+#app-shell:has(#view-map:not(.hidden).sheet-open) #toast-notification,
+#app-shell:has(#farm-sheet:not([hidden])) #toast-notification { top: calc(172px + env(safe-area-inset-top, 0px)); }
+#app-shell:has(#view-map:not(.hidden).is-drawing) #toast-notification { top: calc(200px + env(safe-area-inset-top, 0px)); }
+@media (min-width: 768px) and (max-width: 1023px) {
+  #app-shell:has(#view-map:not(.hidden).sheet-open) #toast-notification,
+  #app-shell:has(#farm-sheet:not([hidden])) #toast-notification { top: 188px; }
+  #app-shell:has(#view-map:not(.hidden).is-drawing) #toast-notification { top: 216px; }
+}
+@media (min-width: 1024px) {
+  #app-shell:has(#view-map:not(.hidden).sheet-open) #toast-notification,
+  #app-shell:has(#farm-sheet:not([hidden])) #toast-notification,
+  #app-shell:has(#view-map:not(.hidden).is-drawing) #toast-notification { top: 140px; }
+}
+/* Narrow phones: when the status chip is shown, the logo stays and the word mark gives it room (G8). */
+@media (max-width: 479px) {
+  body.has-status-chip #app-shell > header .header-brand h1 { display: none; }
+  .status-chip { max-width: 52vw; }
+}
+
+/* WEB 0.2.2.0 ===============================================================================================
+   Owned by the WEB implementer: scan flow (UX brief S1-S7), drafts strip (D1), header status chip (G8),
+   Riwayat badge tones (G9), "new version" prompt. Scoped to WEB markup; the UX rules above stay untouched.
+   ========================================================================================================== */
+
+/* ---------- Scan screen: one column; the state is #view-scan[data-scan-state] ---------- */
+#view-scan:not(.hidden) {
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 12px;
+  padding-top: 12px;
+  padding-left: 16px;
+  padding-right: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#view-scan .scan-head { flex: none; }
+#view-scan .scan-head .t-meta { margin-top: 2px; }
+#view-scan:not([data-scan-state="live"]) .scan-head { display: none; }
+#view-scan .capture-tree-context { flex: none; margin: 0; }
+
+#view-scan .scan-body { display: flex; flex-direction: column; gap: 12px; min-height: 0; flex: 1 1 auto; }
+#view-scan #scan-stage {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  flex: 1 1 auto; min-height: 240px; width: 100%;
+}
+#view-scan #scan-frame { border-radius: 12px; }
+#view-scan .scan-flip { position: absolute; top: 12px; right: 12px; z-index: 5; }
+#view-scan .scan-preview-hit { position: absolute; inset: 0; z-index: 3; display: none; background: transparent; border: 0; cursor: zoom-in; }
+#view-scan:not([data-scan-state="live"]) .scan-preview-hit { display: block; }
+#view-scan:not([data-scan-state="live"]) .scan-flip { display: none; }
+
+#view-scan .scan-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+#view-scan .scan-status-head { display: flex; flex-direction: column; gap: 2px; }
+#view-scan .scan-status-head.hidden { display: none; }
+#view-scan .scan-info-links { display: flex; flex-wrap: wrap; gap: 0 4px; margin-left: -12px; }
+#view-scan .scan-info-links.hidden { display: none; }
+/* review without a usable location: the warning card below says it once, the chip would repeat it */
+#view-scan[data-scan-state="review"]:has(#scan-location-warning:not(.hidden)) #scan-location-chip { display: none; }
+#view-scan #capture-location-summary:empty { display: none; }
+#view-scan #scan-offline-note.hidden, #view-scan #scan-photo-date.hidden { display: none; }
+
+/* Location chip under the viewfinder / beside the preview (S1) */
+.scan-chip {
+  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; max-width: 100%;
+  min-height: 32px; padding: 4px 10px; border-radius: 8px; box-sizing: border-box;
+  font-size: 14px; font-weight: 600; line-height: 1.25;
+  background: #f1f5f9; color: #334155; border: 1px solid var(--jk-border-strong);
+}
+.scan-chip > svg, .scan-chip > i[data-lucide] { flex: none; width: 16px; height: 16px; }
+.scan-chip > span { min-width: 0; overflow-wrap: anywhere; }
+.scan-chip[data-tone="ok"] { background: var(--jk-green-50); color: var(--jk-green-900); border-color: var(--jk-green-200); }
+.scan-chip[data-tone="warn"] { background: var(--jk-warning-bg); color: #78350f; border-color: #fcd34d; }
+.scan-chip[data-tone="none"] { background: #fef2f2; color: #7f1d1d; border-color: #fca5a5; }
+
+/* Live: gallery icon + big shutter */
+/* The control blocks do not box their children: the sticky action bar then sticks within the whole scroll view,
+   not within a short panel that may itself start below the fold on small phones. */
+#view-scan .scan-controls { display: contents; }
+#view-scan .scan-shutter { display: flex; align-items: center; gap: 12px; }
+#view-scan .scan-shutter.hidden { display: none; }
+#view-scan .scan-shutter .scan-snap { flex: 1 1 auto; min-height: 56px; }   /* beats the older #scan-controls button 44 px rule */
+#view-scan .scan-shutter .scan-gallery { width: 56px; min-width: 56px; min-height: 56px; cursor: pointer; }
+#view-scan .scan-panel { display: contents; }
+#view-scan .scan-panel.hidden { display: none; }
+#view-scan .scan-notice-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 auto; }
+#view-scan .scan-notice-body .btn { align-self: flex-start; }
+#view-scan .scan-hint-toggle { align-self: flex-start; margin-left: -12px; }
+#view-scan .scan-hint-toggle.hidden { display: none; }
+#view-scan #crop-hint-wrap { display: flex; flex-direction: column; gap: 4px; }
+#view-scan #crop-hint-input { scroll-margin-bottom: 180px; }   /* keeps the field above the sticky Analisa bar */
+#view-scan #crop-hint-wrap[hidden] { display: none; }
+#view-scan .scan-quota:empty { display: none; }
+
+/* Sticky primary action, kept above the bottom nav on phones (S2: reachable without scrolling). */
+#view-scan .scan-actions { margin: 0 -16px; }
+@media (max-width: 1023px) {
+  /* The bottom nav overlays main (~93 px). Sticky offsets count from the padding edge, so the view keeps no bottom
+     padding and a spacer after the last block lets the bar scroll clear of the nav. */
+  #app-shell > main > #view-scan:not(.hidden) { padding-bottom: 0; scroll-padding-bottom: 0; }
+  /* 112 px = nav (~93 px) + the raised camera button + an 8 px gap */
+  #view-scan:not(.hidden)::after { content: ''; flex: none; height: calc(112px + env(safe-area-inset-bottom, 0px)); }
+  #view-scan .scan-actions { bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Review / sending / sent / failed / result: compact preview beside the status (<= ~38 % of the height) */
+#view-scan:not([data-scan-state="live"]) .scan-body { flex: none; flex-direction: row; align-items: flex-start; }
+#view-scan:not([data-scan-state="live"]) #scan-stage {
+  flex: 0 0 auto; min-height: 0; width: min(40%, 200px); height: auto; aspect-ratio: 3 / 4; max-height: 38vh;
+}
+#view-scan:not([data-scan-state="live"]) #scan-frame { border-radius: 8px; }
+#view-scan:not([data-scan-state="live"]) .scan-info { flex: 1 1 0; }
+
+/* Progress */
+.scan-progress-card { display: flex; flex-direction: column; gap: 12px; }
+.scan-progress-row { display: flex; align-items: center; gap: 12px; }
+.scan-spinner { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--jk-green-200); border-top-color: var(--jk-green-700); animation: jk-spin 0.9s linear infinite; box-sizing: border-box; }
+@keyframes jk-spin { to { transform: rotate(360deg); } }
+.scan-meter { height: 8px; border-radius: 4px; background: var(--jk-border); overflow: hidden; }
+/* 0.2.4.16 (audit F14): the fill is full width and scaled, so the bar animates on the compositor, not by layout. */
+.scan-meter > div { height: 100%; width: 100%; transform: scaleX(0); transform-origin: left center; background: var(--jk-green-700); transition: transform 0.24s cubic-bezier(.2,.8,.2,1); }
+.scan-meter[data-state="error"] > div { background: var(--jk-red-600); }
+#res-confidence-fill[data-level="low"] { background: var(--jk-red-700); }
+#res-confidence-fill[data-level="mid"] { background: var(--jk-amber-600); }
+@media (prefers-reduced-motion: reduce) { .scan-spinner { animation: none; } .scan-meter > div { transition: none; } }
+
+/* Result card (S6) */
+.scan-result-card { display: flex; flex-direction: column; gap: 12px; }
+.scan-result-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.scan-result-section { display: flex; flex-direction: column; gap: 4px; }
+.scan-result-section .section-title { margin: 0; }
+.scan-result-card #res-listen { align-self: flex-start; }
+.scan-secondary-row > .btn { min-width: 0; padding: 0 8px; gap: 6px; }
+#scan-assign-card { display: flex; flex-direction: column; gap: 12px; }
+#scan-assign-card.hidden { display: none; }
+#scan-assign-card .section-title { margin: 0; }
+.scan-candidates { display: flex; flex-direction: column; gap: 8px; }
+.scan-candidate { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 8px 12px; min-height: 64px; }
+.scan-candidate-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.scan-candidate-copy > * { overflow-wrap: anywhere; }
+.scan-candidate-mark { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--jk-border-strong); box-sizing: border-box; }
+.scan-candidate.is-selected { border-color: var(--jk-green-700); box-shadow: inset 0 0 0 1px var(--jk-green-700); }
+.scan-candidate.is-selected .scan-candidate-mark { border-color: var(--jk-green-700); background: radial-gradient(circle, var(--jk-green-700) 45%, transparent 50%); }
+#crop-assign-list { display: flex; flex-direction: column; gap: 12px; }
+#crop-assign-list .scan-candidates { max-height: 40vh; overflow-y: auto; }
+
+/* Tablet / desktop: one centred column, a larger preview */
+@media (min-width: 1024px) {
+  #view-scan:not(.hidden) { padding-top: 24px; padding-bottom: 32px; }
+  #view-scan[data-scan-state="live"] #scan-stage { min-height: 360px; }
+  #view-scan:not([data-scan-state="live"]) #scan-stage { width: 240px; max-height: 40vh; }
+  #view-scan .scan-actions { margin: 0; bottom: 0; border: 1px solid var(--jk-border); border-radius: 12px; }
+}
+
+/* ---------- Drafts strip in Riwayat (D1) ---------- */
+#offline-drafts.drafts-strip { display: flex; flex-direction: column; flex: none; gap: 0; padding: 0; margin: 0; background: var(--jk-surface); border: 1px solid #fcd34d; border-radius: 12px; }
+#offline-drafts.drafts-strip[hidden] { display: none; }
+#offline-drafts.drafts-strip[data-tone="bad"] { border-color: #fca5a5; }
+#offline-drafts.drafts-strip[data-tone="busy"] { border-color: var(--jk-green-200); }
+.drafts-strip-head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px; background: var(--jk-warning-bg); border-radius: 11px; }
+#offline-drafts .drafts-toggle[aria-expanded="true"] { border-radius: 8px; }
+#offline-drafts:has(.drafts-list:not([hidden])) .drafts-strip-head { border-radius: 11px 11px 0 0; }
+#offline-drafts[data-tone="bad"] .drafts-strip-head { background: #fef2f2; }
+#offline-drafts[data-tone="busy"] .drafts-strip-head { background: var(--jk-green-50); }
+.drafts-toggle { flex: 1 1 auto; min-width: 0; justify-content: flex-start; gap: 4px; padding: 0 8px; color: var(--jk-ink); }
+/* 0.2.4.14: the down arrow sits in the middle of the strip head, the summary stays left. */
+#offline-drafts .drafts-toggle { display: grid; grid-template-columns: minmax(max-content, 1fr) auto minmax(0, 1fr); align-items: center; }
+/* Centred while the summary fits the left half; a longer summary (with "Kirim sekarang") keeps one line and pushes the arrow right. */
+#offline-drafts .drafts-toggle .btn-label { grid-column: 1; text-align: left; white-space: nowrap; }
+#offline-drafts .drafts-toggle .drafts-chevron { grid-column: 2; justify-self: center; }
+.drafts-toggle > svg.drafts-chevron, .drafts-toggle > i.drafts-chevron { width: 18px; height: 18px; }
+#drafts-send { flex: none; padding: 0 12px; }
+.drafts-toggle .btn-label { font-size: 15px; }
+.drafts-toggle .drafts-chevron { transition: transform 0.15s ease; }
+.drafts-toggle[aria-expanded="true"] .drafts-chevron { transform: rotate(180deg); }
+.drafts-list { display: flex; flex-direction: column; gap: 0; }
+.drafts-list[hidden] { display: none; }
+.draft-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-top: 1px solid var(--jk-border); min-width: 0; }
+.draft-row-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 auto; }
+.draft-row-title { font-size: 15px; font-weight: 700; color: var(--jk-ink); overflow-wrap: anywhere; }
+.draft-row-meta { font-size: 13px; color: var(--jk-muted); overflow-wrap: anywhere; }
+.draft-row-reason { font-size: 13px; color: #7f1d1d; overflow-wrap: anywhere; }
+.draft-row-reason:empty { display: none; }
+/* 0.2.4.14: a photo being analysed opens its progress; the copy block is a plain-looking button. */
+button.draft-row-open { appearance: none; background: none; border: 0; padding: 4px 0; margin: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 44px; border-radius: 8px; }
+button.draft-row-open:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
+.draft-row-reason.is-hint { color: var(--jk-green-800); font-weight: 600; }
+.draft-thumb.is-tappable { cursor: pointer; }
+.draft-chip { align-self: flex-start; display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 700; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; background: #f1f5f9; color: var(--jk-text); }
+.draft-chip[data-tone="wait"] { background: var(--jk-warning-bg); color: #78350f; }
+.draft-chip[data-tone="busy"] { background: var(--jk-green-50); color: var(--jk-green-900); }
+.draft-chip[data-tone="bad"] { background: #fef2f2; color: #7f1d1d; }
+.draft-row-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.draft-more { position: relative; }
+.draft-more > summary { list-style: none; }
+.draft-more > summary::-webkit-details-marker { display: none; }
+.draft-more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: var(--jk-z-menu); display: flex; flex-direction: column; gap: 4px; min-width: 200px; padding: 8px; background: var(--jk-surface); border: 1px solid var(--jk-border-strong); border-radius: 12px; box-shadow: var(--jk-shadow-raised); }
+.draft-more-menu .btn { justify-content: flex-start; width: 100%; }
+.drafts-empty { padding: 12px 16px; font-size: 14px; color: var(--jk-muted); }
+
+/* ---------- Header status chip (G8) ---------- */
+.status-chip {
+  display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; max-width: 46vw;
+  height: 44px; min-height: 44px; padding: 0 10px; border-radius: 8px; box-sizing: border-box; cursor: pointer;
+  border: 1px solid #fcd34d; background: var(--jk-warning-bg); color: #78350f; font: inherit; font-size: 15px; font-weight: 700; line-height: 1.2;
+}
+.status-chip.hidden { display: none; }
+.status-chip > svg, .status-chip > i[data-lucide] { flex: none; width: 18px; height: 18px; }
+.status-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-chip[data-tone="offline"] { background: #f1f5f9; border-color: var(--jk-border-strong); color: var(--jk-text); }
+.status-chip[data-tone="bad"] { background: #fef2f2; border-color: #fca5a5; color: #7f1d1d; }
+.status-chip[data-tone="busy"] { background: var(--jk-green-50); border-color: var(--jk-green-200); color: var(--jk-green-900); }
+.status-chip:focus-visible { outline: 3px solid var(--jk-green-700); outline-offset: 2px; }
+
+/* Riwayat badge tones (G9): new results green, waiting amber, failed red */
+.nav-badge[data-tone="new"] { background: var(--jk-green-700); }
+.nav-badge[data-tone="warn"] { background: #b45309; }
+.nav-badge[data-tone="bad"] { background: var(--jk-red-600); }
+
+/* "Versi baru tersedia" */
+.update-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; background: var(--jk-green-50); border-bottom: 1px solid var(--jk-green-200); color: var(--jk-green-900); font-size: 15px; font-weight: 600; position: relative; z-index: var(--jk-z-bars); }
+.update-banner[hidden] { display: none; }
+
+/* Attention strip (the old sync banner, now only for problems the farmer must act on) */
+.sync-banner { font-size: 14px; }
+.sync-banner[data-tone="bad"] { background: #fef2f2; color: #7f1d1d; border-bottom-color: #fca5a5; }
+.sync-banner[data-tone="warn"] { background: var(--jk-warning-bg); color: #78350f; border-bottom-color: #fcd34d; }
+.sync-banner #sync-retry { min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--jk-border-strong); background: var(--jk-surface); color: var(--jk-green-900); font-weight: 700; font-size: 14px; }
+.sync-banner .sync-pending-label { display: none; }
+
+/* ---------------------------------------------------------------- owner feedback 0.2.2.0 (phone test) */
+/* Riwayat tabs: the inner radius follows the outer one (12 px outer - 4 px padding = 8 px), so the corners nest. */
+.seg > button, .seg > .seg-item { border-radius: 8px; }
+/* Tree cards: one row, as tall as the thumbnail — thumbnail | text | camera icon. */
+.tree-card { grid-template-columns: 64px minmax(0, 1fr) auto; grid-template-rows: auto; align-items: center; gap: 0 12px; }
+.tree-card > .tree-thumb { grid-column: 1; grid-row: 1; align-self: center; }
+.tree-card > .tree-main { grid-column: 2; grid-row: 1; min-height: 64px; }
+.tree-card > .tree-cam { grid-column: 3; grid-row: 1; }
+.tree-cam.btn-icon{width:56px;min-width:56px;height:56px;min-height:56px;border-radius:12px}.tree-cam.btn-icon > i[data-lucide],.tree-cam.btn-icon > svg{width:26px;height:26px}
+.tree-card .tree-when { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Map tools: icon only. */
+.map-tools > .btn-icon { justify-content: center; }
+/* Riwayat status filters carry their status colour; the active one is filled. */
+.log-chips .chip[data-filter="review"] { border-color: #93c5fd; background: #eff6ff; color: #1d4ed8; }
+.log-chips .chip[data-filter="Severe"] { border-color: #fca5a5; background: #fef2f2; color: var(--jk-red-700); }
+.log-chips .chip[data-filter="Moderate"] { border-color: #fcd34d; background: var(--jk-warning-bg); color: #92400e; }
+.log-chips .chip[data-filter="Healthy"] { border-color: #86efac; background: var(--jk-green-50); color: var(--jk-green-700); }
+.log-chips .chip[data-filter="review"][aria-pressed="true"] { background: #1d4ed8; border-color: #1d4ed8; color: var(--jk-surface); }
+.log-chips .chip[data-filter="Severe"][aria-pressed="true"] { background: var(--jk-red-600); border-color: var(--jk-red-600); color: var(--jk-surface); }
+.log-chips .chip[data-filter="Moderate"][aria-pressed="true"] { background: var(--jk-amber-500); border-color: var(--jk-amber-500); color: #1f2937; }
+.log-chips .chip[data-filter="Healthy"][aria-pressed="true"] { background: var(--jk-green-700); border-color: var(--jk-green-700); color: var(--jk-surface); }
+.log-chips .chip[data-filter="Moderate"][aria-pressed="true"] .chip-count { background: rgba(255, 255, 255, 0.5); color: #1f2937; }
+/* Plant-type picker: tappable suggestion chips instead of the browser's datalist popup. */
+.crop-hint-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.crop-hint-chips[hidden] { display: none; }
+
+/* ---------------------------------------------------------------- owner feedback 0.2.2.1 (desktop Beranda) */
+/* Foto terbaru slider: round arrows over the row ends, mouse only (touch swipes), each hidden at its end. */
+.carousel-wrap { position: relative; }
+.carousel-nav {
+  position: absolute; z-index: 2; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
+  border: 1px solid var(--jk-border-strong); border-radius: 50%; background: rgba(255, 255, 255, 0.96); color: var(--jk-ink);
+  box-shadow: var(--jk-shadow-raised); cursor: pointer;
+}
+.carousel-nav.is-prev { left: 8px; }
+.carousel-nav.is-next { right: 8px; }
+.carousel-nav:hover { background: var(--jk-surface); border-color: var(--jk-border-strong); }
+.carousel-nav:focus-visible { outline: 3px solid var(--jk-green-700); outline-offset: 2px; }
+.carousel-nav svg { width: 22px; height: 22px; }
+.carousel-nav[hidden] { display: none; }
+@media (hover: none) { .carousel-nav { display: none; } }
+
+@media (min-width: 1024px) {
+  /* Location and summary use the full width; camera/map remain in navigation. */
+  #home-place-card { grid-column: 1 / -1; grid-row: 1; }
+  #home-tiles { grid-column: 1 / -1; grid-row: 2; }
+  #home-attention { grid-column: 1 / span 2; grid-row: 3; }
+  #home-daily { grid-column: 3; grid-row: 3; align-self: stretch; display: flex; flex-direction: column; }
+  #home-daily-card { flex: 1 1 auto; display: flex; flex-direction: column; }
+  #home-daily-card > .card { flex: 1 1 auto; }
+  #home-daily-card .daily-home > .btn-row { margin-top: auto; }
+  #home-daily-card .daily-clamp { -webkit-line-clamp: 8; }
+  #home-recent { grid-column: 1 / -1; grid-row: 4; }
+  /* The phone row bleeds to the screen edge; on desktop it stops at the content edges like every other card. */
+  #home-history-carousel { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+  #view-home:has(#home-empty:not(.hidden)) #home-place-card { grid-column: 1 / -1; }
+
+  /* Collapsible menu, Gemini-style. Every icon keeps the same x position in both states: the menu has 12 px side
+     padding, the logo sits in a 48 px box at its left edge and each item icon is centered on the rail, so
+     collapsing only clips the labels and the name. Expanded: logo | name | "Ciutkan menu". Collapsed: the logo is
+     the "Buka menu" button, and hovering or focusing it swaps it for the panel icon. */
+  #app-shell { transition: grid-template-columns 0.2s ease; }
+  #desktop-nav { padding-left: 12px; padding-right: 12px; overflow: hidden; }
+  #desktop-nav .desktop-brand { gap: 4px; margin: 0 0 1.2rem; padding: 0; min-height: 48px; }
+  .brand-logo {
+    position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; padding: 0; border: 0; border-radius: var(--jk-radius-control); background: transparent;
+    color: var(--jk-ink); cursor: default; pointer-events: none;
+  }
+  .brand-logo img { width: 34px; height: 34px; object-fit: contain; }
+  .brand-open-ico { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .brand-open-ico svg { width: 22px; height: 22px; }
+  .brand-name { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; color: var(--jk-ink); font-weight: 800; }
+  .desktop-nav-toggle {
+    flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
+    border: 0; border-radius: var(--jk-radius-control); background: transparent; color: var(--jk-muted); cursor: pointer;
+  }
+  .desktop-nav-toggle svg { width: 20px; height: 20px; }
+  .desktop-nav-toggle:hover, .desktop-nav-toggle:focus-visible { background: var(--jk-border); color: var(--jk-ink); }
+  #desktop-nav > button { padding: 0 12px; white-space: nowrap; }
+  .jk-nav-collapsed #app-shell { grid-template-columns: 72px minmax(0, 1fr); }
+  .jk-nav-collapsed .brand-logo { pointer-events: auto; cursor: pointer; }
+  .jk-nav-collapsed .brand-logo:hover, .jk-nav-collapsed .brand-logo:focus-visible { background: var(--jk-border); }
+  .jk-nav-collapsed .brand-logo:hover img, .jk-nav-collapsed .brand-logo:focus-visible img { visibility: hidden; }
+  .jk-nav-collapsed .brand-logo:hover .brand-open-ico, .jk-nav-collapsed .brand-logo:focus-visible .brand-open-ico { display: inline-flex; }
+  .jk-nav-collapsed .desktop-nav-toggle { display: none; }
+  .jk-nav-collapsed .desktop-brand > .brand-name,
+  .jk-nav-collapsed #desktop-nav > button > span:not(.nav-badge) {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .jk-nav-collapsed #toast-notification { left: 104px; }
+}
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) { #app-shell { transition: none; } }
+
+/* ---------------------------------------------------------------- owner feedback 0.2.2.1 (Riwayat cards + timeline) */
+/* List-item layout for plant cards (Riwayat and Beranda): leading photo and trailing action are both vertically centred;
+   the status is part of the text, on the meta line with the time, so nothing floats in a corner. */
+.badge.badge-sm { height: 22px; padding: 0 8px; }
+.card-status { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.card-status > .badge { flex: none; }
+.card-status > .tree-when, .card-status > .att-when { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-card { align-items: center; }
+.tree-card > .tree-thumb, .tree-card > .tree-cam { align-self: center; }
+.tree-card .tree-name { display: block; }
+button.card-tap.att-item { align-items: center; }
+.att-name { display: block; }
+
+/* Timeline: one 2 px line running from dot centre to dot centre; each dot is centred on the line and on its status row
+   (card padding 12 px + half the 28 px badge = 26 px). Nothing sticks out above the first dot or below the last. */
+.tl-entry { position: relative; }
+.tl-entry:not(:last-child) > .tl-rail { margin-bottom: 0; background: none; }
+.tl-entry:not(:last-child)::before {
+  content: ''; position: absolute; left: 9px; top: 26px; bottom: -26px; width: 2px; background: var(--jk-border-strong); border-radius: 1px;
+}
+.tl-rail { position: relative; z-index: 1; }
+.tl-dot { width: 14px; height: 14px; margin-top: 19px; border: 2px solid var(--jk-surface); box-shadow: 0 0 0 1px var(--jk-border-strong); box-sizing: border-box; }
+
+/* AI confidence on each timeline entry */
+.tl-confidence { margin: 2px 0 0; color: var(--jk-muted); font-size: 13px; font-weight: 600; line-height: 1.4; }
+.tl-confidence.is-low { color: #b45309; }
+
+/* 0.2.3.3: the photo and status row share a bottom edge in both plant lists. */
+button.card-tap.att-item { align-items:flex-end; }
+.att-item > .thumb, .tree-thumb > .thumb { width:72px; height:72px; display:block; }
+.att-body, .tree-body { min-height:72px; }
+.att-name, .tree-name, .att-sub, .tree-sub { line-height:20px; }
+.att-body > .card-status, .tree-body > .card-status { margin-top:auto; min-height:22px; line-height:20px; }
+.tree-card { grid-template-columns:72px minmax(0,1fr) auto; }
+.tree-card > .tree-thumb { display:flex; align-self:end; line-height:0; }
+.tree-card > .tree-main { min-height:72px; align-items:stretch; }
+
+/* Icons must not shrink while labels re-enter the expanding desktop rail. */
+@media (min-width:1024px) {
+  #desktop-nav > button > svg { flex:none; }
+  #desktop-nav > button > span:not(.nav-badge) { min-width:0; overflow:hidden; text-overflow:clip; }
+}
+
+/* Magenta plot edges retain a light/dark halo over roads and vegetation. */
+.farm-boundary { filter: drop-shadow(0 0 1px var(--jk-surface)) drop-shadow(0 0 1px var(--jk-ink)); }
+
+/* Keep the photograph visible; the full report has its own dialog. */
+#photo-viewer{position:fixed;height:100dvh;overflow:hidden;background:#0b1020}
+.viewer-head{flex:none}
+.viewer-stage{overflow:hidden}
+.viewer-stage img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain}
+.viewer-foot{flex:0 1 auto;min-height:0;max-height:42dvh;width:100%;max-width:760px;box-sizing:border-box;align-self:center;overflow-y:auto;overscroll-behavior:contain;color:var(--jk-border)}
+.viewer-caption{display:block;-webkit-line-clamp:unset;overflow:visible}
+.viewer-caption .assessment-summary-current,.viewer-caption .assessment-previous{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+
+/* Full analysis and history share a row in the map detail, including phones. */
+.sheet-history-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:stretch}
+.sheet-history-row>.btn,.sheet-history-row #sheet-assessment>.btn{width:100%;height:100%;min-height:52px;white-space:normal;line-height:1.3;padding:10px 12px}
+.sheet-history-row #sheet-assessment{min-width:0;display:flex}
+.sheet-history-row .btn-label{white-space:normal;overflow:visible;text-overflow:clip}
+.sheet-history-row:has(#sheet-assessment:empty) #sheet-open-history{grid-column:1/-1}
+
+
+/* ---------- 0.2.4.17 Petak: sheet header, summary teaser and Ringkasan petak; Ubah data tanaman ---------- */
+.farm-crops-sheet header h3 { min-width: 0; flex: 1; }
+.farm-crops-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.farm-crops-actions .btn-icon { margin-right: -8px; }
+.plot-teaser { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 56px; margin-top: 12px; padding: 8px 12px; text-align: left;
+  border: 1px solid var(--jk-green-200); border-radius: var(--jk-radius-control); background: var(--jk-green-50); color: var(--jk-ink); cursor: pointer; }
+.plot-teaser:focus-visible { outline: 3px solid var(--jk-green-700); outline-offset: 2px; }
+.plot-teaser > svg { flex: none; width: 20px; height: 20px; color: var(--jk-green-700); }
+.plot-teaser-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.plot-teaser-title { font-size: 15px; font-weight: 700; color: var(--jk-green-800); }
+.plot-teaser-sub { font-size: 13px; color: var(--jk-muted); }
+.farm-log-summary { margin: 4px 0 8px; }
+.plot-summary { display: flex; flex-direction: column; gap: 16px; }
+.plot-status { display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: var(--jk-radius-control); border: 1px solid var(--jk-line, var(--jk-border)); background: var(--jk-surface-soft); }
+.plot-status-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.plot-tone-severe { border-color: var(--jk-red-600); }
+.plot-tone-moderate { border-color: var(--jk-amber-500); }
+.plot-tone-healthy { border-color: var(--jk-green-600); }
+.plot-block { display: flex; flex-direction: column; gap: 8px; }
+.plot-h { font-size: 15px; font-weight: 700; color: var(--jk-ink); }
+.plot-p { font-size: 15px; line-height: 1.45; color: var(--jk-text); }
+.plot-fit.is-out { color: var(--jk-red-700); font-weight: 600; }
+.plot-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.plot-stat { min-height: 64px; padding: 8px 10px; cursor: default; }
+.plot-stat .stat-label { font-size: 13px; line-height: 1.25; }
+.stat-healthy { border-left: 4px solid var(--jk-green-700); }
+.stat-healthy .stat-num { color: var(--jk-green-700); }
+.plot-species { padding: 12px; border: 1px solid var(--jk-line, var(--jk-border)); border-radius: var(--jk-radius-control); }
+.plot-species-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; font-size: 15px; }
+.plot-plant-list { display: flex; flex-direction: column; margin-top: 8px; }
+.plot-plant-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; }
+.plot-plant-row + .plot-plant-row { border-top: 1px solid var(--jk-line, var(--jk-border)); }
+.plot-plant-main { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.plot-plant-name { font-size: 14px; overflow-wrap: anywhere; }
+.plot-plant-label { overflow-wrap: anywhere; }
+.plot-reanalyze { min-height: 44px; flex: none; }
+.plot-reanalyze > i[data-lucide] { display: none; }
+.plot-problems { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.plot-problems li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 15px; color: var(--jk-text); }
+.plot-problems li > span:nth-child(2) { flex: 1; min-width: 0; }
+.plot-kind { padding: 2px 8px; border-radius: var(--jk-radius-control); font-size: 13px; font-weight: 700; background: var(--jk-surface-soft); color: var(--jk-muted); }
+.plot-kind-hama { background: var(--jk-amber-500); color: var(--jk-ink); }
+.plot-kind-penyakit { background: var(--jk-red-600); color: var(--jk-surface); }
+.plot-kind-hara { background: var(--jk-green-100); color: var(--jk-green-900); }
+.plot-list { display: flex; flex-direction: column; gap: 8px; padding-left: 20px; list-style: disc; font-size: 15px; line-height: 1.45; color: var(--jk-text); }
+.plot-advice { list-style: none; padding-left: 0; }
+.plot-advice li { position: relative; padding-left: 24px; }
+.plot-advice li::before { content: ''; position: absolute; left: 4px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--jk-green-700); }
+.plot-caveat { font-size: 13px; line-height: 1.4; color: var(--jk-muted); }
+.check-row { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 15px; color: var(--jk-text); cursor: pointer; }
+.check-row[hidden] { display: none; }
+.check-row input { width: 22px; height: 22px; flex: none; accent-color: var(--jk-green-700); }
+.record-edit-location { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.record-edit-location .min-w-0 { display: flex; flex-direction: column; }
+.record-edit-location .label { margin-bottom: 0; }
+.record-edit-problems { display: flex; flex-direction: column; gap: 12px; }
+.record-edit-problems .hint { margin: -4px 0 0; }
+.tl-corrected { margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--jk-green-800); }

@@ -1,0 +1,64 @@
+{
+  "passed": false,
+  "security_concerns": [
+    {
+      "severity": "medium",
+      "status": "confirmed_reproducible",
+      "file": "backend/queue.py",
+      "line": 317,
+      "title": "Malformed historical context JSON blocks all upload admission",
+      "details": "fast_quota_snapshot executes json_extract(context_json, '$.analysisTier') without guarding malformed JSON. The snapshot is invoked for every new job, including normal-tier submissions, so one malformed jobs.context_json row for that account causes SQLite OperationalError ('malformed JSON') and prevents all further uploads rather than treating the row as uncountable/legacy. Reproduced against an isolated temporary SQLite DB with a synthetic failed job containing context_json='{bad json'; fast_quota_snapshot raised sqlite3.OperationalError.",
+      "impact": "Account-level denial of service for uploads when legacy/corrupt/imported job context is malformed. No production data was accessed.",
+      "reproduction": "Create synthetic account x and job j in a temporary database, insert context_json='{bad json', then call queue.fast_quota_snapshot({'id':'x','role':'user'})."
+    }
+  ],
+  "logic_errors": [
+    {
+      "severity": "low",
+      "status": "confirmed_source_gap",
+      "file": "../deliverables/jagakebond-2.1.2/jagakebond-2.1.2-source.zip",
+      "title": "Delivered native client does not honor Retry-After",
+      "details": "Inspected delivered android-client UploadWorker.java and JagaSyncPlugin.java; neither contains Retry-After handling. The frontend offline-sync.js reads Retry-After and applies a retry delay, but the handoff's broader assertion that native sync already honors the header is not supported by the delivered 2.1.2 native source. Backend emits a valid delta-seconds header; native retries therefore use their existing behavior rather than this server-provided reset time.",
+      "impact": "Native/offline submissions may retry before the quota resets or wait using a generic policy. This does not bypass the server quota.",
+      "reproduction": "Search the two delivered Java sources for 'Retry-After'; no matches. Compare frontend/offline-sync.js lines 45-47, which parses it."
+    }
+  ],
+  "suggestions": [
+    "Guard JSON extraction using json_valid(context_json), e.g. CASE WHEN json_valid(context_json) THEN json_extract(...) END; add malformed/null/valid-context coverage for both fast and normal admission.",
+    "Either implement Retry-After handling in the native client before a future native release or narrow the handoff claim to the web/offline-sync client; verify against the actual release artifact when available.",
+    "The frontend retry delay clamps server Retry-After to one hour; that is an intentional/operational behavior to verify if long waits are expected, since a next-midnight value can exceed that limit."
+  ],
+  "reviewed_file_sha256": {
+    "backend/api_app.py": "461b4de208ca02091cbd0ed21355477bde3f9ba61a8f77fcbfec9bd62f7203bb",
+    "backend/auth.py": "8b33e23e1a4ce880468ab49a8ad92916a08d66dc1152af1472e32e66eb05f15e",
+    "backend/api_admin.py": "a85a686fdb24c7c42ba43f5989bc05de929360816b0aa39b425823846e89f136",
+    "backend/db.py": "eb991ef23146a4ebf8d1b1b29203091aa4f90fa3557502df61bd64b9f05a8736",
+    "backend/queue.py": "a11014897cb097ea2ffe2a24c6047625ac883c4227332a9c482dc39f3f5881db",
+    "backend/settings_store.py": "77a95649bcbedca27edf250c8022f46e12db224d567a0583c6bf145df517791a",
+    "tests/test_fast_tiers.py": "89e2997763df5324db99985057dfad0f7ef0004092ad8bae722212d72535a3e6",
+    "tests/test_api_contract.py": "f02c13b578c0144f1be2f16c2f4d5c55170deab14cb3e652c1b8b50cc1c783a4"
+  },
+  "executed_checks": [
+    {
+      "command": "/opt/jagakebond/venv/bin/python tests/test_fast_tiers.py && /opt/jagakebond/venv/bin/python tests/test_api_contract.py",
+      "result": "PASS; both returned zero. API contract printed: api contract: ownership, idempotency, quota, validation, ack, SSRF and result assertions passed. Tests ran from app/ and their fixtures used temporary SQLite databases."
+    },
+    {
+      "command": "/opt/jagakebond/venv/bin/python <isolated malformed-JSON reproducer>",
+      "result": "CONFIRMED: sqlite3.OperationalError malformed JSON from fast_quota_snapshot after inserting synthetic malformed context_json into a temporary DB."
+    },
+    {
+      "command": "unzip source archive; inspect android-client/.../UploadWorker.java and JagaSyncPlugin.java for Retry-After",
+      "result": "No Retry-After occurrence in either native source file; frontend/offline-sync.js parses the header."
+    },
+    {
+      "command": "sha256sum backend/{api_app,auth,api_admin,db,queue,settings_store}.py tests/test_fast_tiers.py tests/test_api_contract.py",
+      "result": "Hashes recorded above."
+    },
+    {
+      "command": "unified diff of six reviewed backend files against JagaKebond-2.1.2/app/backend/ in delivered source ZIP",
+      "result": "Diffs reviewed for the quota changes: authoritative role/active admission in transaction; cap calculation and Jakarta window; normal-mode exclusion; legacy daily_quota compatibility handling; and 429 Retry-After."
+    }
+  ],
+  "scope_notes": "Read-only review. No edits to source/tests, production imports/data/environment, credentials, or network services. Only this review report is created. Quota deletion/purge was traced: purge deletes only acked terminal rows after long retention, so it cannot remove current-day admissions. The per-admission role read and SQLite writer transaction serialize quota counting/insertion; idempotent replay is checked before cap rejection. Jakarta midnight window uses timezone-aware local date boundaries. Registration forces user; priority role is accepted only through admin account management and receives no require_admin privilege. Legacy stored daily_quota does not control caps."
+}

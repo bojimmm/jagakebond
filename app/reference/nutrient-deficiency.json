@@ -1,0 +1,37 @@
+{
+  "version": "2026-10-30.1",
+  "title": "Rujukan gejala kekurangan unsur hara untuk analisis foto",
+  "method": "Ringkasan gejala visual dari bahan penyuluhan resmi Indonesia (JICA bersama Ditjen Hortikultura Kementerian Pertanian dan BBPP Kupang, BPSDMP Kementerian Pertanian). Rujukan ini membantu menyebut dugaan yang masuk akal; bukan hasil uji tanah atau daun.",
+  "limitations": [
+    "Gejala kekurangan hara sering mirip gejala penyakit, keracunan, atau kerusakan akar; foto daun saja tidak membuktikan kekurangan hara.",
+    "Kekurangan hara tidak dapat dipastikan hanya dari warna daun; perlu pola antar tanaman, riwayat pemupukan, pH, dan uji tanah atau daun.",
+    "Rujukan ini tidak memuat merek, dosis, atau jadwal pemupukan. Jangan menuliskan dosis apa pun.",
+    "Gejala akibat pH tanah masam atau basa (pH di bawah 5,5 atau di atas 7,5) menyerupai kekurangan hara meski unsur tersedia di tanah."
+  ],
+  "nutrients": [
+    {"symbol": "N", "name": "Nitrogen", "mobile": true, "short": "Daun tua menguning merata dari bawah, tanaman kerdil, daun sempit dan pendek; pada padi tingkat kehijauan daun menurun."},
+    {"symbol": "P", "name": "Fosfor", "mobile": true, "short": "Daun tua berwarna gelap keunguan atau kemerahan, tumbuh kerdil, akar kurang berkembang, pembungaan dan pembentukan buah atau biji berkurang."},
+    {"symbol": "K", "name": "Kalium", "mobile": true, "short": "Tepi dan ujung daun tua menguning lalu coklat dan mengering, batang dan daun lemas mudah rebah, tanaman lebih rentan penyakit."},
+    {"symbol": "Ca", "name": "Kalsium", "mobile": false, "short": "Titik tumbuh dan daun muda keriput atau rusak, tepi daun klorosis, kuncup bunga mati; pada tomat muncul busuk pantat buah; sering dipicu pasokan air tidak stabil."},
+    {"symbol": "Mg", "name": "Magnesium", "mobile": true, "short": "Klorosis di antara tulang daun pada daun tua, kadang bercak merah kecoklatan, daun mudah terbakar."},
+    {"symbol": "S", "name": "Sulfur", "mobile": false, "short": "Daun muda menguning, warna hijau pucat dan tidak merata, pertumbuhan terhambat."},
+    {"symbol": "Fe", "name": "Besi", "mobile": false, "short": "Klorosis di antara tulang daun pada daun muda, tulang daun tetap hijau."},
+    {"symbol": "Mn", "name": "Mangan", "mobile": false, "short": "Klorosis pada bagian tanaman yang baru, kadang disertai bintik."},
+    {"symbol": "Zn", "name": "Seng", "mobile": false, "short": "Daun mengecil dan menyempit, daun menggulung atau mendeformasi, klorosis, pertumbuhan terhambat."},
+    {"symbol": "B", "name": "Boron", "mobile": false, "short": "Ujung tunas dan akar rusak, buah muda retak atau bercak, perkembangan biji dan buah terganggu."},
+    {"symbol": "Cu", "name": "Tembaga", "mobile": false, "short": "Daun kering dan rapuh, pertumbuhan batang dan pembungaan terganggu."},
+    {"symbol": "Mo", "name": "Molibdenum", "mobile": true, "short": "Klorosis terutama pada daun tua, pemanfaatan nitrogen terganggu."}
+  ],
+  "crops": [
+    {"key": "padi", "name": "Padi", "note": "Kekurangan N dinilai dari tingkat kehijauan daun (Bagan Warna Daun); kekurangan P dan K mengikuti status hara tanah, bukan foto. Jangan menyimpulkan dosis."},
+    {"key": "jagung", "name": "Jagung", "note": "Kebutuhan N, P, dan K mengikuti status hara tanah hasil uji tanah; gejala daun hanya menjadi petunjuk awal."},
+    {"key": "tomat", "name": "Tomat", "note": "Rujukan resmi memakai batang paling atas untuk menilai N. Ujung daun menguning menandakan kurang K. Busuk pantat buah dan pecah buah menandakan masalah Kalsium, bukan penyakit."},
+    {"key": "cabai", "name": "Cabai", "note": "Pada cabai, paprika, dan terung, kekurangan hara juga terlihat pada bentuk bunga: tangkai putik lebih pendek dari kepala sari menandakan penyerbukan dan hara yang tidak seimbang."}
+  ],
+  "sources": [
+    {"url": "https://data.hortikultura.pertanian.go.id/jica/Materials/Chapter%205/5-9%20Panduan%20teknis%20tentang%20identifikasi%20unsur%20hara.pdf", "publisher": "Direktorat Jenderal Hortikultura, Kementerian Pertanian (kerja sama JICA)", "title": "Panduan teknis tentang identifikasi unsur hara (Ver. Okt 2023)", "evidence": "Peran dan gejala N, P, K, Ca, Mg, Mn, Fe, B, Mo per bagian tanaman; pH 6,0-6,5 optimal; tabel perbandingan kekurangan dan kelebihan unsur."},
+    {"url": "https://data.hortikultura.pertanian.go.id/jica/Materials/Chapter%205/5-11%20Panduan%20teknis%20tentang%20kelainan%20fisiologis%20pada%20tomat%20dan%20brokoli.pdf", "publisher": "Direktorat Jenderal Hortikultura, Kementerian Pertanian (kerja sama JICA)", "title": "Panduan teknis tentang kelainan fisiologis pada tomat dan brokoli", "evidence": "Kelainan fisiologis yang menyerupai penyakit, termasuk kekurangan Kalsium dan Boron pada buah tomat."},
+    {"url": "https://pupukbersubsidi.pertanian.go.id/alokasi/assets/Buku%20padi%20revisi%201_final.pdf", "publisher": "Kementerian Pertanian", "title": "Buku rekomendasi pemupukan padi (revisi 1)", "evidence": "Gejala kurang atau lebih N tercermin pada kehijauan daun (Bagan Warna Daun); dosis N, P, K ditetapkan dari produktivitas dan status hara tanah, bukan dari foto."},
+    {"url": "https://bbppkupang.bppsdmp.pertanian.go.id/blog/unsur-nutrisi-tanaman", "publisher": "BBPP Kupang, Badan Penyuluhan dan Pengembangan SDM Pertanian", "title": "Unsur nutrisi tanaman", "evidence": "Gejala kekurangan N, P, K, Ca, Mg, S, Fe, Mn, Cu, Zn, B, Mo dalam Bahasa Indonesia."}
+  ]
+}

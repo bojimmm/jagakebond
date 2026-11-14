@@ -1,0 +1,36 @@
+# Photo viewer and historical hypotheses (0.2.3.8)
+
+Opening a photo previously rendered the entire structured report inside an
+unbounded flex footer, allowing it to consume the image's height. The viewer now
+keeps a compact cause summary, a bounded scrollable footer and the photograph.
+The full seven-section report opens explicitly with Lihat analisis lengkap in
+its existing separate dialog. Closing that dialog returns to the same photo and
+button. Photo close/account reset removes its image and private summary text.
+The modal background is opaque; phone, wide desktop and short landscape layouts
+are verified using actual thumbnail clicks and generated fixture images.
+
+Dugaan hama / penyakit names the current possible cause, not merely damage.
+Healthy photos use Penilaian tanaman. Where an earlier hypothesis is available,
+it is explicitly labeled Dugaan sebelum analisis ulang / Belum terkonfirmasi,
+including the photo subtitle. Previous candidates are comparisons, never silently
+presented as a confirmed current diagnosis. Speech/sharing retain that provenance.
+The model prompt now asks condition to identify a supported suspected pest,
+disease or cause group; uncertain species are not invented.
+
+Optional previousCondition is sanitized from server-owned records.extra_json.
+Clients cannot forge/update it. No schema migration or new API route. The owner
+specifically requested recovery of earlier hypotheses for Tisna Munajat's three
+previously re-analyzed photos. A separate guarded metadata-only operation reads
+the existing root-private pre-reanalysis snapshot, preserves the fresh seven
+sections and all photo/location/date/label fields, and adds three audit entries.
+No re-analysis, extra uploads, original-photo writes or global farmer-data access.
+Do not rerun the earlier re-analysis operation.
+
+Synthetic checks:21 backend assertions for historical-field filtering, persistence
+and authority;60 viewer browser checks at320x700,390x844,1900x920,844x390;6 separate
+metadata-restoration safety scenarios. Full release adds two suites for72 total.
+Android158 tests,73 source web assets/26 native resources and same signer remain.
+versionCode26/cachejk-v31/protocol2.1.0/schema10. Google, map zoom22/magenta plots,
+existing assessments and chemical-reference limitations are retained. Install
+over the existing app, never uninstall/clear data. Physical-phone acceptance and
+agronomic diagnosis remain separate from software verification.

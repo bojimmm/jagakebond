@@ -1,0 +1,52 @@
+[Unit]
+Description=JagaKebond AI worker (Cepat queue consumer)
+Documentation=file:/srv/sites/jagake.bond/ops/README.md
+# The worker is useless without the API it claims from.
+After=network-online.target jagakebond.service
+Wants=network-online.target jagakebond.service
+
+[Service]
+Type=simple
+User=jagakebond
+Group=jagakebond
+WorkingDirectory=/srv/sites/jagake.bond/app
+EnvironmentFile=/srv/sites/jagake.bond/app/.env
+# Keep Cepat on an independent process so it can run while the normal worker is
+# blocked in a long model call. Both workers still use the protected API config.
+Environment=WORKER_LANE=fast
+Environment=WORKER_NAME=jagakebond-worker-fast
+ExecStart=/srv/sites/jagake.bond/runtime/venvs/sha256-51acce0dd5bf8868/bin/python -u worker/gemini_worker.py
+
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jagakebond-worker-fast
+
+# --- hardening -------------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+ReadWritePaths=
+
+PrivateDevices=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=yes
+SystemCallArchitectures=native
+UMask=0077
+
+# --- resource limits -------------------------------------------------------
+MemoryMax=300M
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

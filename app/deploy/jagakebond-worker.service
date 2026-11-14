@@ -1,0 +1,61 @@
+[Unit]
+Description=JagaKebond AI worker (FIFO queue consumer)
+Documentation=file:/srv/sites/jagake.bond/ops/README.md
+# The worker is useless without the API it claims from.
+After=network-online.target jagakebond.service
+Wants=network-online.target jagakebond.service
+
+[Service]
+Type=simple
+User=jagakebond
+Group=jagakebond
+WorkingDirectory=/srv/sites/jagake.bond/app
+EnvironmentFile=/srv/sites/jagake.bond/app/.env
+# Normal-mode consumer; the optional fast unit below runs the Cepat lane independently.
+Environment=WORKER_LANE=normal
+Environment=WORKER_NAME=jagakebond-worker
+
+# Reads its router key and model routes from the backend over /api/worker/config
+# (WORKER_TOKEN protected), so operator changes in the admin console apply without
+# a restart — the settings are re-read every 60 s.
+ExecStart=/srv/sites/jagake.bond/runtime/venvs/sha256-51acce0dd5bf8868/bin/python -u worker/gemini_worker.py
+
+Restart=always
+# 30 s, not 10: a crash loop (bad token, router down) must not hammer the API and the
+# router several times a minute.
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jagakebond-worker
+
+# --- hardening -------------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+# The worker writes nothing; it only calls the API and the router.
+ReadWritePaths=
+
+# No device nodes beyond /dev/null, /dev/zero, /dev/urandom...; no kernel module/log/tunable
+# access; no capabilities at all.
+PrivateDevices=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=yes
+SystemCallArchitectures=native
+UMask=0077
+
+# --- resource limits -------------------------------------------------------
+# A small polling HTTP client (it holds one photo and its model answer at a time).
+MemoryMax=300M
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

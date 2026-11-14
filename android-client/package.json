@@ -1,0 +1,20 @@
+{
+  "name": "jagakebond-private-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Private bundled-web Android test client for JagaKebond",
+  "scripts": {
+    "sync-assets": "node scripts/sync-assets.mjs",
+    "cap:sync": "cap sync android",
+    "android:debug": "cd android && ./gradlew --no-daemon --max-workers=2 assembleDebug",
+    "android:test": "cd android && ./gradlew --no-daemon --max-workers=2 testDebugUnitTest",
+    "android:release": "cd android && ./gradlew --no-daemon --max-workers=2 assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  }
+}

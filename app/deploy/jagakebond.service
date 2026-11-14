@@ -1,0 +1,71 @@
+[Unit]
+Description=JagaKebond web app (FastAPI + installable PWA)
+Documentation=file:/srv/sites/jagake.bond/ops/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jagakebond
+Group=jagakebond
+WorkingDirectory=/srv/sites/jagake.bond/app
+EnvironmentFile=/srv/sites/jagake.bond/app/.env
+
+# --workers 1 is REQUIRED by this application's queue locking and pacing design.
+# SQLite supports concurrent processes with locking; multi-worker app behavior is not
+# configured or load-tested here. Scaling needs a reviewed DB/queue design.
+# --proxy-headers with a loopback allow-list means X-Forwarded-For is only trusted
+# from the local Caddy reverse proxy, never from the internet.
+ExecStart=/srv/sites/jagake.bond/runtime/venvs/sha256-51acce0dd5bf8868/bin/uvicorn backend.app:app \
+  --host 127.0.0.1 --port 8010 \
+  --workers 1 \
+  --proxy-headers --forwarded-allow-ips=127.0.0.1
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGINT
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jagakebond
+
+# --- hardening -------------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+# Only the data directory is writable (SQLite database, WAL, uploads).
+ReadWritePaths=/srv/sites/jagake.bond/app/data
+LimitNOFILE=4096
+
+# No device nodes beyond /dev/null, /dev/zero, /dev/urandom...; no kernel module/log/tunable
+# access; no capabilities at all (the app binds an unprivileged loopback port).
+PrivateDevices=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+CapabilityBoundingSet=
+# Sockets: local (the worker/Caddy hop is TCP on loopback) and IP only.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=yes
+SystemCallArchitectures=native
+# Files the app creates (SQLite, WAL, uploads) are readable by the service user only.
+UMask=0077
+
+# --- resource limits -------------------------------------------------------
+# The host has 3.7 GB of RAM shared with Caddy, the worker and other services. A photo
+# decode can briefly need ~150 MB; MemoryHigh makes the kernel throttle and reclaim from
+# this service first, MemoryMax is the hard stop (systemd restarts it) instead of letting
+# the OOM killer pick a victim elsewhere on the box.
+MemoryHigh=700M
+MemoryMax=900M
+# threadpool (~40) + SQLite + image libraries; stops a runaway thread/fork storm.
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

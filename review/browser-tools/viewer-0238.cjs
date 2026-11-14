@@ -1,0 +1,61 @@
+/* Real photo-click/layout checks; synthetic records and generated fixture photo only. */
+const fs=require('fs'),path=require('path'),http=require('http');
+const {chromium}=require('playwright');
+const ROOT=path.resolve(__dirname,'../../app/frontend'),checks=[];
+const arg=process.argv.indexOf('--shots'),OUT=arg<0?null:path.resolve(process.argv[arg+1]);if(OUT)fs.mkdirSync(OUT,{recursive:true});
+const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.woff':'font/woff'};
+const server=http.createServer((req,res)=>{const u=new URL(req.url,'http://fixture'),p=path.resolve(ROOT,'.'+(u.pathname==='/'?'/index.html':u.pathname));if(!p.startsWith(ROOT+path.sep)||!fs.existsSync(p)||!fs.statSync(p).isFile()){res.writeHead(404);return res.end();}res.writeHead(200,{'Content-Type':mime[path.extname(p)]||'application/octet-stream'});res.end(fs.readFileSync(p));});
+const a={version:1,findings:['Lubang dan kikisan pada daun.'],possible_causes:['Dugaan ulat pemakan daun; periksa bagian bawah daun untuk membedakannya dari penyebab lain.'],actions:['Periksa permukaan bawah daun dan catat kerusakan baru.'],prevention:['Jaga kebersihan area perawatan sesuai kondisi tanaman.'],monitoring:['Bandingkan bagian yang sama pada pemeriksaan berikutnya.'],escalation:['Hubungi petugas bila kerusakan meluas.'],nutrition:['Dugaan kekurangan nitrogen ringan; bandingkan dengan uji tanah.'],missing_information:['Foto dekat hama yang ditemukan dan usia tanaman.']};
+for(const key of Object.keys(a))if(Array.isArray(a[key]))a[key]=Array.from({length:5},(_,i)=>a[key][0]+' Catatan contoh '+(i+1)+'.');
+function check(name,ok,detail){checks.push({name,ok:!!ok});console.log((ok?'PASS ':'FAIL ')+name+(ok?'':' '+JSON.stringify(detail)));}
+(async()=>{await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;
+try{browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+for(const viewport of [{width:320,height:700},{width:390,height:844},{width:1900,height:920},{width:844,height:390}]){
+ const key=viewport.width+'x'+viewport.height,context=await browser.newContext({viewport,serviceWorkers:'block'});const errors=[],writes=[];
+ await context.route(url=>url.protocol==='https:',route=>route.abort());
+ const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('about:blank');
+ const photo=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=600;c.height=800;const g=c.getContext('2d');g.fillStyle='#dcead4';g.fillRect(0,0,600,800);g.fillStyle='#438254';g.beginPath();g.ellipse(310,400,180,290,.35,0,Math.PI*2);g.fill();g.strokeStyle='#9bc77d';g.lineWidth=14;g.beginPath();g.moveTo(210,720);g.lineTo(410,130);g.stroke();return c.toDataURL('image/jpeg',.9);});
+ const record={id:'viewer-fixture',crop:'Cabai (Chili)',cropId:'plant-fixture',condition:'Kerusakan daun akibat hama pengunyah',severity:'Moderate',confidence:.8,createdMs:1793318400000,timestampMs:1793318400000,imageUrl:photo,assessment:a,previousCondition:'Dugaan ulat grayak <img src=x onerror="window.__viewerInjected=true">'};
+ await context.route('**/api/**',route=>{const r=route.request(),p=new URL(r.url()).pathname;let body=[];if(r.method()!=='GET')writes.push(p);
+  if(p==='/api/auth/me')body={ok:true,account:{id:'viewer-fixture-account',name:'Data contoh',role:'user'},csrf:'fixture'};
+  if(p==='/api/auth/google/config')body={enabled:false};if(p==='/api/health')body={ok:true,version:'2.1.0',release:'0.2.3.8',capabilities:{recordsPaging:true,treeContinuity:true}};
+  if(p==='/api/records')body={items:[record],next:null};if(p==='/api/telemetry')body={};
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+ });
+ await page.goto('http://127.0.0.1:'+server.address().port,{waitUntil:'networkidle'});await page.waitForFunction(()=>JagaAppAccount()&&loadedOnce);
+ await page.evaluate(()=>{JagaOfflineSync.stop();navigateToMenu('log');openTreeTimeline('plant-fixture');});
+ await page.locator('.tl-top .thumb').first().click();
+ await page.waitForFunction(()=>{const i=document.getElementById('photo-viewer-image');return i.complete&&i.naturalWidth>0&&!document.getElementById('photo-viewer').classList.contains('hidden');});
+ const layout=await page.evaluate(()=>{const r=id=>{const b=document.getElementById(id).getBoundingClientRect();return{top:b.top,bottom:b.bottom,width:b.width,height:b.height}};return{image:r('photo-viewer-image'),foot:document.querySelector('.viewer-foot').getBoundingClientRect().toJSON(),head:document.querySelector('.viewer-head').getBoundingClientRect().toJSON(),vh:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth};});
+ check(key+': actual thumbnail click keeps a large visible photo',layout.image.width>=100&&layout.image.height>=100&&layout.image.top>=layout.head.bottom-1&&layout.image.bottom<=layout.foot.top+1,layout);
+ check(key+': footer is bounded and page does not overflow',layout.foot.height<=layout.vh*.42+2&&!layout.overflow,layout);
+ check(key+': full report is not expanded inside photo footer',await page.locator('#viewer-assessment .assessment-section').count()===0&&await page.locator('#viewer-assessment button').count()===1);
+ const caption=await page.locator('#photo-viewer-caption').innerText();
+ check(key+': current suspected pest is clearly named',caption.includes('Dugaan Hama / Penyakit')&&caption.includes('Hama Pengunyah'));
+ check(key+': earlier hypothesis is retained and explicitly unconfirmed',caption.includes('Dugaan sebelum analisis ulang')&&caption.includes('ulat grayak')&&caption.includes('Belum terkonfirmasi')&&(await page.locator('#photo-viewer-subtitle').innerText()).includes('Sebelum analisis ulang'));
+ check(key+': historical text cannot inject markup',await page.locator('#photo-viewer-caption img').count()===0&&!await page.evaluate(()=>window.__viewerInjected));
+ if(OUT)await page.screenshot({path:path.join(OUT,'photo-'+key+'.png')});
+ const src=await page.locator('#photo-viewer-image').getAttribute('src');
+ await page.locator('#viewer-assessment button').click();
+ check(key+': full analysis opens only when requested',await page.locator('#assessment-dialog').isVisible()&&await page.locator('#assessment-dialog .assessment-section').count()===7);
+ const scroll=await page.locator('#assessment-dialog .assessment-dialog-body').evaluate(el=>{el.scrollTop=el.scrollHeight;return{end:el.scrollTop+el.clientHeight>=el.scrollHeight-2,scroll:getComputedStyle(el).overflowY};});
+ check(key+': long report scrolls to its last section',scroll.end&&scroll.scroll==='auto');
+ await page.getByRole('button',{name:'Tutup analisis'}).click();
+ check(key+': closing analysis returns to the same photo and trigger',await page.locator('#photo-viewer').isVisible()&&src===await page.locator('#photo-viewer-image').getAttribute('src')&&await page.evaluate(()=>!!document.activeElement.closest('#viewer-assessment')));
+ await page.locator('#viewer-save-gallery').scrollIntoViewIfNeeded();
+ check(key+': photo actions stay reachable within footer',await page.locator('#viewer-save-gallery').isVisible()&&await page.locator('#viewer-edit-location').count()===1);
+ await page.getByRole('button',{name:'Tutup foto'}).click();
+ check(key+': close releases image and private summary text',await page.locator('#photo-viewer-image').getAttribute('src')===null&&await page.locator('#photo-viewer-caption').innerText()===''&&await page.locator('#viewer-assessment').innerText()==='');
+ await page.evaluate(({photo})=>{farmRecords[0].assessment=null;farmRecords[0].previousCondition=null;farmRecords[0].condition='Dugaan bercak daun';openPhotoViewer(photo,'Foto lama','Data contoh','Saran tersimpan',farmRecords[0].id);},{photo});
+ check(key+': legacy photo still shows its suspected disease',await page.locator('#photo-viewer-caption').innerText().then(t=>t.includes('Dugaan Hama / Penyakit')&&t.includes('Bercak Daun'))&&await page.locator('#viewer-assessment button').count()===0);
+ await page.evaluate(({photo})=>{closePhotoViewer();farmRecords[0].severity='Healthy';farmRecords[0].condition='Tidak ada gejala jelas pada foto';openPhotoViewer(photo,'Foto sehat','Data contoh','',farmRecords[0].id);},{photo});
+ check(key+': healthy photo is not labeled as a suspected pest',await page.locator('#photo-viewer-caption').innerText().then(t=>t.includes('Penilaian Tanaman')&&!t.includes('Dugaan Hama / Penyakit')));
+ await page.evaluate(()=>closePhotoViewer());
+ check(key+': photo viewing does not mutate or re-analyze records',writes.length===0,writes);
+ check(key+': no uncaught page errors',errors.length===0,errors);
+ await context.close();
+}
+}finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+const bad=checks.filter(c=>!c.ok);console.log(`viewer-0238: ${checks.length-bad.length}/${checks.length} checks passed`);process.exitCode=bad.length?1:0;
+})().catch(e=>{console.error(e.stack);server.close();process.exitCode=1;});

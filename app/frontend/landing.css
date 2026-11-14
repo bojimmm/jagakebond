@@ -1,0 +1,162 @@
+/* Public welcome: light, readable surfaces; never inherits a device dark theme. */
+#auth-gate.landing-gate { display:flex; flex-direction:column; overflow:auto; overscroll-behavior:contain; background:#fff; background-image:radial-gradient(ellipse at 28% 88%,#f2f7ed 0,transparent 65%); color:#173b2c; color-scheme:light; -webkit-user-select:text; user-select:text; }
+.auth-layout { display:grid; grid-template-columns:minmax(0,1.18fr) minmax(380px,.82fr); flex:1 0 auto; width:100%; max-width:1480px; margin:0 auto; }
+.auth-brand-panel { display:flex; flex-direction:column; padding:32px clamp(32px,4.5vw,76px) 28px; border-right:1px solid #e5eae4; min-width:0; background:transparent; overflow:hidden; }
+.landing-brand { display:inline-flex; align-items:center; align-self:flex-start; gap:10px; min-height:44px; color:#174a31; font-size:25px; font-weight:800; letter-spacing:-1.1px; text-decoration:none; }
+.landing-brand img { width:44px; height:44px; object-fit:contain; }
+.landing-brand-dot { color:#62a94d; }
+.landing-copy { margin-top:clamp(30px,4vh,55px); max-width:620px; }
+#landing-title { margin:0; font-size:clamp(38px,3.8vw,60px); line-height:1.08; letter-spacing:-2.4px; font-weight:750; }
+#landing-title span { color:#2f7b45; }
+.landing-description { max-width:465px; margin:20px 0 0; color:#536558; font-size:16px; line-height:1.7; }
+.landing-art { position:relative; flex:1 0 300px; height:330px; max-height:405px; margin-top:18px; min-width:0; }
+.landing-art-backdrop {
+  position: absolute;
+  width: 320px;
+  height: 285px;
+  right: 4px;
+  bottom: 6px;
+  border-radius: 48% 48% 12px 12px;
+  background: #e7efd9;
+  filter: blur(22px);
+}
+.landing-farmer { position:absolute; right:-25px; bottom:0; width:385px; height:385px; }
+.landing-farmer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-bottom-right-radius: 20px;
+}
+/* App screenshots captured with synthetic demonstration data. */
+.landing-app-shot { position:absolute; z-index:1; margin:0; padding:7px; border:1px solid #dce5d6; border-radius:12px; background:#fff; box-shadow:0 12px 32px #28402716; }
+.landing-app-shot picture, .landing-app-shot img { display:block; width:100%; height:auto; border-radius:8px; }
+.landing-app-home { left:0; transform:rotate(-3deg); }
+.landing-app-history { z-index:2; right:-8px; bottom:16px; width:270px; transform:rotate(2deg); }
+.auth-form-panel { display:flex; align-items:center; justify-content:center; padding:48px clamp(28px,4vw,65px); background:#fff; min-width:0; }
+.auth-panel-inner { width:100%; max-width:400px; }
+.landing-mobile-brand { display:none; }
+.auth-welcome { margin:0 0 12px; color:#6e7a6b; font-size:13px; letter-spacing:1.5px; line-height:1.5; font-weight:700; }
+#auth-title { margin:0; color:#1e3628; font-size:27px; line-height:1.25; letter-spacing:-.8px; font-weight:750; }
+#auth-description { margin:10px 0 0; color:#5d6f55; font-size:14px; line-height:1.6; }
+.auth-form { display:flex; flex-direction:column; gap:18px; margin-top:28px; }
+.auth-form .label { display:block; margin-bottom:8px; color:#314331; font-size:14px; line-height:1.4; font-weight:600; }
+.auth-form .field { min-height:54px; padding:0 14px; border:1px solid #809174; background:#fff; border-radius:8px; color:#1e3628; font-size:16px; box-shadow:none; }
+.auth-form .field::placeholder { color:#687461; opacity:1; }
+.auth-form .field:focus { border-color:#317445; outline:2px solid #d6e8cf; outline-offset:1px; }
+.auth-password-field { position:relative; }
+.auth-password-field .field { padding-right:68px; }
+#auth-toggle-password { position:absolute; right:4px; top:5px; min-width:56px; min-height:44px; border:0; border-radius:8px; background:#fff; color:#526c4c; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+#auth-submit { min-height:54px; margin-top:4px; border:1px solid #236139; border-radius:12px; background:#236139; color:#fff; font-size:16px; box-shadow:0 3px 7px #183a1710; }
+#auth-submit:hover { background:#194e2d; }
+#auth-submit:disabled { opacity:.65; cursor:wait; }
+.auth-help { margin-top:12px; text-align:center; color:#52664b; font-size:14px; }
+.auth-help summary { display:flex; align-items:center; justify-content:center; min-height:44px; list-style:none; cursor:pointer; }
+.auth-help summary::-webkit-details-marker { display:none; }
+.auth-help summary:hover { text-decoration:underline; }
+.auth-help p { margin:4px 0 0; padding:12px; text-align:left; background:#f5f8f2; border-radius:8px; font-size:13px; line-height:1.65; }
+.auth-account-choice { margin-top:20px; padding-top:22px; border-top:1px solid #e5eadd; }
+.auth-hint { margin:0; color:#5d6f55; font-size:13px; line-height:1.65; text-align:center; }
+.auth-mode-switch { margin-top:14px; }
+.auth-mode-switch button { min-height:50px; border:1px solid #719568; border-radius:12px; color:#34663d; background:#fff; font-size:15px; }
+.auth-mode-switch button.is-active, .auth-mode-switch button[hidden] { display:none !important; }
+.auth-mode-switch:has(button[hidden]):has(button.is-active) { margin-top:0; }
+.auth-form-panel .google-signin { margin-top:20px; }
+.landing-footer {
+  padding: 0 8px env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid #e4e9e0;
+  background: #fff;
+  color: #5e7053;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+.landing-footer nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 clamp(8px, 2vw, 22px);
+}
+.landing-footer a { display:inline-flex; align-items:center; min-height:44px; color:#65785b; text-decoration:none; }
+.landing-footer a:hover { text-decoration:underline; }
+@media (min-width:1440px) { .landing-art { min-height:350px; } .landing-farmer { right:10px; width:425px; height:425px; } .landing-art-backdrop { right:35px; width:350px; height:300px; } }
+@media (max-width:1023px) { #auth-gate.landing-gate { background-image:none; } .auth-layout { display:flex; flex-direction:column; max-width:560px; } .auth-brand-panel { display:none; } .auth-form-panel { flex:1; padding:32px 28px 28px; } .auth-panel-inner { max-width:400px; } .landing-mobile-brand { display:inline-flex; margin-bottom:36px; font-size:25px; } .landing-mobile-brand img { width:40px; height:40px; } .auth-welcome { display:none; } #auth-title { font-size:27px; } }
+@media (max-width:380px) { .auth-form-panel { padding:24px 22px; } .landing-mobile-brand { margin-bottom:26px; } #auth-title { font-size:25px; } .auth-form { margin-top:24px; } }
+@media (min-width:1024px) and (max-height:800px) { .auth-brand-panel { padding-top:24px; } .landing-copy { margin-top:24px; } #landing-title { font-size:46px; } .landing-description { margin-top:14px; } .landing-art { flex-basis:260px; height:280px; } .landing-farmer { width:340px; height:340px; } .landing-art-backdrop { height:250px; } .landing-app-history { width:245px; bottom:12px; } .auth-form-panel { padding-top:32px; padding-bottom:32px; } }
+@media (prefers-reduced-motion:reduce) { #auth-gate * { scroll-behavior:auto; } }
+
+.auth-legal-note { margin:16px 0 0; color:#63735a; font-size:13px; line-height:1.7; text-align:center; }
+.auth-legal-note a { color:#2f6339; text-decoration:underline; text-underline-offset:2px; }
+.account-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 18px;
+}
+.account-legal-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--jk-green-800);
+  text-decoration: underline;
+}
+
+/* The smaller Peta preview sits behind Beranda and the farmer photo. */
+.landing-app-home {
+  top: -8px;
+  width: 240px;
+}
+
+.landing-app-map {
+  z-index: 0;
+  left: clamp(62px, calc(25vw - 186px), 130px);
+  top: 151px;
+  width: clamp(180px, 17.5vw, 252px);
+  transform: rotate(5deg);
+}
+
+@media (min-width: 1024px) and (min-height: 801px) {
+  .landing-app-home {
+    top: 12px;
+    width: 266px;
+  }
+
+  .landing-app-map {
+    top: 190px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .landing-app-map {
+    left: 90px;
+  }
+}
+
+/* Desktop artwork spacing. */
+@media (min-width: 1024px) {
+  .auth-brand-panel {
+    padding-bottom: max(32px, calc(clamp(32px, 4.5vw, 76px) - 24px));
+  }
+
+  .landing-copy {
+    margin-bottom: 18px;
+  }
+
+  .landing-art {
+    margin-top: auto;
+  }
+}
+
+@media (min-width: 1440px) {
+  .auth-brand-panel {
+    padding-bottom: calc(clamp(32px, 4.5vw, 76px) + 11px);
+  }
+}
+
+@media (min-width: 1440px) and (min-height: 900px) {
+  .landing-art {
+    max-height: 435px;
+  }
+}

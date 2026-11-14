@@ -1,0 +1,206 @@
+{
+  "version": "2026-10-30.1",
+  "checked_at": "2026-10-30",
+  "registration_source": "https://ap-simpel.pertanian.go.id/",
+  "registration_check": {
+    "status": "unavailable",
+    "note": "Firecrawl could not retrieve the Ministry registry on 2026-10-30; no current registration or expiry inferred."
+  },
+  "products": [
+    {
+      "id": "amistar-top-325-sc",
+      "name": "Amistar Top 325 SC",
+      "category": "fungisida",
+      "composition": "Azoksistrobin 200 g/l + difenokonazol 125 g/l; SC.",
+      "source_url": "https://www.syngenta.co.id/product/crop-protection/fungisida/amistar-top",
+      "checked_at": "2026-10-30",
+      "registration_status": "unverified",
+      "manufacturer_registration_number": null,
+      "registration_number_verified": null,
+      "registration_valid_until": null,
+      "label_url": null,
+      "missing_evidence": [
+        "status izin edar dan masa berlaku terkini",
+        "label lengkap untuk tanaman–sasaran",
+        "jeda panen (PHI)",
+        "jeda masuk kembali (REI)",
+        "batas aplikasi dan penilaian kondisi lahan"
+      ],
+      "uses": [
+        {
+          "crop": "cabai",
+          "problem": "anthracnose",
+          "target_name": "Antraknosa (Colletotrichum sp.)"
+        },
+        {
+          "crop": "cabai",
+          "problem": "leaf_spot",
+          "target_name": "Bercak daun (Cercospora sp.; cocokkan spesies pada sumber)"
+        },
+        {
+          "crop": "padi",
+          "problem": "blast",
+          "target_name": "Blas (Pyricularia oryzae)"
+        },
+        {
+          "crop": "tomat",
+          "problem": "early_blight",
+          "target_name": "Bercak kering (Alternaria solani)"
+        },
+        {
+          "crop": "tomat",
+          "problem": "late_blight",
+          "target_name": "Busuk daun (Phytophthora infestans)"
+        },
+        {
+          "crop": "jagung",
+          "problem": "leaf_spot",
+          "target_name": "Bercak daun coklat (Helminthosporium sp.)"
+        },
+        {
+          "crop": "bawang_merah",
+          "problem": "anthracnose",
+          "target_name": "Antraknosa (Colletotrichum sp.)"
+        },
+        {
+          "crop": "mangga",
+          "problem": "anthracnose",
+          "target_name": "Antraknosa (Colletotrichum gloeosporioides)"
+        }
+      ]
+    },
+    {
+      "id": "anvil-50-sc",
+      "name": "Anvil 50 SC",
+      "category": "fungisida",
+      "composition": "Heksakonazol (Hexaconazole) 50 g/l; SC.",
+      "source_url": "https://www.syngenta.co.id/product/crop-protection/fungisida/anvil-50-sc",
+      "checked_at": "2026-10-30",
+      "registration_status": "unverified",
+      "manufacturer_registration_number": "RI.0102011990896",
+      "registration_number_verified": null,
+      "registration_valid_until": null,
+      "label_url": null,
+      "missing_evidence": [
+        "status izin edar dan masa berlaku terkini",
+        "label lengkap untuk tanaman–sasaran",
+        "jeda panen (PHI)",
+        "jeda masuk kembali (REI)",
+        "batas aplikasi dan penilaian kondisi lahan"
+      ],
+      "uses": [
+        {
+          "crop": "pisang",
+          "problem": "sigatoka",
+          "target_name": "Sigatoka (Mycosphaerella sp.)"
+        },
+        {
+          "crop": "cabai",
+          "problem": "leaf_spot",
+          "target_name": "Bercak daun (Cercospora sp.; cocokkan spesies pada sumber)"
+        },
+        {
+          "crop": "cabai",
+          "problem": "anthracnose",
+          "target_name": "Antraknosa (Colletotrichum sp.)"
+        },
+        {
+          "crop": "tomat",
+          "problem": "early_blight",
+          "target_name": "Bercak kering (Alternaria solani)"
+        }
+      ]
+    },
+    {
+      "id": "score-250-ec",
+      "name": "Score 250 EC",
+      "category": "fungisida",
+      "composition": "Difenokonazol 250 g/l; EC.",
+      "source_url": "https://www.syngenta.co.id/product/crop-protection/fungisida/score-250-ec",
+      "checked_at": "2026-10-30",
+      "registration_status": "unverified",
+      "manufacturer_registration_number": "RI.0102011990939",
+      "registration_number_verified": null,
+      "registration_valid_until": null,
+      "label_url": null,
+      "missing_evidence": [
+        "status izin edar dan masa berlaku terkini",
+        "label lengkap untuk tanaman–sasaran",
+        "jeda panen (PHI)",
+        "jeda masuk kembali (REI)",
+        "batas aplikasi dan penilaian kondisi lahan"
+      ],
+      "uses": [
+        {
+          "crop": "cabai",
+          "problem": "leaf_spot",
+          "target_name": "Bercak daun (Cercospora sp.; cocokkan spesies pada sumber)"
+        },
+        {
+          "crop": "tomat",
+          "problem": "early_blight",
+          "target_name": "Bercak kering (Alternaria solani)"
+        },
+        {
+          "crop": "padi",
+          "problem": "leaf_spot",
+          "target_name": "Bercak daun (Cercospora sp.; cocokkan spesies pada sumber)"
+        }
+      ]
+    },
+    {
+      "id": "phonska-plus",
+      "name": "Phonska Plus",
+      "category": "pupuk",
+      "composition": "N 15%; P2O5 15%; K 15% (istilah pada halaman produsen); S 9%; Zn 2.000 ppm.",
+      "source_url": "https://petrokimia-gresik.com/product/phonska-plus",
+      "checked_at": "2026-10-30",
+      "registration_status": "unverified",
+      "manufacturer_registration_number": null,
+      "registration_number_verified": null,
+      "registration_valid_until": null,
+      "label_url": null,
+      "missing_evidence": [
+        "izin/label terkini",
+        "kecocokan tanah dan fase tanaman",
+        "kebutuhan hara spesifik lokasi"
+      ],
+      "uses": [
+        {
+          "crop": "padi",
+          "problem": "nutrition",
+          "target_name": "Komposisi hara; kebutuhan tanah belum dinilai"
+        },
+        {
+          "crop": "jagung",
+          "problem": "nutrition",
+          "target_name": "Uji pemupukan pada jagung dalam laporan produsen 2016; bukan rekomendasi spesifik lahan"
+        }
+      ],
+      "additional_sources": [
+        "https://petrokimia-gresik.com/news/npk-phonska-plus-cegah-defisiensi-seng-zn"
+      ],
+      "use_evidence": "Uji pada padi yang dilaporkan produsen; bukan kebutuhan hara individual atau bukti stok terkini."
+    },
+    {
+      "id": "sp-36",
+      "name": "SP-36",
+      "category": "pupuk",
+      "composition": "P2O5 total minimal 36%; rujukan komposisi, bukan penetapan kebutuhan hara.",
+      "source_url": "https://petrokimia-gresik.com/product/pupuk-sp-36",
+      "checked_at": "2026-10-30",
+      "registration_status": "unverified",
+      "manufacturer_registration_number": null,
+      "registration_number_verified": null,
+      "registration_valid_until": null,
+      "label_url": null,
+      "missing_evidence": [
+        "izin/label terkini",
+        "kecocokan tanah dan fase tanaman",
+        "kebutuhan hara spesifik lokasi"
+      ],
+      "uses": [],
+      "general_reference": true
+    }
+  ]
+}

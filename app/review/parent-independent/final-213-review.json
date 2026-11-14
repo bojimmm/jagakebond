@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "security_concerns": [],
+  "logic_errors": [],
+  "suggestions": [
+    "Full application suite and clean APK build remain parent-owned release gates; this bounded review did not run them."
+  ],
+  "reviewed_sha256": {
+    "app/frontend/offline-sync.js": "56da6a0a2527158bf57fb44fad27c3f215a947f9e2e1e8a60c6e602dee68bb0d",
+    "app/frontend/offline-store.js": "0cb071bf0b94b6db932648516c4f77ab5ac4003940d3b72bc695d92a923d4670",
+    "app/tests/retry_after.test.cjs": "7435ad2529403b89e5d72cdd330670c71a1ebdb157738fe284b12ae69cbedd94",
+    "app/frontend/app.js": "60b705c9b502476a56e4796d860b22ba5700f9c107c86d256a15d13455221d53",
+    "app/frontend/index.html": "fe42e5d787b6c10f56fde0cabc13e72cca126e394d45d61d450c0fc90b6273b2",
+    "app/frontend/sw.js": "7f3d68cddcd74b15f610c2a8fbfa1d81ebd0f3150de027346c27cfe74940ba71"
+  },
+  "checks": [
+    {
+      "command": "node --test tests/retry_after.test.cjs (from app/)",
+      "result": "PASS, exit 0: 6 tests passed, 0 failed. Verified Retry-After parsing/cap/fallback, 429 deadline isolation from normal drafts, deadline persistence over sync-instance recreation, account B isolation, and eligibility at deadline."
+    },
+    {
+      "command": "node tests/test_offline_browser.cjs (from app/)",
+      "result": "PASS, exit 0. IndexedDB browser tests report durable reload, account isolation, idempotency, payload conflict, lock, response-loss replay, and durable submitted receipt."
+    },
+    {
+      "command": "node --test ../review/browser-tools/polygon-edit.cjs ../review/browser-tools/location-hourly.cjs ../review/browser-tools/tier-ui.cjs (from app/)",
+      "result": "PASS, exit 0: 12 harness tests passed, 0 failed. Includes stable-ID polygon edit/save and account race cases, hourly/manual location gates, and tier UI cases."
+    }
+  ],
+  "source_assessment": {
+    "web_retry": "offline-sync.js computes an individual draft's nextAttemptAtMs from Retry-After, persists it through JagaOfflineStore.update, skips only rows whose deadline is still in the future, and continues after a 429. The 15-second periodic sync and online event retry later. Valid Retry-After 1 remains 1000 ms; malformed, zero, or absent values use the native-compatible 60000 ms fallback; values above 86400 seconds are capped at 24 hours.",
+    "durability_and_account_scope": "offline-store.js stores draft rows in IndexedDB with accountId and account-qualified keys. pendingForSync queries the accountId index, filters pending status, and rechecks ownership after the asynchronous transaction. Updates read/merge/write the existing row in a readwrite transaction and check ownership before and after. The retry deadline is a regular persisted row field; no volatile global retry gate is present.",
+    "account_switch_guards": "offline-sync.js snapshots generation/account per run and checks both before each draft, after the health check before upload, after a successful response before state update, and on errors before deadline/error updates. start/stop advance generation. Store ownership checks reject reads/writes after lock or account change. Focused Node tests confirm account B's draft proceeds while account A's draft is deferred; browser tests confirm store isolation and lock behavior.",
+    "cache_revision_change": "Current frontend/app.js retains only jk-v9 during cache cleanup; frontend/sw.js declares jk-v9 and its shell references offline-sync.js?v=14; frontend/index.html loads offline-sync.js?v=14. These are cache/shell revision changes only and do not alter retry logic. Source hashes record the final inspected versions.",
+    "limits": "Review is source and test-harness based. No physical device/OS scheduling or production environment was exercised. Full suite and clean APK build were left to the parent release process. No implementation files were edited."
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "version": "2026-11-07.1",
+  "problems": [
+    {
+      "id": "anthracnose",
+      "label": "Antraknosa",
+      "aliases": [
+        "antraknosa",
+        "anthracnose"
+      ]
+    },
+    {
+      "id": "leaf_spot",
+      "label": "Bercak Daun",
+      "aliases": [
+        "bercak daun",
+        "leaf spot"
+      ]
+    },
+    {
+      "id": "sigatoka",
+      "label": "Sigatoka",
+      "aliases": [
+        "sigatoka",
+        "sigatoka pisang"
+      ]
+    },
+    {
+      "id": "blast",
+      "label": "Blas",
+      "aliases": [
+        "blas",
+        "blast"
+      ]
+    },
+    {
+      "id": "downy_mildew",
+      "label": "Bulai",
+      "aliases": [
+        "bulai",
+        "bulai downy",
+        "downy mildew",
+        "embun bulu"
+      ]
+    },
+    {
+      "id": "early_blight",
+      "label": "Bercak Kering",
+      "aliases": [
+        "bercak kering",
+        "early blight"
+      ]
+    },
+    {
+      "id": "late_blight",
+      "label": "Busuk Daun",
+      "aliases": [
+        "busuk daun",
+        "late blight"
+      ]
+    },
+    {
+      "id": "fruit_rot",
+      "label": "Busuk Buah",
+      "aliases": [
+        "busuk buah",
+        "fruit rot"
+      ]
+    },
+    {
+      "id": "leaf_blight",
+      "label": "Hawar Daun",
+      "aliases": [
+        "hawar daun",
+        "hawar daun bakteri",
+        "bacterial leaf blight"
+      ]
+    },
+    {
+      "id": "rust",
+      "label": "Karat Daun",
+      "aliases": [
+        "karat daun",
+        "rust",
+        "leaf rust"
+      ]
+    },
+    {
+      "id": "mosaic",
+      "label": "Mosaik",
+      "aliases": [
+        "mosaik",
+        "mosaic"
+      ]
+    },
+    {
+      "id": "aphids",
+      "label": "Kutu Daun",
+      "aliases": [
+        "kutu daun",
+        "aphid",
+        "aphids"
+      ]
+    },
+    {
+      "id": "mites",
+      "label": "Tungau",
+      "aliases": [
+        "tungau",
+        "mite",
+        "mites"
+      ]
+    },
+    {
+      "id": "thrips",
+      "label": "Thrips",
+      "aliases": [
+        "thrips",
+        "thrip"
+      ]
+    },
+    {
+      "id": "caterpillar",
+      "label": "Ulat",
+      "aliases": [
+        "ulat",
+        "caterpillar"
+      ]
+    },
+    {
+      "id": "borer",
+      "label": "Hama Penggerek",
+      "aliases": [
+        "hama penggerek",
+        "penggerek",
+        "penggerek batang"
+      ]
+    },
+    {
+      "id": "planthopper",
+      "label": "Wereng",
+      "aliases": [
+        "wereng",
+        "planthopper"
+      ]
+    },
+    {
+      "id": "nutrition",
+      "label": "Kebutuhan Unsur Hara",
+      "aliases": [
+        "kekurangan hara",
+        "defisiensi hara",
+        "kekurangan nitrogen",
+        "kekurangan fosfor",
+        "kekurangan kalium",
+        "kekurangan magnesium",
+        "kekurangan kalsium",
+        "kekurangan besi",
+        "kekurangan mangan",
+        "kekurangan boron",
+        "kekurangan seng",
+        "kekurangan sulfur",
+        "kekurangan molibdenum",
+        "defisiensi nitrogen",
+        "kekurangan unsur hara nitrogen",
+        "defisiensi fosfor",
+        "kekurangan unsur hara fosfor",
+        "kekurangan fosfat",
+        "defisiensi fosfat",
+        "kekurangan unsur hara fosfat",
+        "defisiensi kalium",
+        "kekurangan unsur hara kalium",
+        "defisiensi kalsium",
+        "kekurangan unsur hara kalsium",
+        "defisiensi magnesium",
+        "kekurangan unsur hara magnesium",
+        "kekurangan belerang",
+        "defisiensi belerang",
+        "kekurangan unsur hara belerang",
+        "defisiensi sulfur",
+        "kekurangan unsur hara sulfur",
+        "defisiensi besi",
+        "kekurangan unsur hara besi",
+        "defisiensi mangan",
+        "kekurangan unsur hara mangan",
+        "defisiensi boron",
+        "kekurangan unsur hara boron",
+        "defisiensi seng",
+        "kekurangan unsur hara seng",
+        "kekurangan zink",
+        "defisiensi zink",
+        "kekurangan unsur hara zink",
+        "kekurangan tembaga",
+        "defisiensi tembaga",
+        "kekurangan unsur hara tembaga",
+        "defisiensi molibdenum",
+        "kekurangan unsur hara molibdenum"
+      ]
+    }
+  ]
+}

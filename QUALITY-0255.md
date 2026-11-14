@@ -1,0 +1,8 @@
+# Quality pass towards commercial grade
+
+Release candidate: 0.2.4.15 / Android versionCode 43 / cache jk-v49. Built on live 0.2.4.14.
+
+- **Error monitoring (self-hosted):** `error-report.js` (loaded right after the polyfills) sends uncaught errors and unhandled promise rejections to `POST /api/client-errors` once each, at most ten per page load, when signed in and online. Expected failures the app already explains (no signal, session ended) are skipped. The server keeps them as `client.error` audit rows: e-mail addresses, long numbers and token-like strings are masked; at most 20 per account per hour; the same error once per 10 minutes; purged after 30 days. The admin overview shows a "Kesalahan aplikasi" card (count for 24 hours, five newest, link to Audit filtered to them). The Android bridge allows the route. `index.html` carries `<meta name="jk-release">` so a report from an old cached page is recognisable.
+- **Audit items fixed:** F8 (12 px rules now 13 px, map tooltip 13 px); F15 (Riwayat status chips wrap so Waspada/Sehat are always visible; Peta shows "N tanaman belum punya lokasi", which opens Riwayat with a hint); F18 (phone held sideways keeps the bottom menu on screen; the shell's 500 px minimum height is capped at the screen); F16 (admin toasts at the bottom on phones); F17 (audit details read "Peran: Normal" instead of "peran=user"); F9 (duplicate map z-index rules removed; the "Data lama" tile replaced by the error count).
+
+Tests: app/tests/test_quality_0255.py, review/browser-tools/quality-0255.cjs (both added to the runner: 82 suites), admin-0220.cjs (error card), BridgePolicyTest (route).
