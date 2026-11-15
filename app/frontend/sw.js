@@ -1,6 +1,6 @@
 /* Public static shell only. API responses, owned photos and map tiles are never cached.
    The shell cache name lives HERE and nowhere else: page code asks this worker to purge via postMessage. */
-const SHELL_CACHE = 'jk-v72';
+const SHELL_CACHE = 'jk-v73';
 const SHELL_ASSETS = [
   '/', '/index.html', '/manifest.webmanifest?v=3',
   '/privacy.html', '/terms.html', '/legal.css?v=1', '/landing.css?v=10', '/landing.js?v=3',

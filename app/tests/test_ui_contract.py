@@ -27,7 +27,7 @@ class UiContractTests(unittest.TestCase):
     def test_auth_uses_local_farm_assets_and_brand_copy(self):
         from PIL import Image
         self.assertIn("img/landing-farmer.webp?v=1", HTML)
-        self.assertIn("img/landing-app-home.png?v=1", HTML)
+        self.assertIn("img/landing-app-home.png?v=2", HTML)
         self.assertIn("img/landing-app-map.png?v=1", HTML)
         self.assertIn("img/landing-app-history.png?v=5", HTML)
         self.assertNotIn('src="/img/crops/', HTML)
