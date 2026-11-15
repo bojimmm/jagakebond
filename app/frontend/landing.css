@@ -342,7 +342,7 @@
   pointer-events: none;
   z-index: 0;
 }
-#auth-gate .landing-farmer { position: absolute; right: 0; bottom: 0; width: 300px; height: 300px; z-index: 1; }
+#auth-gate .landing-farmer { position: absolute; right: 0; bottom: 0; width: 348px; height: 348px; z-index: 1; }
 #auth-gate .landing-farmer img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: bottom right; border-radius: var(--r-2xl); }
 #auth-gate .landing-app-shot {
   position: absolute;
@@ -359,9 +359,9 @@
 #auth-gate .landing-app-shot picture,
 #auth-gate .landing-app-shot img { display: block; width: 100%; height: auto; border-radius: var(--r-lg); }
 #auth-gate .landing-app-shot figcaption { position: absolute; left: -9999px; }
-#auth-gate .landing-app-home { left: 0; top: var(--s200); width: 248px; rotate: -3deg; }
-#auth-gate .landing-app-map { left: 96px; top: 172px; width: 208px; rotate: 5deg; z-index: 1; }
-#auth-gate .landing-app-history { right: 0; bottom: var(--s100); width: 248px; rotate: 2deg; z-index: 3; }
+#auth-gate .landing-app-home { left: 0; top: var(--s100); width: 256px; rotate: -3deg; z-index: 2; }
+#auth-gate .landing-app-map { left: 92px; top: 184px; width: 214px; rotate: 5deg; z-index: 0; }
+#auth-gate .landing-app-history { right: 0; bottom: 14px; width: 268px; rotate: 2deg; z-index: 3; }
 
 /* Right Sign-In Form Panel */
 #auth-gate .auth-form-panel {
@@ -744,10 +744,10 @@
 
 /* Responsive Breakpoints matching Demo 1:1 + Mobile Non-Scroll #cara */
 @media (max-width: 1180px) {
-  #auth-gate .landing-app-home { width: 216px; }
-  #auth-gate .landing-app-map { left: 72px; width: 184px; top: 156px; }
-  #auth-gate .landing-app-history { width: 216px; }
-  #auth-gate .landing-farmer { width: 270px; height: 270px; }
+  #auth-gate .landing-app-home { width: 224px; }
+  #auth-gate .landing-app-map { left: 72px; width: 192px; top: 162px; }
+  #auth-gate .landing-app-history { width: 236px; }
+  #auth-gate .landing-farmer { width: 296px; height: 296px; }
 }
 
 @media (max-width: 1023px) {

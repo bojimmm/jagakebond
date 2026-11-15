@@ -27,9 +27,9 @@ class UiContractTests(unittest.TestCase):
     def test_auth_uses_local_farm_assets_and_brand_copy(self):
         from PIL import Image
         self.assertIn("img/landing-farmer.webp?v=1", HTML)
-        self.assertIn("img/landing-app-home.png?v=2", HTML)
-        self.assertIn("img/landing-app-map.png?v=1", HTML)
-        self.assertIn("img/landing-app-history.png?v=5", HTML)
+        self.assertIn("img/landing-app-home.png?v=3", HTML)
+        self.assertIn("img/landing-app-map.png?v=2", HTML)
+        self.assertIn("img/landing-app-history.png?v=6", HTML)
         self.assertNotIn('src="/img/crops/', HTML)
         with Image.open(ROOT / "frontend/img/landing-app-history.png") as preview:
             self.assertGreater(preview.width, 500, 'Preview must retain readable app detail')
