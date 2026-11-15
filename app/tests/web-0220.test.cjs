@@ -136,7 +136,7 @@ test('offline-sync.js: timeouts and backoff constants follow contract 5.9', () =
 test('service worker: one cache name, HTML for a script is never cached, tiles never cached (5.7)', () => {
   const sw = read('sw.js');
   assert.equal((sw.match(/jk-v\d+/g) || []).length, 1, 'the cache name appears once');
-  assert.match(sw, /const SHELL_CACHE = 'jk-v78';/);
+  assert.match(sw, /const SHELL_CACHE = 'jk-v81';/);
   for (const page of ['app.js', 'session.js', 'shell.js', 'scan-flow.js', 'workflow-ui.js']) assert.doesNotMatch(read(page), /jk-v\d+/, page + ' must not name a cache');
   assert.match(sw, /isValidShellResponse/);
   assert.match(sw, /url\.origin !== self\.location\.origin\) return;/);
@@ -353,5 +353,53 @@ test('scan-flow.js: toggleCameraZoom flips between 1x and 2x and updates video c
   assert.ok(!classes.has('btn:is-active'));
   assert.ok(!classes.has('vid:is-zoom-2x'));
 });
+
+test('i18n.js + daily-log.js: default id, EN crop/condition/pattern translation, canonical ID log save', () => {
+  const store = new Map();
+  const localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) };
+  const dispatched = [];
+  const ctx = browserLike({ localStorage });
+  ctx.window = ctx;
+  ctx.window.dispatchEvent = ev => dispatched.push(ev);
+  ctx.CustomEvent = function (type, opts) { return { type, detail: opts?.detail }; };
+  vm.createContext(ctx);
+  vm.runInContext(read('i18n.js') + '\n' + read('daily-log.js'), ctx);
+
+  const i18n = ctx.window.JagaI18n || ctx.JagaI18n;
+  const daily = ctx.window.JagaDailyLog || ctx.JagaDailyLog;
+  assert.equal(i18n.getLang(), 'id');
+  assert.equal(i18n.isEn(), false);
+  assert.equal(i18n.t('Masuk'), 'Masuk');
+
+  i18n.setLang('en');
+  assert.equal(i18n.getLang(), 'en');
+  assert.equal(i18n.isEn(), true);
+  assert.equal(store.get('jk_lang'), 'en');
+  assert.equal(dispatched.at(-1)?.type, 'jk:langchange');
+  assert.equal(i18n.crop('Cabai Rawit'), "Bird's Eye Chili");
+  assert.equal(i18n.condition('Bercak Daun'), 'Leaf Spot');
+  assert.equal(i18n.severity('Severe'), 'Critical');
+  assert.equal(i18n.dateTokens('Senin, 2 Okt'), 'Mon, 2 Oct');
+  assert.equal(i18n.t('3 dari 5 tersisa'), '3 of 5 left');
+  assert.equal(i18n.t('2 Petak Aktif · 8 Tanaman Terpantau'), '2 Active Plots · 8 Tracked Crops');
+  assert.equal(i18n.t('• Cabai: Kritis — Bercak Daun.'), '• Chili: Critical — Leaf Spot.');
+  assert.equal(
+    i18n.t('Diagnosis sekarang dibuat saat AI mengira tanaman ini Kopi. Analisis ulang memakai foto yang sama dengan jenis Cabai.'),
+    'Current diagnosis was generated assuming this crop is Coffee. Re-analyzing uses the same photo as Chili.'
+  );
+
+  const draft = { date: '2026-10-20', photoCount: 2, crops: [{ crop: 'Cabai', condition: 'Bercak Daun', severity: 'Severe' }] };
+  const enView = daily.narrative(draft);
+  const idCanonical = daily.narrative(draft, null, 'id');
+  assert.match(enView, /^Today \(Tue, 20 Oct\)/);
+  assert.match(enView, /• Chili: Critical — Leaf Spot\./);
+  assert.match(idCanonical, /^Hari ini \(Selasa, 20 Okt\)/);
+  assert.match(idCanonical, /• Cabai: Kritis — Bercak Daun\./);
+
+  i18n.setLang('id');
+  assert.equal(i18n.getLang(), 'id');
+  assert.equal(i18n.t('Masuk'), 'Masuk');
+});
+
 
 

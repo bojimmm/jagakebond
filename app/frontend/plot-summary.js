@@ -14,11 +14,35 @@
   const NUTRIENT = /^(kekurangan|defisiensi)/i;
   const DISEASE =
     /^(mosaik|bulai|antrakn|bercak|sigatoka|blas|busuk|hawar|karat|layu|embun|jamur|virus|bakteri|kudis|keriting|kanker|gosong|tungro|kerdil|cacar|mati)/i;
-  const KIND_LABEL = {
+  const tr = (s, v) =>
+    root.JagaI18n && typeof root.JagaI18n.t === "function"
+      ? root.JagaI18n.t(s, v)
+      : s;
+  const isEn = () =>
+    !!(
+      root.JagaI18n &&
+      typeof root.JagaI18n.isEn === "function" &&
+      root.JagaI18n.isEn()
+    );
+  const trCrop = (s) =>
+    root.JagaI18n && typeof root.JagaI18n.crop === "function"
+      ? root.JagaI18n.crop(s)
+      : s;
+  const trCond = (s) =>
+    root.JagaI18n && typeof root.JagaI18n.condition === "function"
+      ? root.JagaI18n.condition(s)
+      : s;
+  const KIND_LABEL_ID = {
     hama: "Hama",
     penyakit: "Penyakit",
     hara: "Hara",
     lain: "Lainnya",
+  };
+  const KIND_LABEL_EN = {
+    hama: "Pest",
+    penyakit: "Disease",
+    hara: "Nutrient",
+    lain: "Other",
   };
   const SEV_RANK = { Severe: 0, Moderate: 1, Unknown: 2, Healthy: 3 };
   const NOT_A_PROBLEM =
@@ -37,7 +61,7 @@
           "'": "&#39;",
         })[c],
     );
-  const fmt = (n) => Math.round(n).toLocaleString("id-ID");
+  const fmt = (n) => Math.round(n).toLocaleString(isEn() ? "en-US" : "id-ID");
   const kindOf = (label) =>
     PEST.test(label)
       ? "hama"
@@ -52,26 +76,38 @@
       .trim() || "Tanaman";
   const list = (items) =>
     items.length <= 2
-      ? items.join(" dan ")
-      : items.slice(0, -1).join(", ") + ", dan " + items[items.length - 1];
+      ? items.join(isEn() ? " and " : " dan ")
+      : items.slice(0, -1).join(", ") +
+        (isEn() ? ", and " : ", dan ") +
+        items[items.length - 1];
   // Plants carry no names of their own, so lists count them per species: "2 tanaman Cabai dan 1 tanaman Kopi".
   const plants = (names) => {
     const n = new Map();
-    for (const x of names) n.set(x, (n.get(x) || 0) + 1);
-    return list([...n].map(([name, k]) => k + " tanaman " + name));
+    for (const x of names) {
+      const label = trCrop(x);
+      n.set(label, (n.get(label) || 0) + 1);
+    }
+    return list(
+      [...n].map(([name, k]) =>
+        isEn() ? `${k} ${name} ${k === 1 ? "plant" : "plants"}` : `${k} tanaman ${name}`,
+      ),
+    );
   };
   function band(m) {
     if (m === null) return null;
-    const label =
+    const label = tr(
       m < 400
         ? "Dataran Rendah"
         : m <= 700
           ? "Dataran Menengah"
-          : "Dataran Tinggi";
+          : "Dataran Tinggi",
+    );
     return {
       id: m < 400 ? "rendah" : m <= 700 ? "menengah" : "tinggi",
       label,
-      note: "Perkiraan dari ketinggian foto yang tercatat. Kelembapan, suhu, dan penyebab gejala tidak dapat disimpulkan dari ketinggian saja.",
+      note: tr(
+        "Perkiraan dari ketinggian foto yang tercatat. Kelembapan, suhu, dan penyebab gejala tidak dapat disimpulkan dari ketinggian saja.",
+      ),
     };
   }
   function median(values) {
@@ -107,12 +143,14 @@
     return root.recSeverity(rec);
   }
   const severityLabel = (severity) =>
-    ({
-      Severe: "Kritis",
-      Moderate: "Waspada",
-      Healthy: "Sehat",
-      Unknown: "Belum Pasti",
-    })[severity] || "Belum Pasti";
+    tr(
+      {
+        Severe: "Kritis",
+        Moderate: "Waspada",
+        Healthy: "Sehat",
+        Unknown: "Belum Pasti",
+      }[severity] || "Belum Pasti",
+    );
   const severityTone = (severity) =>
     ({ Severe: "severe", Moderate: "moderate", Healthy: "healthy" })[
       severity
@@ -233,14 +271,14 @@
       ),
     };
     model.status = !groups.length
-      ? { tone: "unknown", label: "Belum Ada Data" }
+      ? { tone: "unknown", label: tr("Belum Ada Data") }
       : counts.Severe
-        ? { tone: "severe", label: "Perlu Tindakan" }
+        ? { tone: "severe", label: tr("Perlu Tindakan") }
         : counts.Moderate
-          ? { tone: "moderate", label: "Perlu Dipantau" }
+          ? { tone: "moderate", label: tr("Perlu Dipantau") }
           : counts.Healthy === groups.length
-            ? { tone: "healthy", label: "Baik" }
-            : { tone: "unknown", label: "Belum Pasti" };
+            ? { tone: "healthy", label: tr("Baik") }
+            : { tone: "unknown", label: tr("Belum Pasti") };
     model.findings = findings(model);
     model.advice = advice(model);
     return model;
@@ -261,61 +299,89 @@
   }
   /* Correlations between species, problems and the plot. */
   function findings(m) {
-    const out = [];
+    const out = [],
+      en = isEn();
     for (const p of m.problems) {
       if (p.plants < 2) continue;
+      const condName = trCond(p.label),
+        spNames = list([...p.species].map(trCrop));
       out.push(
-        `Dugaan ${p.label} tercatat pada ${p.plants} tanaman dari ${p.species.size} jenis (${list([...p.species])}). Periksa tanaman lain untuk mengetahui luas gejalanya; catatan ini belum membuktikan penularan.`,
+        en
+          ? `Suspected ${condName} recorded on ${p.plants} plants across ${p.species.size} ${p.species.size === 1 ? "type" : "types"} (${spNames}). Inspect other plants to check the spread; this log does not prove transmission.`
+          : `Dugaan ${p.label} tercatat pada ${p.plants} tanaman dari ${p.species.size} jenis (${list([...p.species])}). Periksa tanaman lain untuk mengetahui luas gejalanya; catatan ini belum membuktikan penularan.`,
       );
     }
     const worst = focusSpecies(m);
-    if (worst)
+    if (worst) {
+      const wName = trCrop(worst.name);
       out.push(
-        `${worst.sick} dari ${worst.plants} tanaman ${worst.name} yang tercatat memerlukan perhatian. Jumlah ini hanya mencakup tanaman yang didokumentasikan.`,
+        en
+          ? `${worst.sick} of ${worst.plants} recorded ${wName} plants need attention. This count only includes documented plants.`
+          : `${worst.sick} dari ${worst.plants} tanaman ${worst.name} yang tercatat memerlukan perhatian. Jumlah ini hanya mencakup tanaman yang didokumentasikan.`,
       );
+    }
     if (m.review.length)
       out.push(
-        `Hasil yang memerlukan pemeriksaan langsung: ${plants(m.review)}.`,
+        en
+          ? `Results needing direct inspection: ${plants(m.review)}.`
+          : `Hasil yang memerlukan pemeriksaan langsung: ${plants(m.review)}.`,
       );
     if (m.worse.length)
       out.push(
-        `Status pengamatan lebih berat dibanding catatan sebelumnya: ${plants(m.worse)}. Ini bukan bukti perubahan biologis atau hasil perawatan.`,
+        en
+          ? `Observed status more severe than previous log: ${plants(m.worse)}. This is not proof of biological progression or treatment outcome.`
+          : `Status pengamatan lebih berat dibanding catatan sebelumnya: ${plants(m.worse)}. Ini bukan bukti perubahan biologis atau hasil perawatan.`,
       );
     if (m.better.length)
       out.push(
-        `Status pengamatan lebih ringan dibanding catatan sebelumnya: ${plants(m.better)}. Periksa kondisi tanaman secara langsung.`,
+        en
+          ? `Observed status milder than previous log: ${plants(m.better)}. Check plant conditions directly.`
+          : `Status pengamatan lebih ringan dibanding catatan sebelumnya: ${plants(m.better)}. Periksa kondisi tanaman secara langsung.`,
       );
     return out;
   }
   function advice(m) {
+    const en = isEn();
     if (!m.plants)
       return [
-        "Foto tanaman yang berada di dalam batas petak ini untuk mulai mengisi ringkasan.",
+        tr("Foto tanaman yang berada di dalam batas petak ini untuk mulai mengisi ringkasan."),
       ];
     const out = [];
     if (m.severe.length)
       out.push(
-        `Periksa langsung dahulu tanaman berstatus Kritis: ${plants(m.severe)}. Buka Riwayat dan ketuk nama tanaman untuk melihat langkah pemeriksaannya.`,
+        en
+          ? `Inspect Critical-status plants directly first: ${plants(m.severe)}. Open History and tap the crop name to view check steps.`
+          : `Periksa langsung dahulu tanaman berstatus Kritis: ${plants(m.severe)}. Buka Riwayat dan ketuk nama tanaman untuk melihat langkah pemeriksaannya.`,
       );
     if (m.problems.length)
       out.push(
-        "Periksa bagian tanaman dengan dugaan serupa, termasuk tanaman lain yang belum difoto. Catat letak dan jumlah gejalanya; jangan menyimpulkan penularan dari jumlah foto.",
+        tr(
+          "Periksa bagian tanaman dengan dugaan serupa, termasuk tanaman lain yang belum difoto. Catat letak dan jumlah gejalanya; jangan menyimpulkan penularan dari jumlah foto.",
+        ),
       );
     if (m.problems.some((p) => p.kind === "hara"))
       out.push(
-        "Minta pemeriksaan tanah atau daun bila dicurigai masalah hara. Foto dan ketinggian saja belum cukup untuk memilih pemupukan.",
+        tr(
+          "Minta pemeriksaan tanah atau daun bila dicurigai masalah hara. Foto dan ketinggian saja belum cukup untuk memilih pemupukan.",
+        ),
       );
     if (m.review.length)
       out.push(
-        `Minta penilaian penyuluh untuk hasil yang belum pasti: ${plants(m.review)}.`,
+        en
+          ? `Ask an extension officer to review uncertain results: ${plants(m.review)}.`
+          : `Minta penilaian penyuluh untuk hasil yang belum pasti: ${plants(m.review)}.`,
       );
     if (m.stale.length)
       out.push(
-        `Belum difoto lebih dari ${STALE_DAYS} hari: ${plants(m.stale)}. Foto kembali bagian yang sama untuk memperbarui catatan.`,
+        en
+          ? `Not photographed for over ${STALE_DAYS} days: ${plants(m.stale)}. Re-photograph the same area to refresh logs.`
+          : `Belum difoto lebih dari ${STALE_DAYS} hari: ${plants(m.stale)}. Foto kembali bagian yang sama untuk memperbarui catatan.`,
       );
     if (!out.length)
       out.push(
-        "Tidak ada gejala yang jelas pada foto-foto yang tercatat. Tetap periksa tanaman secara langsung; ringkasan ini bukan jaminan seluruh petak bebas masalah.",
+        tr(
+          "Tidak ada gejala yang jelas pada foto-foto yang tercatat. Tetap periksa tanaman secara langsung; ringkasan ini bukan jaminan seluruh petak bebas masalah.",
+        ),
       );
     return out;
   }
@@ -329,18 +395,21 @@
     }[t] || "badge-unknown");
   function teaserHtml(farm) {
     const m = build(farm, records(farm.id)),
-      c = m.counts;
+      c = m.counts,
+      en = isEn();
     const parts = m.plants
       ? [
-          m.plants + " tanaman",
-          c.Severe ? c.Severe + " Kritis" : null,
-          c.Moderate ? c.Moderate + " Waspada" : null,
+          en ? `${m.plants} ${m.plants === 1 ? "plant" : "plants"}` : m.plants + " tanaman",
+          c.Severe ? c.Severe + " " + tr("Kritis") : null,
+          c.Moderate ? c.Moderate + " " + tr("Waspada") : null,
         ]
           .filter(Boolean)
           .join(" · ")
-      : "Belum ada tanaman";
+      : tr("Belum ada tanaman");
     return (
-      '<span class="plot-teaser-main"><span class="plot-teaser-title">Ringkasan Petak</span><span class="plot-teaser-sub">' +
+      '<span class="plot-teaser-main"><span class="plot-teaser-title">' +
+      esc(tr("Ringkasan Petak")) +
+      '</span><span class="plot-teaser-sub">' +
       esc(parts) +
       "</span></span>" +
       '<span class="' +
@@ -353,10 +422,12 @@
 
   function bodyHtml(m) {
     const c = m.counts,
-      farm = m.farm;
+      farm = m.farm,
+      en = isEn(),
+      KIND_LABEL = en ? KIND_LABEL_EN : KIND_LABEL_ID;
     const meta = [
-      m.plants + " tanaman",
-      m.photos + " foto",
+      en ? `${m.plants} ${m.plants === 1 ? "plant" : "plants"}` : m.plants + " tanaman",
+      en ? `${m.photos} ${m.photos === 1 ? "photo" : "photos"}` : m.photos + " foto",
       typeof root.formatArea === "function" && farm.areaM2
         ? root.formatArea(farm.areaM2)
         : null,
@@ -365,7 +436,7 @@
       .join(" · ");
     const when =
       m.updated && typeof root.formatWhenId === "function"
-        ? "Data terakhir berubah " + root.formatWhenId(m.updated)
+        ? (en ? "Last updated " : "Data terakhir berubah ") + root.formatWhenId(m.updated)
         : "";
     // The same tiles as Beranda's plant summary (styles.css .stat-tile), here read-only.
     const stat = (key, label, cls) =>
@@ -374,7 +445,7 @@
       '"><span class="stat-num">' +
       c[key] +
       '</span><span class="stat-label">' +
-      label +
+      esc(label) +
       "</span></div>";
     let html =
       '<section class="plot-status plot-tone-' +
@@ -392,33 +463,42 @@
       "</section>";
     if (m.plants)
       html +=
-        '<section class="plot-block"><h4 class="plot-h">Kondisi Tanaman</h4><div class="plot-stats">' +
-        stat("Severe", "Kritis", "stat-severe") +
-        stat("Moderate", "Waspada", "stat-moderate") +
-        stat("Healthy", "Sehat", "stat-healthy") +
-        stat("Unknown", "Belum Pasti", "") +
+        '<section class="plot-block"><h4 class="plot-h">' +
+        esc(tr("Kondisi Tanaman")) +
+        '</h4><div class="plot-stats">' +
+        stat("Severe", tr("Kritis"), "stat-severe") +
+        stat("Moderate", tr("Waspada"), "stat-moderate") +
+        stat("Healthy", tr("Sehat"), "stat-healthy") +
+        stat("Unknown", tr("Belum Pasti"), "") +
         "</div></section>";
     html +=
-      '<section class="plot-block"><h4 class="plot-h">Ketinggian Petak</h4>' +
+      '<section class="plot-block"><h4 class="plot-h">' +
+      esc(tr("Ketinggian Petak")) +
+      "</h4>" +
       (m.band
         ? '<p class="plot-p"><b>' +
           esc(m.band.label) +
-          "</b>, sekitar " +
-          fmt(m.elevation) +
-          ' m dpl.</p><p class="plot-p">' +
+          "</b>" +
+          (en ? ", approx. " + fmt(m.elevation) + " m a.s.l." : ", sekitar " + fmt(m.elevation) + " m dpl.") +
+          '</p><p class="plot-p">' +
           esc(m.band.note) +
           "</p>"
-        : '<p class="plot-p t-muted">Ketinggian belum tercatat. Foto tanaman dengan GPS menyala agar ketinggian petak terbaca.</p>') +
+        : '<p class="plot-p t-muted">' +
+          esc(tr("Ketinggian belum tercatat. Foto tanaman dengan GPS menyala agar ketinggian petak terbaca.")) +
+          "</p>") +
       "</section>";
     if (m.species.length)
       html +=
-        '<section class="plot-block"><h4 class="plot-h">Jenis Tanaman dan Masalahnya</h4>' +
+        '<section class="plot-block"><h4 class="plot-h">' +
+        esc(tr("Jenis Tanaman dan Masalahnya")) +
+        "</h4>" +
         '<div class="plot-species-list">' +
         m.species
           .map((s) => {
+            const spDisplay = trCrop(s.name);
             const renderIssueTag = (item) => {
               if (item.severity === "Healthy") {
-                return '<span class="t-meta plot-plant-label">Kondisi sehat</span>';
+                return '<span class="t-meta plot-plant-label">' + esc(tr("Kondisi sehat")) + "</span>";
               }
               const k = kindOf(item.label);
               const kindBadge =
@@ -433,24 +513,30 @@
                 '<div class="plot-issue-wrap">' +
                 kindBadge +
                 '<span class="t-meta plot-plant-label">' +
-                esc(item.label) +
+                esc(trCond(item.label)) +
                 "</span></div>"
               );
             };
-            const reanalyzeBtn = (item) =>
-              item.canReanalyze && item.id && item.needsReview
+            const reanalyzeBtn = (item) => {
+              const iName = trCrop(item.name);
+              return item.canReanalyze && item.id && item.needsReview
                 ? '<button type="button" class="btn btn-secondary btn-icon btn-sm plot-reanalyze" data-act="JagaAssessment.reanalyze" data-args="' +
                   esc(JSON.stringify([item.id, "$this"])) +
-                  '" aria-label="Analisis ulang foto ' +
-                  esc(item.name) +
-                  '" title="Analisis ulang"><i data-lucide="refresh-cw" aria-hidden="true"></i></button>'
+                  '" aria-label="' +
+                  esc(en ? `Re-analyze photo of ${iName}` : `Analisis ulang foto ${iName}`) +
+                  '" title="' +
+                  esc(tr("Analisis ulang")) +
+                  '"><i data-lucide="refresh-cw" aria-hidden="true"></i></button>'
                 : "";
+            };
             if (s.items.length === 1) {
               const single = s.items[0];
               return (
                 '<div class="plot-species"><div class="plot-species-top"><div class="plot-species-title"><b>' +
-                esc(s.name) +
-                '</b><span class="t-meta">1 tanaman</span></div><span class="' +
+                esc(spDisplay) +
+                '</b><span class="t-meta">' +
+                esc(en ? "1 plant" : "1 tanaman") +
+                '</span></div><span class="' +
                 toneBadge(severityTone(single.severity)) +
                 '">' +
                 esc(severityLabel(single.severity)) +
@@ -464,7 +550,7 @@
               .map((item) => {
                 return (
                   '<div class="plot-plant-row"><div class="plot-plant-main"><b class="plot-plant-name">' +
-                  esc(item.name) +
+                  esc(trCrop(item.name)) +
                   '</b><span class="' +
                   toneBadge(severityTone(item.severity)) +
                   '">' +
@@ -478,12 +564,14 @@
               .join("");
             return (
               '<div class="plot-species"><div class="plot-species-top"><div class="plot-species-title"><b>' +
-              esc(s.name) +
+              esc(spDisplay) +
               "</b></div>" +
               '<span class="t-meta">' +
-              s.plants +
-              " tanaman" +
-              (s.sick ? " · " + s.sick + " bermasalah" : " · semua sehat") +
+              esc(
+                en
+                  ? `${s.plants} ${s.plants === 1 ? "plant" : "plants"}` + (s.sick ? ` · ${s.sick} affected` : " · all healthy")
+                  : s.plants + " tanaman" + (s.sick ? " · " + s.sick + " bermasalah" : " · semua sehat"),
+              ) +
               '</span></div><div class="plot-plant-list">' +
               items +
               "</div></div>"
@@ -493,21 +581,37 @@
         "</div></section>";
     if (m.findings.length)
       html +=
-        '<section class="plot-block"><h4 class="plot-h">Temuan</h4><ul class="plot-list">' +
+        '<section class="plot-block"><h4 class="plot-h">' +
+        esc(tr("Temuan")) +
+        '</h4><ul class="plot-list">' +
         m.findings.map((t) => "<li>" + esc(t) + "</li>").join("") +
         "</ul></section>";
     html +=
-      '<section class="plot-block"><h4 class="plot-h">Saran Pengelolaan</h4><ul class="plot-list plot-advice">' +
+      '<section class="plot-block"><h4 class="plot-h">' +
+      esc(tr("Saran Pengelolaan")) +
+      '</h4><ul class="plot-list plot-advice">' +
       m.advice.map((t) => "<li>" + esc(t) + "</li>").join("") +
       "</ul></section>";
     html +=
-      '<p class="plot-caveat">Dihitung dari foto terakhir setiap tanaman di petak ini dan diperbarui otomatis setiap ada perubahan. Ini panduan umum, bukan diagnosis pasti atau takaran obat. Untuk obat dan dosis, tanyakan penyuluh pertanian setempat.</p>';
+      '<p class="plot-caveat">' +
+      esc(
+        tr(
+          "Dihitung dari foto terakhir setiap tanaman di petak ini dan diperbarui otomatis setiap ada perubahan. Ini panduan umum, bukan diagnosis pasti atau takaran obat. Untuk obat dan dosis, tanyakan penyuluh pertanian setempat.",
+        ),
+      ) +
+      "</p>";
     return html;
   }
 
   function sig(farm) {
     return (
-      (root.recordsSig?.() || "") + "|" + farm.id + farm.name + farm.areaM2
+      (isEn() ? "en" : "id") +
+      "|" +
+      (root.recordsSig?.() || "") +
+      "|" +
+      farm.id +
+      farm.name +
+      farm.areaM2
     );
   }
   function render() {
@@ -520,7 +624,7 @@
       top = scroller ? scroller.scrollTop : 0;
     lastSig = signature;
     document.getElementById("plot-summary-title").textContent =
-      farm.name || "Petak";
+      farm.name || tr("Petak");
     box.innerHTML = bodyHtml(build(farm, records(farm.id)));
     root.icons?.();
     document
@@ -568,6 +672,10 @@
   root.JagaHooks?.on("account-reset", () => {
     if (isOpen()) close();
     openFarmId = null;
+  });
+  root.addEventListener("jk:langchange", () => {
+    lastSig = "";
+    refresh();
   });
   root.JagaPlotSummary = {
     build,

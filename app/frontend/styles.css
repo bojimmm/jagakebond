@@ -1210,6 +1210,7 @@ details.fold > summary.btn-block { width: 100%; }
 #daily-draft-summary { color: var(--jk-text); line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 #status-choice-grid > .btn { justify-content: flex-start; }
 #modal-account .info-row > span:last-child { overflow-wrap: anywhere; }
+#modal-account .info-row-lang { align-items: center; }
 
 /* Location editor (built by workflow-ui.js): same sizes as every other dialog. */
 .workflow-dialog { padding: 16px; border-radius: var(--jk-radius-card); }

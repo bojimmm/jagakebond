@@ -31,6 +31,8 @@
  function valid(){return owner&&String(root.JagaAppAccount?.()?.id||'')===owner&&root.JagaAppGeneration?.()===generation;}
  function text(tag,value,cls){const el=document.createElement(tag);if(value)el.textContent=value;if(cls)el.className=cls;return el;}
  function button(id,label,cls,fn){const el=text('button',label,cls);if(id)el.id=id;el.type='button';el.onclick=fn;return el;}
+ const tr=(s,v)=>(root.JagaI18n&&typeof root.JagaI18n.t==='function')?root.JagaI18n.t(s,v):s;
+ const isEn=()=>!!(root.JagaI18n&&typeof root.JagaI18n.isEn==='function'&&root.JagaI18n.isEn());
  function build(){
   modal=text('div',null,'tour-coach hidden');modal.id='feature-tour';
   for(const side of ['top','right','bottom','left'])modal.append(els[side]=text('div',null,'tour-shade'));
@@ -39,37 +41,41 @@
   const card=els.card=text('section',null,'tour-card');card.setAttribute('aria-labelledby','tour-title');
   const head=text('header',null,'tour-head');
   els.progress=text('p',null,'tour-progress');
-  head.append(els.progress,button('tour-skip','Lewati','btn btn-quiet btn-sm',()=>dismiss('skipped')));
+  els.skip=button('tour-skip',tr('Lewati'),'btn btn-quiet btn-sm',()=>dismiss('skipped'));
+  head.append(els.progress,els.skip);
   const content=text('div',null,'tour-content');content.id='tour-content';content.setAttribute('aria-live','polite');content.setAttribute('aria-atomic','true');
   els.content=content;
   const controls=text('div',null,'tour-controls');
-  els.back=button('tour-back','Kembali','btn btn-secondary',()=>move(-1));
-  els.next=button('tour-next','Lanjut','btn btn-primary',()=>next());
+  els.back=button('tour-back',tr('Kembali'),'btn btn-secondary',()=>move(-1));
+  els.next=button('tour-next',tr('Lanjut'),'btn btn-primary',()=>next());
   els.extra=button('tour-extra','','btn btn-secondary tour-extra',()=>{const camera=typeof openCamera==='function';dismiss('done',true);if(camera)openCamera();});
   controls.append(els.back,els.next);
   card.append(head,content,els.extra,controls);
-  modal.append(els.ring,els.proxy,card);document.body.append(modal);dialogNames['feature-tour']='Panduan penggunaan';
+  modal.append(els.ring,els.proxy,card);document.body.append(modal);dialogNames['feature-tour']=tr('Panduan penggunaan');
   root.addEventListener('resize',schedule,{passive:true});
   root.visualViewport?.addEventListener('resize',schedule,{passive:true});
   document.addEventListener('scroll',schedule,{passive:true,capture:true});
+  root.addEventListener('jk:langchange',()=>{dialogNames['feature-tour']=tr('Panduan penggunaan');if(modal&&!modal.classList.contains('hidden')){render();layout();}});
  }
  function current(){return plan[step];}
  function render(){
   const s=current(),body=s.targets&&s.bodyEmpty&&target&&target.id==='home-empty'?s.bodyEmpty:s.body;
-  els.progress.textContent='Langkah '+(step+1)+' dari '+plan.length;
+  els.progress.textContent=isEn()?`Step ${step+1} of ${plan.length}`:'Langkah '+(step+1)+' dari '+plan.length;
+  if(els.skip)els.skip.textContent=tr('Lewati');
+  if(els.back)els.back.textContent=tr('Kembali');
   const dots=text('div',null,'tour-dots');dots.setAttribute('aria-hidden','true');
   plan.forEach((_,i)=>dots.append(text('span',null,i===step?'is-current':i<step?'is-done':'')));
-  const title=text('h2',s.title);title.id='tour-title';title.tabIndex=-1;
-  const nodes=[dots,title,text('p',body,'tour-body')];
-  if(s.action&&target)nodes.push(text('p',s.action+', atau ketuk Lanjut.','tour-action'));
-  if(s.tip)nodes.push(text('p',s.tip,'tour-tip'));
+  const title=text('h2',tr(s.title));title.id='tour-title';title.tabIndex=-1;
+  const nodes=[dots,title,text('p',tr(body),'tour-body')];
+  if(s.action&&target)nodes.push(text('p',isEn()?`${tr(s.action)}, or tap Next.`:s.action+', atau ketuk Lanjut.','tour-action'));
+  if(s.tip)nodes.push(text('p',tr(s.tip),'tour-tip'));
   els.content.replaceChildren(...nodes);
   els.back.disabled=step===0;
-  els.next.textContent=s.next||'Lanjut';
-  els.extra.textContent=s.extra||'';els.extra.hidden=!s.extra;
+  els.next.textContent=tr(s.next||'Lanjut');
+  els.extra.textContent=s.extra?tr(s.extra):'';els.extra.hidden=!s.extra;
   els.proxy.hidden=!(s.open&&target);
   els.ring.classList.toggle('is-tap',!!(s.open&&target));
-  if(s.open&&target)els.proxy.setAttribute('aria-label',(s.action||s.title)+' (bagian dari panduan)');
+  if(s.open&&target)els.proxy.setAttribute('aria-label',tr(s.action||s.title)+(isEn()?' (part of guide)':' (bagian dari panduan)'));
   return title;
  }
  /* Show the step's screen, find its control, then lay out the hole, ring and card around it. */

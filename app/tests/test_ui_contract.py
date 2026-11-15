@@ -98,6 +98,57 @@ class UiContractTests(unittest.TestCase):
             self.assertRegex(HTML, rf'id="{modal_id}" class="hidden\b')
         self.assertLess(len(compiled), 350_000, "compiled CSS should not contain broad color safelists")
 
+    def test_landing_revisions_and_bilingual_contract(self):
+        landing_css = (ROOT / "frontend/landing.css").read_text()
+        i18n_js = (ROOT / "frontend/i18n.js").read_text()
+
+        # Hero fills viewport so the lower band does not peek at initial load, and header CTA stays compact.
+        self.assertIn("min-height: 100svh;", landing_css)
+        self.assertRegex(landing_css, r"#auth-gate \.topbar-cta\s*\{[^}]*min-height:\s*36px;")
+
+        # Eyebrow headings removed in favor of direct section headlines.
+        for removed_eyebrow in ("VIDEO PANDUAN 20 DETIK", "MANFAAT UTAMA", "MASALAH DI LAPANGAN", "Tutorial interaktif 3D"):
+            self.assertNotIn(removed_eyebrow, HTML)
+        for direct_heading in (
+            "Lihat cara kerja JagaKebond dari kebun hingga peta.",
+            "Yang Anda dapat dari setiap foto.",
+            "Catatan kebun sering tercecer di galeri.",
+            "Langkah penggunaan JagaKebond secara visual.",
+            "Pertanyaan yang sering muncul.",
+        ):
+            self.assertIn(direct_heading, HTML)
+
+        # Problem comparison + proof pills + Android offline footnote + borderless autoplay video.
+        self.assertIn("Tanpa JagaKebond", HTML)
+        self.assertNotIn("Tanpa catatan terstruktur", HTML)
+        for pill in (
+            "Aplikasi Web",
+            "Aplikasi Android",
+            "Antarmuka Bilingual",
+            "Data Tersimpan di Cloud",
+            "Aplikasi Bekerja Offline*",
+            "*fitur ini bekerja di aplikasi native Android",
+        ):
+            self.assertIn(pill, HTML)
+        self.assertIn('data-lucide="cloud"', HTML)
+        video_match = re.search(r'<video\s+id="explainer-video"[^>]*>', HTML)
+        self.assertIsNotNone(video_match)
+        self.assertIn("autoplay", video_match.group(0))
+        self.assertIn("muted", video_match.group(0))
+        self.assertIn("playsinline", video_match.group(0))
+        self.assertNotIn("controls", video_match.group(0))
+        self.assertRegex(landing_css, r"#auth-gate \.video-shell\s*\{[^}]*border:\s*0;[^}]*padding:\s*0;")
+
+        # Bilingual switch & i18n module across landing, account modal, legal pages, and 3D tour.
+        self.assertRegex(HTML, r'src="i18n\.js\?v=\d+"')
+        self.assertIn('/i18n.js?v=', SW)
+        self.assertIn("STORAGE_KEY = 'jk_lang'", i18n_js)
+        for page_name in ("index.html", "privacy.html", "terms.html", "tutorial-3d.html"):
+            page = (ROOT / "frontend" / page_name).read_text()
+            self.assertIn('data-lang-choice="id"', page, page_name)
+            self.assertIn('data-lang-choice="en"', page, page_name)
+        self.assertIn('class="info-row info-row-lang"', HTML)
+
 
 if __name__ == "__main__":
     unittest.main()

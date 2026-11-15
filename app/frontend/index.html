@@ -24,8 +24,9 @@
   <script defer src="feature-loader.js?v=1"></script>
   <script defer src="error-report.js?v=1"></script>
   <script defer src="actions.js?v=1"></script>
+  <script defer src="i18n.js?v=4"></script>
   <link rel="stylesheet" href="design-tokens.css?v=2">
-  <link rel="stylesheet" href="vendor/tailwind.generated.css?v=27">
+  <link rel="stylesheet" href="vendor/tailwind.generated.css?v=28">
   <link rel="stylesheet" href="ui-kit.css?v=5">
   <link rel="stylesheet" href="vendor/leaflet/leaflet-1.9.4.css">
   <script defer src="vendor/lucide-0.468.0.umd.min.js"></script>
@@ -37,8 +38,8 @@
   <!-- Map and photo metadata libraries load when their feature is first opened. -->
 
   <!-- App styles -->
-  <link rel="stylesheet" href="styles.css?v=50">
-  <link rel="stylesheet" href="landing.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=51">
+  <link rel="stylesheet" href="landing.css?v=13">
   <link rel="stylesheet" href="assessment.css?v=13">
   <link rel="stylesheet" href="tour.css?v=3">
 </head>
@@ -102,7 +103,7 @@
 
       <div class="mobile-drawer" id="mobile-drawer" aria-label="Menu navigasi ponsel" hidden>
         <a class="title-2" href="#auth-form">Masuk ke kebun Anda<i data-lucide="log-in" aria-hidden="true"></i></a>
-        <a class="title-2" href="#video-panduan">Video panduan 20 detik<i data-lucide="video" aria-hidden="true"></i></a>
+        <a class="title-2" href="#video-panduan">Video panduan<i data-lucide="video" aria-hidden="true"></i></a>
         <a class="title-2" href="#masalah">Masalah dan solusi<i data-lucide="git-compare" aria-hidden="true"></i></a>
         <a class="title-2" href="#cara">Tutorial 3D interaktif<i data-lucide="box" aria-hidden="true"></i></a>
         <a class="title-2" href="#fitur">Fitur utama<i data-lucide="scan" aria-hidden="true"></i></a>
@@ -185,12 +186,11 @@
       <section class="block block-soft" id="video-panduan" aria-labelledby="video-heading">
         <div class="wrap">
           <div class="block-head reveal">
-            <span class="eyebrow caption-3"><i data-lucide="video" aria-hidden="true"></i>Video panduan 20 detik</span>
             <h2 id="video-heading" class="heading-2">Lihat cara kerja JagaKebond dari kebun hingga peta.</h2>
             <p class="body-3">Tonton panduan singkat pengambilan foto gejala tanaman, pembacaan diagnosis awal AI, pemetaan petak kebun, hingga sinkronisasi antrean offline.</p>
           </div>
           <div class="video-shell reveal">
-            <video id="explainer-video" width="1920" height="1080" controls preload="metadata" playsinline poster="img/jagakebond-explainer-poster.png?v=2">
+            <video id="explainer-video" width="1920" height="1080" autoplay muted preload="auto" playsinline poster="img/jagakebond-explainer-poster.png?v=2">
               <source id="explainer-src-webm" src="img/jagakebond-explainer-opt-a.webm?v=2" type="video/webm">
               <source id="explainer-src-mp4" src="img/jagakebond-explainer-opt-a.mp4?v=2" type="video/mp4">
             </video>
@@ -209,14 +209,13 @@
       <section class="block" id="masalah" aria-labelledby="masalah-heading">
         <div class="wrap">
           <div class="block-head reveal">
-            <span class="eyebrow caption-3"><i data-lucide="circle-alert" aria-hidden="true"></i>Masalah di lapangan</span>
             <h2 id="masalah-heading" class="heading-3">Catatan kebun sering tercecer di galeri.</h2>
             <p class="body-3">Gejala muncul, foto menumpuk tanpa label lokasi, dan keputusan diambil dari ingatan. Seminggu kemudian, tidak ada catatan tanaman mana yang membaik atau memburuk.</p>
           </div>
 
           <div class="p2s">
             <article class="p2s-card reveal">
-              <h3 class="heading-6"><i data-lucide="circle-x" aria-hidden="true"></i>Tanpa catatan terstruktur</h3>
+              <h3 class="heading-6"><i data-lucide="circle-x" aria-hidden="true"></i>Tanpa JagaKebond</h3>
               <ul>
                 <li class="body-3"><i data-lucide="circle-x" aria-hidden="true"></i>Foto gejala bercampur dengan foto lain di galeri ponsel</li>
                 <li class="body-3"><i data-lucide="circle-x" aria-hidden="true"></i>Sulit melacak tanaman atau bedeng yang pernah diperiksa</li>
@@ -250,7 +249,6 @@
       <section class="block" id="fitur" aria-labelledby="fitur-heading">
         <div class="wrap">
           <div class="block-head reveal">
-            <span class="eyebrow caption-3"><i data-lucide="leaf" aria-hidden="true"></i>Manfaat utama</span>
             <h2 id="fitur-heading" class="heading-2">Yang Anda dapat dari setiap foto.</h2>
           </div>
 
@@ -286,8 +284,7 @@
       <section id="cara" class="block block-soft landing-tour-section" aria-labelledby="cara-heading">
         <div class="wrap landing-tour-wrap">
           <div class="block-head reveal landing-tour-head">
-            <span class="eyebrow caption-3 landing-tour-eyebrow"><i data-lucide="box" aria-hidden="true"></i>Tutorial interaktif 3D</span>
-            <h2 id="cara-heading" class="heading-2">Lima langkah panduan kebun secara visual.</h2>
+            <h2 id="cara-heading" class="heading-2">Langkah penggunaan JagaKebond secara visual.</h2>
             <p class="body-3">Pilih langkah 1 sampai 5 di bawah (atau gulir di layar desktop) untuk melihat bagaimana pulau kebun 3D dan tampilan ponsel bergerak dari pengambilan foto hingga pemetaan petak.</p>
           </div>
           <div class="tour-layout">
@@ -380,18 +377,18 @@
       <section class="block" id="bukti" aria-labelledby="bukti-heading">
         <div class="wrap">
           <div class="block-head reveal">
-            <span class="eyebrow caption-3"><i data-lucide="shield-check" aria-hidden="true"></i>Kejelasan sistem</span>
             <h2 id="bukti-heading" class="heading-3">Alat bantu catatan, bukan penentu tunggal.</h2>
             <p class="body-3">Penilaian gambar adalah hipotesis awal yang perlu diperiksa ulang di kebun. Keputusan perawatan dan riwayat koreksi tetap dipegang pemilik serta admin kebun.</p>
           </div>
 
           <div class="proof-row reveal">
-            <span class="chip title-5"><i data-lucide="monitor-smartphone" aria-hidden="true"></i>Aplikasi Web PWA</span>
+            <span class="chip title-5"><i data-lucide="monitor-smartphone" aria-hidden="true"></i>Aplikasi Web</span>
             <span class="chip title-5"><i data-lucide="smartphone" aria-hidden="true"></i>Aplikasi Android</span>
-            <span class="chip title-5"><i data-lucide="languages" aria-hidden="true"></i>Antarmuka Bahasa Indonesia</span>
-            <span class="chip title-5"><i data-lucide="lock" aria-hidden="true"></i>Akses dikelola admin kebun</span>
-            <span class="chip title-5"><i data-lucide="history" aria-hidden="true"></i>Antrean sinkron offline</span>
+            <span class="chip title-5"><i data-lucide="languages" aria-hidden="true"></i>Antarmuka Bilingual</span>
+            <span class="chip title-5"><i data-lucide="cloud" aria-hidden="true"></i>Data Tersimpan di Cloud</span>
+            <span class="chip title-5"><i data-lucide="history" aria-hidden="true"></i>Aplikasi Bekerja Offline*</span>
           </div>
+          <p class="proof-footnote caption-2">*fitur ini bekerja di aplikasi native Android</p>
 
           <article class="quote-card reveal">
             <i data-lucide="quote" class="q" aria-hidden="true"></i>
@@ -407,7 +404,6 @@
       <section class="block block-soft" id="faq" aria-labelledby="faq-heading">
         <div class="wrap">
           <div class="block-head reveal">
-            <span class="eyebrow caption-3"><i data-lucide="circle-help" aria-hidden="true"></i>FAQ</span>
             <h2 id="faq-heading" class="heading-2">Pertanyaan yang sering muncul.</h2>
           </div>
 
@@ -439,7 +435,7 @@
 
             <details class="reveal">
               <summary class="title-3">Apakah bisa dipasang di ponsel Android maupun lewat browser? <i data-lucide="plus" aria-hidden="true"></i></summary>
-              <p class="body-3">Ya. JagaKebond berjalan di peramban modern sebagai Web PWA yang bisa dipasang di layar utama, dan juga tersedia sebagai aplikasi Android dengan dukungan kamera serta sinkronisasi latar.</p>
+              <p class="body-3">Ya. JagaKebond berjalan di peramban modern sebagai aplikasi web yang bisa dipasang di layar utama, dan juga tersedia sebagai aplikasi Android dengan dukungan kamera serta sinkronisasi latar.</p>
             </details>
           </div>
         </div>
@@ -465,7 +461,10 @@
           <nav aria-label="Informasi layanan">
             <a class="caption-1" href="privacy.html">Kebijakan Privasi</a>
             <a class="caption-1" href="terms.html">Ketentuan Layanan</a>
-            <span class="lang caption-2" lang="id">Bahasa Indonesia</span>
+            <div class="lang-switch" role="group" aria-label="Pilih bahasa">
+              <button type="button" class="lang-switch-btn is-active" data-lang-choice="id" aria-pressed="true">ID</button>
+              <button type="button" class="lang-switch-btn" data-lang-choice="en" aria-pressed="false">EN</button>
+            </div>
           </nav>
         </div>
       </footer>
@@ -1276,6 +1275,13 @@
           <div class="info-row"><span>Peran</span><span id="account-role">—</span></div>
           <div class="info-row"><span>Analisis cepat hari ini</span><span id="account-quota">Belum tersedia</span></div>
           <div class="info-row"><span>Catatan tersimpan</span><span id="account-records">—</span></div>
+          <div class="info-row info-row-lang">
+            <span>Bahasa / Language</span>
+            <div class="lang-switch" role="group" aria-label="Pilih bahasa">
+              <button type="button" class="lang-switch-btn is-active" data-lang-choice="id" aria-pressed="true">ID</button>
+              <button type="button" class="lang-switch-btn" data-lang-choice="en" aria-pressed="false">EN</button>
+            </div>
+          </div>
         </div>
 
         <details class="fold">
@@ -1500,26 +1506,26 @@
 
   <script defer src="native-adapter.js?v=20"></script>
   <script defer src="offline-store.js?v=15"></script>
-  <script defer src="offline-sync.js?v=19"></script>
+  <script defer src="offline-sync.js?v=20"></script>
   <script defer src="farm-membership.js?v=2"></script>
   <script defer src="workflow-state.js?v=1"></script>
-  <script defer src="daily-log.js?v=8"></script>
-  <script defer src="local-media.js?v=5"></script>
+  <script defer src="daily-log.js?v=9"></script>
+  <script defer src="local-media.js?v=6"></script>
   <script defer src="vendor/gsap.min.js?v=1"></script>
   <script defer src="vendor/ScrollTrigger.min.js?v=1"></script>
   <script defer src="vendor/three.min.js?v=1"></script>
-  <script defer src="app.js?v=55"></script>
+  <script defer src="app.js?v=56"></script>
   <!-- WEB 0.2.2.0: session/API client, scan flow and app-shell extras. Since 0.2.4.16 workflow-ui.js extends app.js through JagaHooks (actions.js) instead of re-assigning its functions. -->
-  <script defer src="session.js?v=3"></script>
-  <script defer src="google-signin.js?v=1"></script>
-  <script defer src="scan-flow.js?v=11"></script>
-  <script defer src="shell.js?v=4"></script>
-  <script defer src="workflow-ui.js?v=17"></script>
+  <script defer src="session.js?v=4"></script>
+  <script defer src="google-signin.js?v=2"></script>
+  <script defer src="scan-flow.js?v=12"></script>
+  <script defer src="shell.js?v=5"></script>
+  <script defer src="workflow-ui.js?v=18"></script>
   <script defer src="problem-registry.js?v=1"></script>
-  <script defer src="assessment-ui.js?v=16"></script>
-  <script defer src="plot-summary.js?v=5"></script>
-  <script defer src="landing.js?v=3"></script>
-  <script defer src="tour.js?v=7"></script>
+  <script defer src="assessment-ui.js?v=17"></script>
+  <script defer src="plot-summary.js?v=6"></script>
+  <script defer src="landing.js?v=4"></script>
+  <script defer src="tour.js?v=8"></script>
 </body>
 </html>
 

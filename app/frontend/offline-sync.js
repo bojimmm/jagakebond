@@ -57,10 +57,12 @@
     const done = () => { if (timerId !== null && typeof clearTimeout === 'function') clearTimeout(timerId); };
     return { promise: fetch(url, init).catch(error => { done(); throw networkFailure(error, timedOut, cancelled); }), done };
   }
+  const tr = (s, v) => (root.JagaI18n && typeof root.JagaI18n.t === 'function') ? root.JagaI18n.t(s, v) : s;
+  const isEn = () => !!(root.JagaI18n && typeof root.JagaI18n.isEn === 'function' && root.JagaI18n.isEn());
   function networkFailure(error, timedOut, cancelled) {
-    const wrapped = new Error(cancelled ? 'Pengiriman dibatalkan.'
+    const wrapped = new Error(tr(cancelled ? 'Pengiriman dibatalkan.'
       : timedOut ? 'Koneksi terlalu lambat. Dicoba lagi otomatis.'
-      : 'Tidak ada sinyal. Foto dikirim otomatis saat sinyal ada.');
+      : 'Tidak ada sinyal. Foto dikirim otomatis saat sinyal ada.'));
     wrapped.network = !cancelled;
     wrapped.timedOut = !!timedOut;
     wrapped.cancelled = !!cancelled;
@@ -68,18 +70,18 @@
     return wrapped;
   }
   function statusMessage(status, detail) {
-    const text = typeof detail === 'string' && detail.trim() ? detail.trim() : '';
-    if (status === 413) return 'Foto terlalu besar untuk server. Ambil ulang foto.';
-    if (status === 422) return text || 'Foto atau datanya ditolak server. Ambil ulang foto.';
-    if (status === 400) return text || 'Data foto ditolak server. Ambil ulang foto.';
-    if (status === 404) return text || 'Tanaman atau petak tidak ditemukan di server.';
-    if (status === 409) return 'Foto ini sudah pernah dikirim dengan data berbeda. Periksa di Riwayat.';
-    if (status === 429) return text || 'Server sedang sibuk. Dicoba lagi otomatis.';
-    if (status === 403) return 'Server menolak kiriman ini. Muat ulang aplikasi atau masuk lagi.';
-    if (status >= 500) return 'Server sedang bermasalah. Dicoba lagi otomatis.';
-    return text || 'Pengiriman ditolak server (kode ' + status + ').';
+    const text = typeof detail === 'string' && detail.trim() ? tr(detail.trim()) : '';
+    if (status === 413) return tr('Foto terlalu besar untuk server. Ambil ulang foto.');
+    if (status === 422) return text || tr('Foto atau datanya ditolak server. Ambil ulang foto.');
+    if (status === 400) return text || tr('Data foto ditolak server. Ambil ulang foto.');
+    if (status === 404) return text || tr('Tanaman atau petak tidak ditemukan di server.');
+    if (status === 409) return tr('Foto ini sudah pernah dikirim dengan data berbeda. Periksa di Riwayat.');
+    if (status === 429) return text || tr('Server sedang sibuk. Dicoba lagi otomatis.');
+    if (status === 403) return tr('Server menolak kiriman ini. Muat ulang aplikasi atau masuk lagi.');
+    if (status >= 500) return tr('Server sedang bermasalah. Dicoba lagi otomatis.');
+    return text || (isEn() ? 'Upload rejected by server (code ' + status + ').' : 'Pengiriman ditolak server (kode ' + status + ').');
   }
-  function flagged(message, flags) { return Object.assign(new Error(message), flags); }
+  function flagged(message, flags) { return Object.assign(new Error(tr(message)), flags); }
 
   async function checkHealth() {
     const request = timedFetch('/api/health', { credentials: 'same-origin' }, HEALTH_TIMEOUT_MS);
@@ -261,7 +263,7 @@
           // 5xx, 408, 425, bad receipt: back off per draft; a draft the server keeps failing on eventually stops.
           const giveUp = error.status >= 500 && attempts >= MAX_SERVER_ATTEMPTS;
           await failDraft(accountId, draft, giveUp
-            ? { status: 'failed', error: 'Server gagal memproses foto ini berkali-kali. Coba kirim lagi nanti.', errorCode: 'http_' + error.status, attempts, lastAttemptMs: now() }
+            ? { status: 'failed', error: tr('Server gagal memproses foto ini berkali-kali. Coba kirim lagi nanti.'), errorCode: 'http_' + error.status, attempts, lastAttemptMs: now() }
             : { status: 'pending', error: error.message, errorCode: error.status ? 'http_' + error.status : 'transient', attempts, lastAttemptMs: now(), nextAttemptAtMs: now() + backoffMs(attempts) });
           notify(error, draft);
           if (giveUp) summary.failed += 1; else summary.deferred += 1;

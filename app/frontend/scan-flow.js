@@ -33,22 +33,38 @@ let cameraEndedRestarts = [];
 let cameraHardwareZoom = false;
 let scanChipTimer = null;
 let assignChoice = null;
+let lastScanInfo = {};
+let lastSentInfo = {};
+let lastSentJob = null;
+let lastFailureState = null;
+let lastDiagnosisShown = null;
+let lastConfidenceState = { confidence: null, uncertain: false };
 
 const scanEl = id => document.getElementById(id);
+const trScan = (text, vars) => (typeof window !== 'undefined' && window.JagaI18n && typeof window.JagaI18n.t === 'function')
+  ? window.JagaI18n.t(text, vars)
+  : (vars ? String(text).replace(/\{(\w+)\}/g, (_, k) => (k in vars ? String(vars[k]) : '{' + k + '}')) : text);
+const isEnScan = () => !!(typeof window !== 'undefined' && window.JagaI18n && typeof window.JagaI18n.isEn === 'function' && window.JagaI18n.isEn());
+const trScanCrop = name => (typeof window !== 'undefined' && window.JagaI18n && typeof window.JagaI18n.crop === 'function') ? window.JagaI18n.crop(name) : name;
+const trScanCond = text => (typeof window !== 'undefined' && window.JagaI18n && typeof window.JagaI18n.condition === 'function') ? window.JagaI18n.condition(text) : text;
+const trScanParts = value => String(value || '').split(' \u00b7 ').map(part => trScanCond(part)).join(' \u00b7 ');
 
 /* ------------------------------------------------------------------ helpers */
 function friendlyTime(ms) {
   if (!Number.isFinite(ms)) return '';
   const date = new Date(ms), now = new Date(), yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-  const time = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
-  if (date.toDateString() === now.toDateString()) return 'Hari ini ' + time;
-  if (date.toDateString() === yesterday.toDateString()) return 'Kemarin ' + time;
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + time;
+  const en = isEnScan();
+  const time = en
+    ? date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+  if (date.toDateString() === now.toDateString()) return trScan('Hari ini ') + time;
+  if (date.toDateString() === yesterday.toDateString()) return trScan('Kemarin ') + time;
+  return date.toLocaleDateString(en ? 'en-US' : 'id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + time;
 }
 function dataUrlToBlob(dataUrl) {
   const comma = String(dataUrl).indexOf(',');
-  if (comma < 0) throw new Error('Foto tidak valid.');
+  if (comma < 0) throw new Error(trScan('Foto tidak valid.'));
   const mime = dataUrl.slice(5, comma).split(';')[0] || 'image/jpeg';
   const raw = atob(dataUrl.slice(comma + 1));
   const bytes = new Uint8Array(raw.length);
@@ -56,17 +72,17 @@ function dataUrlToBlob(dataUrl) {
   return new Blob([bytes], { type: mime });
 }
 function severityBadge(severity) {
-  if (severity === 'Severe') return { label: 'Kritis', cls: 'badge-severe' };
-  if (severity === 'Moderate') return { label: 'Waspada', cls: 'badge-moderate' };
-  if (severity === 'Healthy') return { label: 'Sehat', cls: 'badge-healthy' };
-  return { label: 'Belum dinilai', cls: 'badge-unknown' };
+  if (severity === 'Severe') return { label: trScan('Kritis'), cls: 'badge-severe' };
+  if (severity === 'Moderate') return { label: trScan('Waspada'), cls: 'badge-moderate' };
+  if (severity === 'Healthy') return { label: trScan('Sehat'), cls: 'badge-healthy' };
+  return { label: trScan('Belum dinilai'), cls: 'badge-unknown' };
 }
 function scanVisible() { const view = scanEl('view-scan'); return !!view && !view.classList.contains('hidden'); }
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error('Foto tidak dapat dibaca.'));
+    reader.onerror = () => reject(new Error(trScan('Foto tidak dapat dibaca.')));
     reader.readAsDataURL(blob);
   });
 }
@@ -84,10 +100,10 @@ function placeShort(name) { return String(name || '').split(',')[0].trim(); }
 function liveLocationModel() {
   const gps = currentGpsStatus();
   const place = placeShort(currentCoords.locationName);
-  if (gps.state === 'fresh') return { tone: 'ok', text: 'Lokasi: ' + (place ? place + ' ' : '') + '±' + Math.round(gps.accuracy) + ' m' };
-  if (gps.state === 'weak') return { tone: 'warn', text: 'Lokasi kurang akurat ±' + Math.round(gps.accuracy) + ' m' };
-  if (gps.state === 'inaccurate') return { tone: 'none', text: 'Lokasi belum akurat' };
-  return { tone: 'none', text: 'Lokasi belum terbaca' };
+  if (gps.state === 'fresh') return { tone: 'ok', text: trScan('Lokasi:') + ' ' + (place ? place + ' ' : '') + '±' + Math.round(gps.accuracy) + ' m' };
+  if (gps.state === 'weak') return { tone: 'warn', text: trScan('Lokasi kurang akurat') + ' ±' + Math.round(gps.accuracy) + ' m' };
+  if (gps.state === 'inaccurate') return { tone: 'none', text: trScan('Lokasi belum akurat') };
+  return { tone: 'none', text: trScan('Lokasi belum terbaca') };
 }
 function photoLocationModel(meta) {
   if (!meta) return liveLocationModel();
@@ -95,9 +111,9 @@ function photoLocationModel(meta) {
   if (hasPoint) {
     const place = placeShort(meta.locationName);
     const acc = Number.isFinite(meta.accuracy) ? ' ±' + Math.round(meta.accuracy) + ' m' : '';
-    return { tone: Number.isFinite(meta.accuracy) && meta.accuracy > GPS_WEAK_ACCURACY_M ? 'warn' : 'ok', text: 'Lokasi: ' + (place ? place : 'tercatat') + acc };
+    return { tone: Number.isFinite(meta.accuracy) && meta.accuracy > GPS_WEAK_ACCURACY_M ? 'warn' : 'ok', text: trScan('Lokasi:') + ' ' + (place ? place : trScan('tercatat')) + acc };
   }
-  return { tone: 'none', text: 'Lokasi belum terbaca' };
+  return { tone: 'none', text: trScan('Lokasi belum terbaca') };
 }
 function updateScanLocationChip() {
   const chip = scanEl('scan-location-chip'), text = scanEl('scan-location-text');
@@ -124,6 +140,7 @@ function setScanState(state, info = {}) {
   if (state === 'review') setAnalyzeButtonsDisabled(scanBusy);
 }
 function renderScanHead(state, info) {
+  lastScanInfo = info || {};
   const head = scanEl('scan-status-head');
   const title = scanEl('photo-review-label');
   const text = scanEl('scan-status-text');
@@ -136,16 +153,16 @@ function renderScanHead(state, info) {
   if (date) {
     const when = selectedPhotoMetadata && Number.isFinite(selectedPhotoMetadata.captureTimeMs) ? friendlyTime(selectedPhotoMetadata.captureTimeMs) : '';
     date.classList.toggle('hidden', state === 'live' || !when);
-    date.textContent = when ? 'Diambil ' + when : '';
+    date.textContent = when ? trScan('Diambil ') + when : '';
     const setDate = scanEl('scan-set-date');
     if (setDate) setDate.classList.toggle('hidden', !(state === 'review' && photoMode === 'gallery'));
   }
   // The sent/failed cards carry their own title; the head then only shows when and where the photo was taken.
-  const titles = { preparing:'Menyiapkan Foto…', review: 'Foto Siap Dianalisis', sending: 'Mengirim foto…', result: 'Hasil analisis' };
+  const titles = { preparing: trScan('Menyiapkan Foto…'), review: trScan('Foto Siap Dianalisis'), sending: trScan('Mengirim foto…'), result: trScan('Hasil analisis') };
   if (title) { title.textContent = titles[state] || ''; title.classList.toggle('hidden', !titles[state]); }
   const hasPoint = selectedPhotoMetadata && validCoordinates(selectedPhotoMetadata.lat, selectedPhotoMetadata.lng);
-  const reviewSub = (photoMode === 'gallery' && !hasPoint) ? 'Foto dari galeri' : 'Foto siap dikirim untuk analisis';
-  if (text) text.textContent = info.headText || (state === 'review' ? reviewSub : '');
+  const reviewSub = (photoMode === 'gallery' && !hasPoint) ? trScan('Foto dari galeri') : trScan('Foto siap dikirim untuk analisis');
+  if (text) text.textContent = (info && info.headText ? trScan(info.headText) : '') || (state === 'review' ? reviewSub : '');
 }
 function resetScanControls() {
   setScanState(selectedImageBase64 ? 'review' : 'live');
@@ -179,7 +196,7 @@ function layoutScanFrame() {
 /* ------------------------------------------------------------------ camera (S1, M2, L2) */
 async function requestCameraStream() {
   if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
-    const error = new Error('Kamera tidak didukung di sini.');
+    const error = new Error(trScan('Kamera tidak didukung di sini.'));
     error.name = 'NotSupportedError';
     throw error;
   }
@@ -232,7 +249,7 @@ async function startLiveCameraStream() {
   stopLiveCameraStream();
   const generation = ++cameraRequestGeneration;
   const loading = scanEl('camera-loading');
-  if (loading) loading.textContent = 'Menyiapkan kamera…';
+  if (loading) loading.textContent = trScan('Menyiapkan kamera…');
   try {
     const stream = await requestCameraStream();
     if (generation !== cameraRequestGeneration || !videoEl.isConnected) { stream.getTracks().forEach(track => track.stop()); return; }
@@ -246,7 +263,7 @@ async function startLiveCameraStream() {
       if (generation !== cameraRequestGeneration || !currentAccount || selectedImageBase64 || !scanVisible()) return;
       const now = Date.now();
       cameraEndedRestarts = cameraEndedRestarts.filter(at => now - at < 60000);
-      if (cameraEndedRestarts.length >= 3) { if (loading) { loading.classList.remove('hidden'); loading.textContent = 'Kamera terhenti. Ketuk Putar atau buka lagi tab Kamera.'; } return; }
+      if (cameraEndedRestarts.length >= 3) { if (loading) { loading.classList.remove('hidden'); loading.textContent = trScan('Kamera terhenti. Ketuk Putar atau buka lagi tab Kamera.'); } return; }
       cameraEndedRestarts.push(now);
       setTimeout(() => { if (scanVisible() && !selectedImageBase64 && currentAccount) startLiveCameraStream(); }, 400);
     }));
@@ -254,9 +271,9 @@ async function startLiveCameraStream() {
   } catch (err) {
     if (generation === cameraRequestGeneration && loading) {
       loading.classList.remove('hidden');
-      loading.textContent = err.name === 'NotAllowedError' ? 'Akses kamera ditolak. Aktifkan izin kamera atau pilih foto dari galeri.'
-        : err.name === 'NotSupportedError' ? 'Kamera tidak didukung di sini. Pilih foto dari galeri.'
-        : 'Kamera belum tersedia. Coba lagi atau pilih foto dari galeri.';
+      loading.textContent = err.name === 'NotAllowedError' ? trScan('Akses kamera ditolak. Aktifkan izin kamera atau pilih foto dari galeri.')
+        : err.name === 'NotSupportedError' ? trScan('Kamera tidak didukung di sini. Pilih foto dari galeri.')
+        : trScan('Kamera belum tersedia. Coba lagi atau pilih foto dari galeri.');
     }
   }
 }
@@ -272,7 +289,7 @@ function stopLiveCameraStream() {
 function toggleCameraFacing() {
   cameraFacing = cameraFacing === 'environment' ? 'user' : 'environment';
   startLiveCameraStream();
-  showToast(`Kamera diganti ke ${cameraFacing === 'environment' ? 'belakang' : 'depan'}`);
+  showToast(trScan('Kamera diganti ke {dir}', { dir: trScan(cameraFacing === 'environment' ? 'belakang' : 'depan') }));
 }
 document.addEventListener('visibilitychange', () => {
   if (!currentAccount) return;
@@ -318,7 +335,7 @@ function loadImageElement(src) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Gambar tidak dapat dibaca'));
+    image.onerror = () => reject(new Error(trScan('Gambar tidak dapat dibaca')));
     image.src = src;
   });
 }
@@ -336,9 +353,9 @@ async function decodeGalleryImage(file) {
   } catch (error) { URL.revokeObjectURL(url); throw error; }
 }
 function formatPhotoDate(date, provenance) {
-  const formatted = new Intl.DateTimeFormat('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' }).format(date);
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'zona perangkat tidak diketahui';
-  return `${formatted} (${provenance}; ${zone})`;
+  const formatted = new Intl.DateTimeFormat(isEnScan() ? 'en-US' : 'id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' }).format(date);
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || trScan('zona perangkat tidak diketahui');
+  return `${formatted} (${trScan(provenance)}; ${zone})`;
 }
 function showReviewPhoto() {
   const videoEl = scanEl('camera-stream'), imgEl = scanEl('scanned-image');
@@ -347,16 +364,16 @@ function showReviewPhoto() {
   scanEl('camera-loading')?.classList.add('hidden');
   const badge = scanEl('stamp-source-badge');
   const hasPoint = selectedPhotoMetadata && validCoordinates(selectedPhotoMetadata.lat, selectedPhotoMetadata.lng);
-  if (badge) badge.innerText = (photoMode === 'live' || hasPoint) ? 'Foto Baru' : 'Foto Galeri';
+  if (badge) badge.innerText = trScan((photoMode === 'live' || hasPoint) ? 'Foto Baru' : 'Foto Galeri');
 }
 async function handleImageSelected(event) {
   const input = event.target;
   const file = input.files && input.files[0];
   if (!file) return;
   // Reject before reading: an empty or oversized file wastes the farmer's data allowance and would be refused anyway.
-  if (!file.type || !file.type.startsWith('image/')) { showToast('Berkas harus berupa gambar.'); input.value = ''; return; }
-  if (file.size === 0) { showToast('Berkas foto kosong.'); input.value = ''; return; }
-  if (file.size > MAX_UPLOAD_BYTES) { showToast('Foto melebihi 12 MB. Pilih foto yang lebih kecil.'); input.value = ''; return; }
+  if (!file.type || !file.type.startsWith('image/')) { showToast(trScan('Berkas harus berupa gambar.')); input.value = ''; return; }
+  if (file.size === 0) { showToast(trScan('Berkas foto kosong.')); input.value = ''; return; }
+  if (file.size > MAX_UPLOAD_BYTES) { showToast(trScan('Foto melebihi 12 MB. Pilih foto yang lebih kecil.')); input.value = ''; return; }
   if (!currentAccount) return;
   const owner = String(currentAccount.id), generation = accountGeneration, selection = ++scanSession;
   const selectionCurrent = () => String(currentAccount?.id||'') === owner && generation === accountGeneration && selection === scanSession && photoMode === 'gallery';
@@ -373,14 +390,14 @@ async function handleImageSelected(event) {
   try {
     decoded = await decodeGalleryImage(file);
     if (!selectionCurrent()) return;
-    if (!decoded.width || !decoded.height) throw new Error('Foto tidak dapat dibaca.');
+    if (!decoded.width || !decoded.height) throw new Error(trScan('Foto tidak dapat dibaca.'));
     original = renderOriginal(decoded.source, decoded.width, decoded.height);
     inferenceImage = renderCapture(decoded.source, decoded.width, decoded.height);
-    if (!inferenceImage || inferenceImage === 'data:,') throw new Error('Foto tidak dapat dibaca.');
+    if (!inferenceImage || inferenceImage === 'data:,') throw new Error(trScan('Foto tidak dapat dibaca.'));
   } catch (error) {
     if (!selectionCurrent()) return;
     selectedImageBase64 = null; capturePhotoSnapshot = null; fullCapturePhoto = null;
-    showToast('Foto tidak dapat dibaca.');
+    showToast(trScan('Foto tidak dapat dibaca.'));
     input.value = '';
     resetToLiveCamera();
     return;
@@ -466,15 +483,15 @@ function applyManualDatePreset(daysAgo, label) {
   const target = new Date();
   target.setDate(target.getDate() - daysAgo);
   target.setHours(10, 30, 0, 0);
-  applyPhotoTime(target, 'dipilih manual', `Tanggal foto: ${label}`);
+  applyPhotoTime(target, 'dipilih manual', trScan('Tanggal foto: {label}', { label: trScan(label) }));
 }
 function confirmCustomDateTime() {
   const input = scanEl('manual-datetime-input');
   if (!input || !input.value) { applyManualDatePreset(0, 'Hari ini'); return; }
   const selected = new Date(input.value);
-  if (isNaN(selected)) { showToast('Tanggal tidak valid.'); return; }
-  if (selected.getTime() > Date.now() + 60000) { showToast('Tanggal foto tidak boleh di masa depan.'); return; }
-  applyPhotoTime(selected, 'waktu lokal manual', 'Tanggal foto disimpan.');
+  if (isNaN(selected)) { showToast(trScan('Tanggal tidak valid.')); return; }
+  if (selected.getTime() > Date.now() + 60000) { showToast(trScan('Tanggal foto tidak boleh di masa depan.')); return; }
+  applyPhotoTime(selected, 'waktu lokal manual', trScan('Tanggal foto disimpan.'));
 }
 
 /* ------------------------------------------------------------------ snapshot -> review */
@@ -513,7 +530,7 @@ function takeSnapshotForReview() {
     const clockEl = scanEl('live-clock-stamp');
     if (clockEl) clockEl.innerText = selectedPhotoDateString;
   }
-  if (!selectedImageBase64) { showToast('Arahkan kamera ke tanaman dulu.'); return; }
+  if (!selectedImageBase64) { showToast(trScan('Arahkan kamera ke tanaman dulu.')); return; }
   stopLiveCameraStream();
   showReviewPhoto();
   setScanState('review');
@@ -540,11 +557,15 @@ function resetToLiveCameraCore() {
   activeOfflineCapture = null;
   pendingCropAssignment = null;
   lastResultRecord = null;
+  lastDiagnosisShown = null;
+  lastSentInfo = {};
+  lastSentJob = null;
+  lastFailureState = null;
   const imgEl = scanEl('scanned-image'), videoEl = scanEl('camera-stream');
   if (imgEl) { imgEl.classList.add('hidden'); imgEl.removeAttribute('src'); }
   if (videoEl) videoEl.classList.add('hidden');
   const badge = scanEl('stamp-source-badge');
-  if (badge) badge.innerText = 'Foto Baru';
+  if (badge) badge.innerText = trScan('Foto Baru');
   const hint = scanEl('crop-hint-input');
   if (hint) hint.value = '';
   toggleCropHint(false);
@@ -583,13 +604,17 @@ function renderCropHintChips() {
   const host = scanEl('crop-hint-chips'), input = scanEl('crop-hint-input');
   if (!host || !input) return;
   const typed = input.value.trim().toLowerCase();
-  const names = cropHintNames().filter(n => n.toLowerCase() !== typed && (!typed || n.toLowerCase().includes(typed))).slice(0, 8);
+  const names = cropHintNames().filter(n => {
+    const label = trScanCrop(n);
+    return n.toLowerCase() !== typed && label.toLowerCase() !== typed && (!typed || n.toLowerCase().includes(typed) || label.toLowerCase().includes(typed));
+  }).slice(0, 8);
   host.replaceChildren(...names.map(name => {
+    const label = trScanCrop(name);
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'chip';
-    chip.textContent = name;
-    chip.addEventListener('click', () => { input.value = name; input.blur(); renderCropHintChips(); });
+    chip.textContent = label;
+    chip.addEventListener('click', () => { input.value = isEnScan() ? label : name; input.blur(); renderCropHintChips(); });
     return chip;
   }));
   host.hidden = names.length === 0;
@@ -622,7 +647,7 @@ async function draftRowFor(accountId, clientRequestId) {
 }
 async function executeCropPathologyAnalysis() {
   if (!selectedImageBase64 || scanBusy) return;
-  if (!currentAccount) { showAuthGate('Masuk untuk menyimpan foto.'); return; }
+  if (!currentAccount) { showAuthGate(trScan('Masuk untuk menyimpan foto.')); return; }
   const submissionOwner = String(currentAccount.id), submissionGeneration = accountGeneration;
   const tree = selectedCaptureTree && selectedCaptureTree.owner === submissionOwner && selectedCaptureTree.generation === submissionGeneration ? { ...selectedCaptureTree } : null;
   scanBusy = true;
@@ -630,12 +655,12 @@ async function executeCropPathologyAnalysis() {
   cancelRequested = false;
   setAnalyzeButtonsDisabled(true);
   setScanState('sending');
-  setProgress(8, 'Menyimpan foto di HP…');
+  setProgress(8, trScan('Menyimpan foto di HP…'));
   const stale = () => session !== scanSession || submissionGeneration !== accountGeneration || String(currentAccount?.id) !== submissionOwner;
   let clientRequestId = null;
   try {
     const blob = dataUrlToBlob(selectedImageBase64);
-    if (blob.size > MAX_UPLOAD_BYTES) throw new Error('Foto melebihi 12 MB. Pilih foto yang lebih kecil.');
+    if (blob.size > MAX_UPLOAD_BYTES) throw new Error(trScan('Foto melebihi 12 MB. Pilih foto yang lebih kecil.'));
     const metadata = selectedPhotoMetadata || Object.freeze({ source: photoMode === 'live' ? 'camera-capture' : 'gallery-unknown' });
     const fields = buildCaptureFields(metadata, tree);
     const dataUrl = selectedImageBase64;
@@ -645,14 +670,14 @@ async function executeCropPathologyAnalysis() {
     if (window.JagaMedia) {
       const kept = await window.JagaMedia.tryPut({ accountId, photoId: clientRequestId, imageBase64: (fullCapturePhoto || dataUrl).split(',')[1],
         metadata: locationMetadata({ ...metadata, ...fields }) });
-      if (!kept.ok) showToast(kept.quota ? 'Penyimpanan HP hampir penuh. Foto tetap dikirim, tapi salinan asli tidak disimpan.' : 'Salinan asli foto tidak disimpan. Foto tetap dikirim.');
+      if (!kept.ok) showToast(trScan(kept.quota ? 'Penyimpanan HP hampir penuh. Foto tetap dikirim, tapi salinan asli tidak disimpan.' : 'Salinan asli foto tidak disimpan. Foto tetap dikirim.'));
     }
     if (stale()) return;
     await window.JagaNative.enqueue({ accountId, clientRequestId, imageBase64: dataUrl.split(',')[1], fields });
     if (stale()) return;
     activeOfflineCapture = { accountId, clientRequestId, jobId: null };
     if (!navigator.onLine || isNativeApp()) { setScanState('sent', { queued: true }); updateSentText({ queued: true }); updateOfflineDraftCount(); return; }
-    setProgress(40, 'Mengirim foto…');
+    setProgress(40, trScan('Mengirim foto…'));
     await window.JagaOfflineSync.run({ manual: true, only: clientRequestId });
     if (stale()) return;
     const row = await draftRowFor(accountId, clientRequestId);
@@ -668,7 +693,7 @@ async function executeCropPathologyAnalysis() {
     }
     if (row.status === 'failed' || row.status === 'conflict') {
       lastFailedCapture = { clientRequestId, jobId: null };
-      showAnalysisFailure(row.error || 'Foto ditolak server. Ambil ulang foto.', { kind: 'retake', title: 'Foto belum bisa dikirim' });
+      showAnalysisFailure(row.error || trScan('Foto ditolak server. Ambil ulang foto.'), { kind: 'retake', title: trScan('Foto belum bisa dikirim') });
       updateOfflineDraftCount();
       return;
     }
@@ -678,17 +703,19 @@ async function executeCropPathologyAnalysis() {
     updateOfflineDraftCount();
   } catch (error) {
     if (stale()) return;
-    showAnalysisFailure(userMessage(error, 'Foto belum bisa disimpan. Coba lagi.'), { kind: 'retry', title: 'Foto belum bisa disimpan' });
+    showAnalysisFailure(userMessage(error, trScan('Foto belum bisa disimpan. Coba lagi.')), { kind: 'retry', title: trScan('Foto belum bisa disimpan') });
   } finally {
     if (session === scanSession) scanBusy = false;   // a newer capture owns the flag if the session moved on
     if (scanState === 'review') setAnalyzeButtonsDisabled(false);
   }
 }
 function updateSentText(info) {
+  lastSentInfo = info || {};
+  lastSentJob = null;
   const title = scanEl('sent-title'), text = scanEl('sent-text'), status = scanEl('sent-status');
-  if (title) title.textContent = info.queued ? 'Foto tersimpan di HP' : 'Foto terkirim';
-  if (text) text.textContent = info.queued ? 'Tersimpan di HP — dikirim otomatis saat ada sinyal.' : 'Hasil biasanya muncul dalam beberapa menit.';
-  if (status) status.textContent = info.note || (info.queued ? 'Anda bisa lanjut memotret. Lihat statusnya di Riwayat.' : 'Anda bisa lanjut memotret. Hasilnya masuk ke Riwayat.');
+  if (title) title.textContent = trScan(lastSentInfo.queued ? 'Foto tersimpan di HP' : 'Foto terkirim');
+  if (text) text.textContent = trScan(lastSentInfo.queued ? 'Tersimpan di HP — dikirim otomatis saat ada sinyal.' : 'Hasil biasanya muncul dalam beberapa menit.');
+  if (status) status.textContent = lastSentInfo.note ? trScan(lastSentInfo.note) : trScan(lastSentInfo.queued ? 'Anda bisa lanjut memotret. Lihat statusnya di Riwayat.' : 'Anda bisa lanjut memotret. Hasilnya masuk ke Riwayat.');
 }
 function cancelAnalysis() {
   const capture = activeOfflineCapture;
@@ -703,7 +730,7 @@ function cancelAnalysis() {
     activeOfflineCapture = null;
   }
   resetScanControls();
-  showToast('Dibatalkan. Foto masih ada di layar.');
+  showToast(trScan('Dibatalkan. Foto masih ada di layar.'));
 }
 
 /* Foreground tracker: only an accelerator for the capture the farmer is still looking at.
@@ -723,15 +750,16 @@ function waitFor(ms, session) {
 const STAGE_TEXT = { 'triage:start': 'Memeriksa foto…', 'triage:http': 'Memeriksa foto…', 'triage:done': 'Menyiapkan diagnosis…',
   'diagnose:start': 'Menganalisis gejala…', 'diagnose:http': 'Menganalisis gejala…', 'diagnose:done': 'Menyusun hasil…', 'result:posted': 'Menyiapkan hasil…' };
 function updateSentStatus(job) {
+  lastSentJob = job || null;
   const status = scanEl('sent-status');
-  if (!status || scanState !== 'sent') return;
+  if (!status || scanState !== 'sent' || !job) return;
   const position = typeof job.position === 'number' ? job.position : null;
   let label;
-  if (job.stageLabel) label = job.stageLabel;
-  else if (job.stage && STAGE_TEXT[job.stage]) label = STAGE_TEXT[job.stage];
-  else if (job.status === 'claimed' || position === 0) label = 'Sedang dianalisis…';
-  else label = 'Menunggu giliran' + (position === null ? '' : ' (nomor ' + (position + 1) + ')');
-  status.textContent = label + ' Anda boleh lanjut memotret.';
+  if (job.stageLabel) label = trScan(job.stageLabel);
+  else if (job.stage && STAGE_TEXT[job.stage]) label = trScan(STAGE_TEXT[job.stage]);
+  else if (job.status === 'claimed' || position === 0) label = trScan('Sedang dianalisis…');
+  else label = trScan('Menunggu giliran') + (position === null ? '' : ' (' + trScan('nomor') + ' ' + (position + 1) + ')');
+  status.textContent = label + ' ' + trScan('Anda boleh lanjut memotret.');
 }
 async function trackSubmittedJob(jobId, session) {
   foregroundJobId = jobId;
@@ -774,10 +802,10 @@ function onJobGone() {
 function finishTerminalJob(job) {
   const capture = activeOfflineCapture;
   const providerDown = job.triage && job.triage.code === 'provider_unavailable';
-  const reason = job.error || 'Server tidak dapat menyelesaikan analisis ini.';
+  const reason = job.error || trScan('Server tidak dapat menyelesaikan analisis ini.');
   lastFailedCapture = { clientRequestId: capture ? capture.clientRequestId : null, jobId: job.id };
   if (job.status === 'rejected' && !providerDown) {
-    showAnalysisFailure(reason + ' Sebaiknya ambil foto lain yang lebih dekat dan jelas.', { kind: 'retake', title: 'Foto belum bisa dianalisis' });
+    showAnalysisFailure(reason + ' ' + trScan('Sebaiknya ambil foto lain yang lebih dekat dan jelas.'), { kind: 'retake', title: 'Foto belum bisa dianalisis' });
   } else {
     // provider_unavailable (BE1 give-up) or a server failure: the photo is safe, offer to send it again
     showAnalysisFailure(reason, { kind: 'resend', title: providerDown ? 'Server analisis sedang bermasalah' : 'Analisis belum selesai' });
@@ -787,26 +815,27 @@ function finishTerminalJob(job) {
 
 /* ------------------------------------------------------------------ failure card (S7) */
 function showAnalysisFailure(message, options = {}) {
+  lastFailureState = { message, options };
   const kind = options.kind || 'retry';
   const text = scanEl('analysis-failed-text');
-  if (text) text.innerText = message || 'Analisis tidak dapat diselesaikan.';
+  if (text) text.innerText = trScan(message || 'Analisis tidak dapat diselesaikan.');
   const title = scanEl('analysis-failed-title');
-  if (title) title.textContent = options.title || 'Analisis gagal';
+  if (title) title.textContent = trScan(options.title || 'Analisis gagal');
   const retry = scanEl('btn-retry-analysis'), retake = scanEl('btn-retake-after-fail'), history = scanEl('btn-failed-history');
   const label = scanEl('btn-retry-label');
   // One dominant action: "Foto ulang" when the photo itself is the problem, "Coba lagi" / "Kirim ulang" when it is not.
   if (retry) retry.classList.toggle('hidden', kind === 'retake');
   if (history) history.classList.toggle('hidden', kind === 'retry');
-  if (label) label.textContent = kind === 'resend' ? 'Kirim ulang' : 'Coba lagi';
+  if (label) label.textContent = trScan(kind === 'resend' ? 'Kirim ulang' : 'Coba lagi');
   if (retake) {
     retake.classList.toggle('btn-primary', kind === 'retake');
     retake.classList.toggle('btn-lg', kind === 'retake');
     retake.classList.toggle('btn-secondary', kind !== 'retake');
   }
-  setScanState('failed', { title: options.title || 'Analisis gagal' });
+  setScanState('failed', { title: trScan(options.title || 'Analisis gagal') });
   icons();
 }
-function hideAnalysisFailure() { scanEl('analysis-failed')?.classList.add('hidden'); }
+function hideAnalysisFailure() { lastFailureState = null; scanEl('analysis-failed')?.classList.add('hidden'); }
 /* Removes the capture behind the failure card once the farmer chose to retake (nothing else would ever send it). */
 async function discardFailedCapture() {
   const failed = lastFailedCapture;
@@ -820,7 +849,7 @@ async function discardFailedCapture() {
 }
 function retakeAfterFailure() { discardFailedCapture(); resetToLiveCamera(); }
 async function retryAnalysis() {
-  if (!selectedImageBase64) { resetToLiveCamera(); showToast('Fotonya sudah tidak ada. Ambil ulang foto tanaman Anda.'); return; }
+  if (!selectedImageBase64) { resetToLiveCamera(); showToast(trScan('Fotonya sudah tidak ada. Ambil ulang foto tanaman Anda.')); return; }
   const failed = lastFailedCapture;
   lastFailedCapture = null;
   // A finished-and-failed job is bound to its request id: a fresh id makes a fresh job.
@@ -837,14 +866,15 @@ async function retryAnalysis() {
 
 /* ------------------------------------------------------------------ result (S5, S6) */
 function confidenceWords(value) {
-  if (typeof value !== 'number' || !isFinite(value) || value < LOW_CONFIDENCE_THRESHOLD) return 'Bukti foto belum cukup. Perlu pemeriksaan langsung.';
-  return 'Dugaan dari foto, belum dikonfirmasi di lapangan.';
+  if (typeof value !== 'number' || !isFinite(value) || value < LOW_CONFIDENCE_THRESHOLD) return trScan('Bukti foto belum cukup. Perlu pemeriksaan langsung.');
+  return trScan('Dugaan dari foto, belum dikonfirmasi di lapangan.');
 }
 function renderConfidenceNotice(confidence, uncertain=false) {
+  lastConfidenceState = { confidence, uncertain };
   const value = typeof confidence === 'number' && isFinite(confidence) ? confidence : null;
   lastConfidenceShown = value;
   const words = scanEl('res-confidence-words');
-  if (words) words.textContent = uncertain ? 'Penyebab belum dapat dipastikan. Periksa tanaman secara langsung.' : confidenceWords(value);
+  if (words) words.textContent = uncertain ? trScan('Penyebab belum dapat dipastikan. Periksa tanaman secara langsung.') : confidenceWords(value);
   const textEl = scanEl('res-confidence');
   if (textEl) { textEl.textContent = ''; textEl.hidden = true; }
   const fillEl = scanEl('res-confidence-fill');
@@ -855,14 +885,31 @@ function renderConfidenceNotice(confidence, uncertain=false) {
   if (!warning) return;
   if (!uncertain && (value === null || value >= LOW_CONFIDENCE_THRESHOLD)) { warning.classList.add('hidden'); return; }
   const titleEl = scanEl('res-confidence-title'), adviceEl = scanEl('res-confidence-advice');
-  if (titleEl) titleEl.innerText = 'Perlu Pemeriksaan Langsung';
+  if (titleEl) titleEl.innerText = trScan('Perlu Pemeriksaan Langsung');
   if (adviceEl) adviceEl.innerText = confidenceAdvice(value);
   warning.classList.remove('hidden');
 }
 function confidenceAdvice(value) {
-  return 'Lengkapi dengan foto seluruh tanaman dan foto dekat bagian yang berubah. Gunakan cahaya yang cukup dan periksa kondisi tanaman langsung; beberapa penyebab memerlukan pemeriksaan petugas.';
+  return trScan('Lengkapi dengan foto seluruh tanaman dan foto dekat bagian yang berubah. Gunakan cahaya yang cukup dan periksa kondisi tanaman langsung; beberapa penyebab memerlukan pemeriksaan petugas.');
 }
 function retakeForBetterPhoto() { navigateToMenu('scan'); resetToLiveCamera(); }
+function renderScanResultContent(diagnosis, saved) {
+  const target = saved || diagnosis;
+  if (!target) return;
+  const badge = severityBadge(target.severity);
+  const sev = scanEl('res-badge-severity');
+  if (sev) { sev.textContent = badge.label; sev.className = 'badge ' + badge.cls; }
+  const crop = scanEl('res-crop-condition');
+  const cropLabel = target.cropName || target.crop ? trScanCrop(target.cropName || target.crop) : '';
+  const condLabel = trScanParts(window.JagaAssessment?.label?.(target) || target.condition || '');
+  if (crop) crop.innerText = [cropLabel, condLabel].filter(Boolean).join(' — ') || '—';
+  const action = scanEl('res-geo-brief');
+  if (action) action.innerText = target.immediate_action_id || target.immediate_action || trScan('Belum ada saran. Periksa tanaman langsung.');
+  scanEl('res-review-chip')?.classList.toggle('hidden', target.needs_review !== true);
+  renderConfidenceNotice(typeof target.confidence === 'number' ? target.confidence : null, target.assessment?.uncertain === true);
+  window.JagaAssessment?.render(scanEl('res-assessment'), target);
+  if (action) action.parentElement.hidden = !!target.assessment;
+}
 async function finishSuccessfulAnalysis(job) {
   const generation = accountGeneration;
   const diagnosis = job.diagnosis || {};
@@ -880,16 +927,7 @@ async function finishSuccessfulAnalysis(job) {
   } catch (error) { console.warn('Stamp failed:', error); }
   if (generation !== accountGeneration || !currentAccount) return;
 
-  const badge = severityBadge(diagnosis.severity);
-  const sev = scanEl('res-badge-severity');
-  if (sev) { sev.textContent = badge.label; sev.className = 'badge ' + badge.cls; }
-  const crop = scanEl('res-crop-condition');
-  if (crop) crop.innerText = [diagnosis.crop, window.JagaAssessment?.label?.(diagnosis) || diagnosis.condition].filter(Boolean).join(' — ') || '—';
-  const action = scanEl('res-geo-brief');
-  if (action) action.innerText = diagnosis.immediate_action_id || diagnosis.immediate_action || 'Belum ada saran. Periksa tanaman langsung.';
-  scanEl('res-review-chip')?.classList.toggle('hidden', diagnosis.needs_review !== true);
-  renderConfidenceNotice(typeof diagnosis.confidence === 'number' ? diagnosis.confidence : null, diagnosis.assessment?.uncertain === true);
-
+  lastDiagnosisShown = diagnosis;
   const saved = await saveRecord(buildRecordFromJob(job, diagnosis, null));
   if (generation !== accountGeneration) return;
   if (saved) acknowledgeJob(job.id);
@@ -901,9 +939,8 @@ async function finishSuccessfulAnalysis(job) {
     updateOfflineDraftCount();
   }
   lastResultRecord = saved || null;
-  window.JagaAssessment?.render(scanEl('res-assessment'), saved || diagnosis);
-  if(action) action.parentElement.hidden = !!(saved?.assessment || diagnosis.assessment);
-  if (!saved) showToast('Hasil belum masuk Riwayat. Dicoba lagi otomatis.');
+  renderScanResultContent(diagnosis, saved || null);
+  if (!saved) showToast(trScan('Hasil belum masuk Riwayat. Dicoba lagi otomatis.'));
   setScanState('result');
   if (saved) { pendingCropAssignment = { record: saved }; promptCropAssignment(); }
   else { const card = scanEl('scan-assign-card'); if (card) card.classList.add('hidden'); }
@@ -943,11 +980,15 @@ function candidateRow(c, selected) {
   copy.className = 'scan-candidate-copy';
   const name = document.createElement('strong');
   name.className = 't-body';
-  name.textContent = c.cropName;
+  name.textContent = trScanCrop(c.cropName);
   const meta = document.createElement('span');
   meta.className = 't-meta';
   const sev = severityBadge(c.lastSeverity).label;
-  meta.textContent = '±' + c.distanceM + ' m dari foto ini · ' + c.count + ' foto · terakhir ' + sev;
+  meta.textContent = trScan('±{dist} m dari foto ini · {count} foto · terakhir {sev}', {
+    dist: c.distanceM,
+    count: c.count,
+    sev,
+  });
   copy.append(name, meta);
   const mark = document.createElement('span');
   mark.className = 'scan-candidate-mark';
@@ -973,7 +1014,10 @@ function renderAssignPicker(host, candidates, onPick) {
   const fresh = document.createElement('button');
   fresh.type = 'button';
   fresh.className = 'btn btn-secondary';
-  fresh.innerHTML = '<span class="btn-label">Tanaman baru</span>';
+  const freshLabel = document.createElement('span');
+  freshLabel.className = 'btn-label';
+  freshLabel.textContent = trScan('Tanaman baru');
+  fresh.append(freshLabel);
   fresh.addEventListener('click', () => onPick(null));
   const primary = document.createElement('button');
   primary.type = 'button';
@@ -983,7 +1027,7 @@ function renderAssignPicker(host, candidates, onPick) {
   primary.append(primaryLabel);
   function updatePrimary() {
     const chosen = candidates.find(c => c.cropId === assignChoice) || candidates[0];
-    primaryLabel.textContent = 'Simpan ke ' + chosen.cropName;
+    primaryLabel.textContent = trScan('Simpan ke {name}', { name: trScanCrop(chosen.cropName) });
   }
   updatePrimary();
   primary.addEventListener('click', () => onPick(assignChoice));
@@ -1008,7 +1052,7 @@ function promptCropAssignment() {
     card.replaceChildren();
     const title = document.createElement('p');
     title.className = 'section-title';
-    title.textContent = 'Simpan ke tanaman:';
+    title.textContent = trScan('Simpan ke tanaman:');
     const host = document.createElement('div');
     renderAssignPicker(host, candidates, cropId => assignCropChoice(cropId));
     card.append(title, host);
@@ -1051,37 +1095,37 @@ async function assignCropChoice(cropId) {
     if (index >= 0) farmRecords[index] = saved; else farmRecords.unshift(saved);
     if (lastResultRecord && lastResultRecord.id === saved.id) lastResultRecord = saved;
     expandedCropId = nextCropId;
-    showToast((cropId ? 'Masuk ke ' : 'Tanaman baru: ') + nextCropName);
+    showToast(trScan(cropId ? 'Masuk ke {name}' : 'Tanaman baru: {name}', { name: trScanCrop(nextCropName) }));
     refreshAllHistoryViews();
   } catch (error) {
-    showToast('Belum bisa menyimpan tanaman: ' + userMessage(error));
+    showToast(trScan('Belum bisa menyimpan tanaman: {err}', { err: userMessage(error) }));
   }
 }
 
 /* ------------------------------------------------------------------ result actions */
 function speakScanResult() {
-  if (!('speechSynthesis' in window)) { showToast('Pembacaan suara belum tersedia di HP ini.'); return; }
+  if (!('speechSynthesis' in window)) { showToast(trScan('Pembacaan suara belum tersedia di HP ini.')); return; }
   const parts = [scanEl('res-badge-severity')?.textContent, scanEl('res-crop-condition')?.innerText, (window.JagaAssessment?.text(lastResultRecord) || scanEl('res-geo-brief')?.innerText || '')];
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(parts.filter(Boolean).join('. '));
-  utterance.lang = 'id-ID';
+  utterance.lang = isEnScan() ? 'en-US' : 'id-ID';
   utterance.rate = 0.95;
   window.speechSynthesis.speak(utterance);
 }
 function sharePhotoWhatsApp() {
   const rec = lastResultRecord || farmRecords[0];
   if (!rec) return;
-  const lines = ['*Laporan Lapangan JagaKebond*',
-    'Tanaman: ' + (rec.cropName || rec.crop || '-'),
-    'Kondisi: ' + (window.JagaAssessment?.label?.(rec) || rec.condition || '-') + ' (' + severityBadge(rec.severity).label + ')',
-    rec.locationName ? 'Lokasi: ' + rec.locationName : '',
-    Number.isFinite(rec.timestampMs) ? 'Waktu: ' + friendlyTime(rec.timestampMs) : '',
+  const lines = [trScan('*Laporan Lapangan JagaKebond*'),
+    trScan('Tanaman:') + ' ' + trScanCrop(rec.cropName || rec.crop || '-'),
+    trScan('Kondisi:') + ' ' + trScanParts(window.JagaAssessment?.label?.(rec) || rec.condition || '-') + ' (' + severityBadge(rec.severity).label + ')',
+    rec.locationName ? trScan('Lokasi:') + ' ' + rec.locationName : '',
+    Number.isFinite(rec.timestampMs) ? trScan('Waktu:') + ' ' + friendlyTime(rec.timestampMs) : '',
     window.JagaAssessment?.text(rec) || rec.immediate_action || ''].filter(Boolean);
   window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(lines.join('\n')), '_blank', 'noopener');
 }
 function viewScanResultInMap() {
   const rec = lastResultRecord || farmRecords[0];
-  if (rec) viewRecordInMap(rec.id); else showToast('Belum ada hasil untuk ditampilkan di peta.');
+  if (rec) viewRecordInMap(rec.id); else showToast(trScan('Belum ada hasil untuk ditampilkan di peta.'));
 }
 
 /* ------------------------------------------------------------------ wiring */
@@ -1095,10 +1139,31 @@ document.addEventListener('DOMContentLoaded', () => {
     hintInput.addEventListener('focus', () => { setTimeout(() => hintInput.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300); });
     hintInput.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); hintInput.blur(); } });
   }
-  scanEl('scan-photo-preview-btn')?.addEventListener('click', () => { if (selectedImageBase64) openPhotoViewer(selectedImageBase64, 'Foto Tanaman', '', '', null); });
+  scanEl('scan-photo-preview-btn')?.addEventListener('click', () => { if (selectedImageBase64) openPhotoViewer(selectedImageBase64, trScan('Foto Tanaman'), '', '', null); });
   scanEl('scan-set-date')?.addEventListener('click', openDatePickerModal);
   scanEl('scan-location-fix')?.addEventListener('click', () => openLocationEditor('capture'));
   scanEl('capture-edit-location')?.addEventListener('click', () => openLocationEditor('capture'));
   scanEl('scan-retake')?.addEventListener('click', resetToLiveCamera);
   if (!scanChipTimer) scanChipTimer = setInterval(() => { if (scanVisible() && currentAccount) updateScanLocationChip(); }, 10000);
 });
+if (typeof window !== 'undefined') {
+  window.addEventListener('jk:langchange', () => {
+    if (typeof currentAccount !== 'undefined' && currentAccount) {
+      updateScanLocationChip();
+      if (scanState !== 'live') renderScanHead(scanState, lastScanInfo);
+      if (selectedImageBase64) showReviewPhoto();
+      renderCropHintChips();
+      if (scanState === 'sent') {
+        if (lastSentJob) updateSentStatus(lastSentJob);
+        else updateSentText(lastSentInfo);
+      }
+      if (scanState === 'failed' && lastFailureState) {
+        showAnalysisFailure(lastFailureState.message, lastFailureState.options);
+      }
+      if (scanState === 'result' && (lastResultRecord || lastDiagnosisShown)) {
+        renderScanResultContent(lastDiagnosisShown, lastResultRecord);
+        if (pendingCropAssignment) promptCropAssignment();
+      }
+    }
+  });
+}

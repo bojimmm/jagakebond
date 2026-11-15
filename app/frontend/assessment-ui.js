@@ -1,6 +1,29 @@
 /* Structured assessments and explicit, record-scoped Indonesian input references. */
 (function (root) {
   "use strict";
+  const tr = (text, vars) =>
+    root.JagaI18n && typeof root.JagaI18n.t === "function"
+      ? root.JagaI18n.t(text, vars)
+      : text;
+  const isEn = () =>
+    !!(
+      root.JagaI18n &&
+      typeof root.JagaI18n.isEn === "function" &&
+      root.JagaI18n.isEn()
+    );
+  const trCrop = (name) =>
+    root.JagaI18n && typeof root.JagaI18n.crop === "function"
+      ? root.JagaI18n.crop(name)
+      : name;
+  const trCond = (text) =>
+    root.JagaI18n && typeof root.JagaI18n.condition === "function"
+      ? root.JagaI18n.condition(text)
+      : text;
+  const trParts = (value) =>
+    String(value || "")
+      .split(" \u00b7 ")
+      .map((part) => trCond(part))
+      .join(" \u00b7 ");
   let dialogToken = 0,
     dialogRecordId = null,
     reanalysisBusy = false,
@@ -192,16 +215,18 @@
     host.append(
       node(
         "p",
-        healthy ? "Penilaian Tanaman" : "Dugaan Hama / Penyakit",
+        tr(healthy ? "Penilaian Tanaman" : "Dugaan Hama / Penyakit"),
         "assessment-summary-label",
       ),
-      node("p", current, "assessment-summary-current"),
+      node("p", trParts(current), "assessment-summary-current"),
     );
     if (record?.observedProblems && typeof record.observedProblems === "object")
       host.append(
         node(
           "p",
-          "Dugaan diperbarui manual. Rincian di bawah tetap dari analisis AI.",
+          tr(
+            "Dugaan diperbarui manual. Rincian di bawah tetap dari analisis AI.",
+          ),
           "assessment-note assessment-manual-correction",
         ),
       );
@@ -209,16 +234,18 @@
       host.append(
         node(
           "p",
-          "Status diperbarui manual. Rincian di bawah tetap dari analisis AI.",
+          tr(
+            "Status diperbarui manual. Rincian di bawah tetap dari analisis AI.",
+          ),
           "assessment-note assessment-manual-correction",
         ),
       );
     if (showPrevious && record?.previousCondition) {
       const previous = node("p", null, "assessment-previous");
       previous.append(
-        node("b", "Dugaan sebelum analisis ulang: "),
-        document.createTextNode(record.previousCondition),
-        node("span", " \u00b7 Belum terkonfirmasi."),
+        node("b", tr("Dugaan sebelum analisis ulang: ")),
+        document.createTextNode(trParts(record.previousCondition)),
+        node("span", tr(" \u00b7 Belum terkonfirmasi.")),
       );
       host.append(previous);
     }
@@ -227,13 +254,15 @@
     const a = record?.assessment;
     if (a?.version !== 1) return record?.immediate_action || "";
     return (
-      label(record) +
-      "\nPenilaian foto adalah dugaan awal.\n\n" +
+      trParts(label(record)) +
+      "\n" +
+      tr("Penilaian foto adalah dugaan awal.") +
+      "\n\n" +
       sections
         .filter(([key]) => Array.isArray(a[key]) && a[key].length)
         .map(
           ([key, title]) =>
-            title + ":\n" + a[key].map((t) => "\u2022 " + t).join("\n"),
+            tr(title) + ":\n" + a[key].map((t) => "\u2022 " + t).join("\n"),
         )
         .join("\n\n")
     );
@@ -251,7 +280,7 @@
       if (a?.version === 1) {
         const button = node("button", null, "btn btn-secondary");
         button.type = "button";
-        button.append(node("span", "Analisis Lengkap", "btn-label"));
+        button.append(node("span", tr("Analisis Lengkap"), "btn-label"));
         button.onclick = () => openAssessment(record.id);
         host.append(button);
       }
@@ -264,7 +293,9 @@
       host.append(
         node(
           "p",
-          "Penilaian foto adalah dugaan awal. Periksa kondisi tanaman secara langsung.",
+          tr(
+            "Penilaian foto adalah dugaan awal. Periksa kondisi tanaman secara langsung.",
+          ),
           "assessment-note assessment-caveat",
         ),
       );
@@ -272,7 +303,9 @@
         host.append(
           node(
             "p",
-            "Langkah berikut membantu pemeriksaan. Penanganan khusus perlu disesuaikan dengan penyebab yang sudah dikonfirmasi di lapangan.",
+            tr(
+              "Langkah berikut membantu pemeriksaan. Penanganan khusus perlu disesuaikan dengan penyebab yang sudah dikonfirmasi di lapangan.",
+            ),
             "assessment-note assessment-guidance",
           ),
         );
@@ -284,7 +317,7 @@
           "assessment-section" +
             (key === "actions" ? " assessment-actions" : ""),
         );
-        section.append(node("h4", title));
+        section.append(node("h4", tr(title)));
         const list = node("ul", null, "assessment-list");
         for (const item of a[key].slice(0, 6))
           if (typeof item === "string") list.append(node("li", item));
@@ -295,39 +328,47 @@
       host.append(
         node(
           "p",
-          "Rincian analisis terstruktur belum tersedia untuk catatan ini. Ambil foto baru untuk penilaian terbaru.",
+          tr(
+            "Rincian analisis terstruktur belum tersedia untuk catatan ini. Ambil foto baru untuk penilaian terbaru.",
+          ),
           "assessment-note",
         ),
       );
       if (record?.symptoms) {
-        host.append(node("h4", "Temuan Tersimpan"), node("p", record.symptoms));
+        host.append(
+          node("h4", tr("Temuan Tersimpan")),
+          node("p", record.symptoms),
+        );
       }
       if (record?.immediate_action)
         host.append(node("p", record.immediate_action));
     }
     const copy = node("button", null, "btn btn-secondary assessment-copy");
     copy.type = "button";
-    copy.append(node("span", "Salin Analisis", "btn-label"));
+    copy.append(node("span", tr("Salin Analisis"), "btn-label"));
     const feedback = node("p", null, "assessment-note");
     feedback.setAttribute("role", "status");
     copy.onclick = async () => {
       try {
         await navigator.clipboard.writeText(assessmentText(record));
-        feedback.textContent = "Analisis disalin.";
+        feedback.textContent = tr("Analisis disalin.");
       } catch (_) {
-        feedback.textContent =
-          "Pilih teks analisis lalu gunakan Salin pada perangkat Anda.";
+        feedback.textContent = tr(
+          "Pilih teks analisis lalu gunakan Salin pada perangkat Anda.",
+        );
       }
     };
     host.append(copy, feedback);
     const provenance = record?.analysisProvenance;
     if (provenance && typeof provenance === "object") {
       const about = node("details", null, "assessment-about");
-      about.append(node("summary", "Tentang Analisis"));
+      about.append(node("summary", tr("Tentang Analisis")));
       about.append(
         node(
           "p",
-          "Hasil ini dibuat AI dari foto. Tingkat ketepatannya belum diukur terhadap kumpulan kasus yang dinilai ahli.",
+          tr(
+            "Hasil ini dibuat AI dari foto. Tingkat ketepatannya belum diukur terhadap kumpulan kasus yang dinilai ahli.",
+          ),
           "assessment-note",
         ),
       );
@@ -335,7 +376,7 @@
         about.append(
           node(
             "p",
-            "Model yang dilaporkan penyedia: " +
+            tr("Model yang dilaporkan penyedia: ") +
               provenance.diagnosis.resolvedModel,
             "assessment-note",
           ),
@@ -344,7 +385,7 @@
         about.append(
           node(
             "p",
-            "Penyedia tidak melaporkan model yang menjalankan analisis.",
+            tr("Penyedia tidak melaporkan model yang menjalankan analisis."),
             "assessment-note",
           ),
         );
@@ -357,15 +398,18 @@
       generation = accountGeneration;
     const target = problemKey(record),
       targetLabel =
-        (root.JagaProblems?.ids(record) || []).map(targetText).join(" · ") ||
-        label(record);
+        (root.JagaProblems?.ids(record) || [])
+          .map((key) => trCond(targetText(key)))
+          .join(" \u00b7 ") || trParts(label(record));
     const details = node("details", null, "input-options");
-    const summary = node("summary", "Tinjau Opsi Kimia / Pupuk");
+    const summary = node("summary", tr("Tinjau Opsi Kimia / Pupuk"));
     details.append(summary);
     details.append(
       node(
         "p",
-        "Opsional. Referensi produk hanya dibuka setelah Anda menyetujui batasannya. Kolom kondisi lahan boleh dikosongkan bila belum diketahui.",
+        tr(
+          "Opsional. Referensi produk hanya dibuka setelah Anda menyetujui batasannya. Kolom kondisi lahan boleh dikosongkan bila belum diketahui.",
+        ),
         "assessment-note",
       ),
     );
@@ -373,7 +417,9 @@
     terms.append(
       node(
         "p",
-        "Referensi bukan resep dari foto. Pastikan diagnosis di lapangan, izin edar, tanaman/sasaran dan label terbaru. Ikuti APD, batas aplikasi, jeda panen dan masuk kembali pada label. Jangan mencampur produk tanpa petunjuk. Foto daun saja tidak cukup untuk menentukan kebutuhan pupuk.",
+        tr(
+          "Referensi bukan resep dari foto. Pastikan diagnosis di lapangan, izin edar, tanaman/sasaran dan label terbaru. Ikuti APD, batas aplikasi, jeda panen dan masuk kembali pada label. Jangan mencampur produk tanpa petunjuk. Foto daun saja tidak cukup untuk menentukan kebutuhan pupuk.",
+        ),
         "input-disclaimer",
       ),
     );
@@ -384,7 +430,7 @@
       input.type = "checkbox";
       input.name = key;
       input.required = required;
-      wrap.append(input, node("span", text, "input-check-text"));
+      wrap.append(input, node("span", tr(text), "input-check-text"));
       host.append(wrap);
       fields[key] = input;
       return input;
@@ -403,7 +449,9 @@
     );
     const gate = node(
       "p",
-      "Centang pernyataan batasan referensi untuk membuka formulir referensi produk.",
+      tr(
+        "Centang pernyataan batasan referensi untuk membuka formulir referensi produk.",
+      ),
       "assessment-note",
     );
     terms.append(gate);
@@ -411,14 +459,16 @@
     const form = node("form", null, "input-options-form");
     const targetRow = node("p", null, "assessment-target");
     targetRow.append(
-      node("b", "Sasaran yang ingin ditinjau: "),
+      node("b", tr("Sasaran yang ingin ditinjau: ")),
       document.createTextNode(targetLabel),
-      node("span", " (dari analisis foto ini)"),
+      node("span", tr(" (dari analisis foto ini)")),
     );
     form.append(
       node(
         "p",
-        "Kondisi lahan boleh dikosongkan. Referensi disaring dari jenis tanaman dan sasaran aktif; isian ini tidak menghasilkan dosis atau resep pupuk pribadi.",
+        tr(
+          "Kondisi lahan boleh dikosongkan. Referensi disaring dari jenis tanaman dan sasaran aktif; isian ini tidak menghasilkan dosis atau resep pupuk pribadi.",
+        ),
         "assessment-note",
       ),
       targetRow,
@@ -430,12 +480,12 @@
     form.append(problem);
     fields.problem = problem;
     function field(key, fieldLabel) {
-      const wrap = node("label", fieldLabel);
+      const wrap = node("label", tr(fieldLabel));
       const input = node("input");
       input.name = key;
       input.type = "text";
       input.maxLength = 240;
-      input.placeholder = "Opsional; kosongkan bila belum diketahui";
+      input.placeholder = tr("Opsional; kosongkan bila belum diketahui");
       wrap.append(input);
       form.append(wrap);
       fields[key] = input;
@@ -446,17 +496,17 @@
     field("location", "Kabupaten / kondisi lahan");
     field("harvestWindow", "Perkiraan waktu panen");
     field("recentInputs", "Produk / pemupukan terakhir dan waktunya");
-    const soilLabel = node("label", "Data tanah / uji hara (bila ada)");
+    const soilLabel = node("label", tr("Data tanah / uji hara (bila ada)"));
     const soil = node("input");
     soil.name = "soilInformation";
     soil.maxLength = 240;
-    soil.placeholder = "Opsional; kosongkan bila belum ada";
+    soil.placeholder = tr("Opsional; kosongkan bila belum ada");
     soilLabel.append(soil);
     form.append(soilLabel);
     fields.soilInformation = soil;
     const button = node("button", null, "btn btn-secondary");
     button.type = "submit";
-    button.append(node("span", "Cari referensi produk", "btn-label"));
+    button.append(node("span", tr("Cari referensi produk"), "btn-label"));
     form.append(button);
     const result = node("div", null, "input-options-result");
     result.setAttribute("aria-live", "polite");
@@ -485,7 +535,7 @@
         if (input.type !== "checkbox") body[key] = input.value.trim();
       body.problem = target;
       button.disabled = true;
-      result.replaceChildren(node("p", "Memeriksa katalog…"));
+      result.replaceChildren(node("p", tr("Memeriksa katalog…")));
       try {
         const reply = await api("/api/recommendations", {
           method: "POST",
@@ -513,25 +563,28 @@
             card.append(
               node(
                 "p",
-                "Sasaran yang disebut sumber: " + product.targets.join("; "),
+                tr("Sasaran yang disebut sumber: ") +
+                  product.targets.join("; "),
               ),
             );
           if (product.manufacturer_registration_number)
             card.append(
               node(
                 "p",
-                "Nomor menurut produsen: " +
-                  product.manufacturer_registration_number +
-                  "; status terkini belum dikonfirmasi.",
+                tr(
+                  "Nomor menurut produsen: {num}; status terkini belum dikonfirmasi.",
+                  { num: product.manufacturer_registration_number },
+                ),
                 "assessment-note",
               ),
             );
           card.append(
             node(
               "p",
-              "Diperiksa " +
-                product.checked_at +
-                " \u00b7 Bukan konfirmasi stok atau izin edar aktif.",
+              tr(
+                "Diperiksa {date} \u00b7 Bukan konfirmasi stok atau izin edar aktif.",
+                { date: product.checked_at },
+              ),
               "assessment-note",
             ),
           );
@@ -539,14 +592,14 @@
             card.append(
               node(
                 "p",
-                "Belum lengkap: " + product.missing_evidence.join(", "),
+                tr("Belum lengkap: ") + product.missing_evidence.join(", "),
                 "assessment-note",
               ),
             );
           try {
             const url = new URL(product.source_url);
             if (url.protocol === "https:") {
-              const link = node("a", "Buka sumber produsen");
+              const link = node("a", tr("Buka sumber produsen"));
               link.href = url.href;
               link.target = "_blank";
               link.rel = "noopener noreferrer";
@@ -559,7 +612,9 @@
           result.append(
             node(
               "p",
-              "Belum ada referensi untuk pasangan tanaman dan sasaran ini. Jangan memakai produk untuk tanaman lain sebagai pengganti.",
+              tr(
+                "Belum ada referensi untuk pasangan tanaman dan sasaran ini. Jangan memakai produk untuk tanaman lain sebagai pengganti.",
+              ),
             ),
           );
       } catch (error) {
@@ -597,7 +652,11 @@
     const title = modal.querySelector("h3"),
       body = modal.querySelector(".assessment-dialog-body");
     if (title)
-      title.textContent = record.cropName || record.crop || "Analisis tanaman";
+      title.textContent = record.cropName
+        ? trCrop(record.cropName)
+        : record.crop
+          ? trCrop(record.crop)
+          : tr("Analisis tanaman");
     if (body) {
       body.replaceChildren();
       const content = node("div");
@@ -610,7 +669,7 @@
     const label =
       trigger.querySelector(".btn-label") || trigger.querySelector("span");
     if (label)
-      label.textContent = busy ? "Menganalisis ulang…" : "Analisis ulang";
+      label.textContent = tr(busy ? "Menganalisis ulang…" : "Analisis ulang");
     trigger.disabled = !!busy;
     trigger.setAttribute("aria-busy", busy ? "true" : "false");
   }
@@ -694,30 +753,46 @@
       note: "Foto sudah ada di server. Jendela ini boleh ditutup; hasilnya tetap masuk ke Riwayat.",
     },
   };
+  function applyProgressLabels(mode) {
+    const dialog = reanalysisDialog(),
+      text = PROGRESS_TEXT[mode];
+    if (!dialog || !text) return;
+    const modeName = tr(text.name);
+    dialogNames["reanalysis-dialog"] = modeName;
+    const set = (selector, value) => {
+      const el = dialog.querySelector(selector);
+      if (el) el.textContent = value;
+    };
+    set("#reanalysis-title", tr(text.title));
+    set('[data-reanalysis-step="prepare"] span', tr(text.first));
+    set(".reanalysis-safe-note p", tr(text.note));
+    dialog
+      .querySelector("#reanalysis-meter")
+      ?.setAttribute("aria-label", modeName);
+    dialog
+      .querySelector(".reanalysis-steps")
+      ?.setAttribute("aria-label", tr(text.steps));
+    dialog
+      .querySelector("#reanalysis-close")
+      ?.setAttribute(
+        "aria-label",
+        isEn()
+          ? "Hide " + modeName.toLowerCase()
+          : "Sembunyikan " + text.name.toLowerCase(),
+      );
+    const close = dialog.querySelector("#reanalysis-close-label");
+    if (close && (close.textContent === "Sembunyikan" || close.textContent === "Hide"))
+      close.textContent = tr("Sembunyikan");
+    else if (close && (close.textContent === "Tutup" || close.textContent === "Close"))
+      close.textContent = tr("Tutup");
+  }
   function setProgressMode(mode) {
     const dialog = reanalysisDialog(),
       text = PROGRESS_TEXT[mode];
     if (!dialog || !text) return;
     dialog.dataset.mode = mode;
-    dialogNames["reanalysis-dialog"] = text.name;
-    const set = (selector, value) => {
-      const el = dialog.querySelector(selector);
-      if (el) el.textContent = value;
-    };
     const note = dialog.querySelector(".reanalysis-safe-note");
     if (note) note.hidden = false;
-    set("#reanalysis-title", text.title);
-    set('[data-reanalysis-step="prepare"] span', text.first);
-    set(".reanalysis-safe-note p", text.note);
-    dialog
-      .querySelector("#reanalysis-meter")
-      ?.setAttribute("aria-label", text.name);
-    dialog
-      .querySelector(".reanalysis-steps")
-      ?.setAttribute("aria-label", text.steps);
-    dialog
-      .querySelector("#reanalysis-close")
-      ?.setAttribute("aria-label", "Sembunyikan " + text.name.toLowerCase());
     for (const button of dialog.querySelectorAll(
       "#reanalysis-close, #reanalysis-close-button",
     ))
@@ -725,8 +800,9 @@
     const view = dialog.querySelector("#reanalysis-view");
     if (view) view.hidden = true;
     const close = dialog.querySelector("#reanalysis-close-label");
-    if (close) close.textContent = "Sembunyikan";
+    if (close) close.textContent = tr("Sembunyikan");
     dialog.dataset.tone = "busy";
+    applyProgressLabels(mode);
   }
   function prepareReanalysisDialog(record, trigger) {
     const dialog = reanalysisDialog();
@@ -742,7 +818,7 @@
     const src = String(record?.serverImageUrl || record?.imageUrl || "");
     if (photo && src) {
       photo.src = src;
-      photo.alt = "Foto tanaman yang akan dianalisis ulang";
+      photo.alt = tr("Foto tanaman yang akan dianalisis ulang");
       photo.hidden = false;
     } else if (photo) {
       photo.removeAttribute("src");
@@ -750,20 +826,27 @@
     }
     const crop = dialog.querySelector("#reanalysis-crop");
     if (crop)
-      crop.textContent = record?.cropName || record?.crop || "Foto tanaman";
+      crop.textContent = record?.cropName
+        ? trCrop(record.cropName)
+        : record?.crop
+          ? trCrop(record.crop)
+          : tr("Foto tanaman");
     dialog.dataset.tone = "busy";
     const view = dialog.querySelector("#reanalysis-view");
     if (view) view.hidden = true;
     const close = dialog.querySelector("#reanalysis-close-label");
-    if (close) close.textContent = "Sembunyikan";
+    if (close) close.textContent = tr("Sembunyikan");
     const detail = dialog.querySelector("#reanalysis-detail");
     if (detail)
-      detail.textContent =
-        "Foto asli tanpa cap lokasi disiapkan untuk analisis baru.";
+      detail.textContent = tr(
+        "Foto asli tanpa cap lokasi disiapkan untuk analisis baru.",
+      );
     setReanalysisProgress(
       6,
-      "Menyiapkan foto asli tanpa cap lokasi…",
-      "Hasil lama tetap tersimpan dan dapat dibaca sampai analisis baru selesai.",
+      tr("Menyiapkan foto asli tanpa cap lokasi…"),
+      tr(
+        "Hasil lama tetap tersimpan dan dapat dibaca sampai analisis baru selesai.",
+      ),
       { open: true, trigger },
     );
   }
@@ -781,21 +864,28 @@
         ?.getAttribute("aria-valuenow") || 0,
     );
     percent = Math.max(current, percent);
-    let status = job?.statusLabel || "";
-    let detail = "Hasil lama tetap tersimpan sampai analisis baru selesai.";
+    let status = job?.statusLabel ? tr(job.statusLabel) : "";
+    let detail = tr("Hasil lama tetap tersimpan sampai analisis baru selesai.");
     if (job?.status === "queued" && !stage) {
-      status = "Menunggu giliran analisis ulang";
+      status = tr("Menunggu giliran analisis ulang");
       if (position !== null)
-        detail = `Posisi antrean: ${position + 1}. Hasil lama tetap tersimpan.`;
+        detail = tr(
+          "Posisi antrean: {pos}. Hasil lama tetap tersimpan.",
+          { pos: position + 1 },
+        );
     } else if (!status && stage === "worker:release") {
-      status = "Server sedang sibuk. Analisis dicoba lagi otomatis…";
+      status = tr("Server sedang sibuk. Analisis dicoba lagi otomatis…");
     } else if (!status) {
-      status = claimed
-        ? "Sedang menganalisis ulang…"
-        : "Memasukkan analisis ke antrean…";
+      status = tr(
+        claimed
+          ? "Sedang menganalisis ulang…"
+          : "Memasukkan analisis ke antrean…",
+      );
     }
     if (position !== null && job?.status === "queued")
-      detail = `Posisi antrean: ${position + 1}. Hasil lama tetap tersimpan.`;
+      detail = tr("Posisi antrean: {pos}. Hasil lama tetap tersimpan.", {
+        pos: position + 1,
+      });
     setReanalysisProgress(percent, status, detail, { tone: "busy" });
   }
   async function runReanalysis(record, trigger) {
@@ -820,14 +910,16 @@
       const jobId = receipt?.jobId || receipt?.job_id;
       if (!jobId)
         throw new Error(
-          "Server belum memberi nomor analisis ulang. Coba lagi.",
+          tr("Server belum memberi nomor analisis ulang. Coba lagi."),
         );
       setReanalysisProgress(
         18,
-        "Analisis ulang masuk antrean…",
+        tr("Analisis ulang masuk antrean…"),
         receipt.source === "original-photo-no-stamp"
-          ? "Foto asli tanpa cap berhasil disiapkan. Hasil lama tetap tersimpan."
-          : "Hasil lama tetap tersimpan.",
+          ? tr(
+              "Foto asli tanpa cap berhasil disiapkan. Hasil lama tetap tersimpan.",
+            )
+          : tr("Hasil lama tetap tersimpan."),
         { tone: "busy" },
       );
       for (let attempt = 0; attempt < 300; attempt++) {
@@ -844,8 +936,10 @@
                   ?.querySelector("#reanalysis-meter")
                   ?.getAttribute("aria-valuenow") || 18,
               ),
-              "Koneksi terputus. Mencoba membaca hasil lagi…",
-              "Analisis tetap berjalan di server. Hasil lama tetap tersimpan.",
+              tr("Koneksi terputus. Mencoba membaca hasil lagi…"),
+              tr(
+                "Analisis tetap berjalan di server. Hasil lama tetap tersimpan.",
+              ),
               { tone: "busy" },
             );
           continue;
@@ -858,8 +952,10 @@
         if (job?.status === "done") {
           setReanalysisProgress(
             96,
-            "Menyimpan hasil ke catatan yang sama…",
-            "Analisis selesai. Memperbarui foto tanpa membuat catatan baru.",
+            tr("Menyimpan hasil ke catatan yang sama…"),
+            tr(
+              "Analisis selesai. Memperbarui foto tanpa membuat catatan baru.",
+            ),
             { tone: "busy" },
           );
           await refreshAllData();
@@ -869,7 +965,7 @@
           const updated = farmRecords.find((row) => row.id === record.id);
           if (!updated)
             throw new Error(
-              "Catatan asli tidak ditemukan setelah analisis selesai.",
+              tr("Catatan asli tidak ditemukan setelah analisis selesai."),
             );
           // The result already lives on the original record. Acknowledging the job prevents
           // launch recovery from saving the same result as a second crop.
@@ -877,7 +973,7 @@
           const dialog = reanalysisDialog(),
             view = dialog?.querySelector("#reanalysis-view");
           const close = dialog?.querySelector("#reanalysis-close-label");
-          if (close) close.textContent = "Tutup";
+          if (close) close.textContent = tr("Tutup");
           if (view) {
             view.hidden = false;
             view.onclick = () => {
@@ -887,8 +983,10 @@
           }
           setReanalysisProgress(
             100,
-            "Analisis ulang selesai. Hasil sudah masuk ke catatan asli.",
-            "Dugaan sebelumnya disimpan sebagai pembanding; catatan baru tidak dibuat.",
+            tr("Analisis ulang selesai. Hasil sudah masuk ke catatan asli."),
+            tr(
+              "Dugaan sebelumnya disimpan sebagai pembanding; catatan baru tidak dibuat.",
+            ),
             { tone: "success", toast: true },
           );
           return;
@@ -896,30 +994,35 @@
         if (["failed", "rejected", "cancelled"].includes(job?.status))
           throw new Error(
             job.error ||
-              "Analisis ulang tidak selesai. Analisis lama tetap tersimpan.",
+              tr(
+                "Analisis ulang tidak selesai. Analisis lama tetap tersimpan.",
+              ),
           );
       }
       setReanalysisProgress(
         97,
-        "Analisis ulang masih diproses…",
-        "Analisis tetap berjalan di server. Buka kembali catatan ini nanti; hasil lama tetap tersimpan.",
+        tr("Analisis ulang masih diproses…"),
+        tr(
+          "Analisis tetap berjalan di server. Buka kembali catatan ini nanti; hasil lama tetap tersimpan.",
+        ),
         { tone: "busy", toast: true },
       );
     } catch (error) {
       if (!stillCurrent() || error.message === "reanalysis_stale") return;
       const dialog = reanalysisDialog(),
         close = dialog?.querySelector("#reanalysis-close-label");
-      if (close) close.textContent = "Tutup";
+      if (close) close.textContent = tr("Tutup");
       setReanalysisProgress(
         Number(
           dialog
             ?.querySelector("#reanalysis-meter")
             ?.getAttribute("aria-valuenow") || 6,
         ),
-        "Analisis ulang belum selesai",
-        "Analisis ulang gagal: " +
-          userMessage(error) +
-          " Analisis lama tetap tersimpan.",
+        tr("Analisis ulang belum selesai"),
+        tr(
+          "Analisis ulang gagal: {reason} Analisis lama tetap tersimpan.",
+          { reason: userMessage(error) },
+        ),
         { tone: "error", toast: true },
       );
     } finally {
@@ -944,22 +1047,29 @@
       ),
       percent,
     );
-    let status = job?.stageLabel || job?.statusLabel || "",
-      detail = "Hasilnya masuk ke Riwayat setelah selesai.";
+    let status = job?.stageLabel
+        ? tr(job.stageLabel)
+        : job?.statusLabel
+          ? tr(job.statusLabel)
+          : "",
+      detail = tr("Hasilnya masuk ke Riwayat setelah selesai.");
     if (job?.status === "queued" && !stage) {
-      status = "Menunggu giliran analisis";
-      if (position !== null) detail = "Posisi antrean: " + (position + 1) + ".";
+      status = tr("Menunggu giliran analisis");
+      if (position !== null)
+        detail = tr("Posisi antrean: {pos}.", { pos: position + 1 });
     } else if (!status && stage === "worker:release")
-      status = "Server sedang sibuk. Analisis dicoba lagi otomatis…";
+      status = tr("Server sedang sibuk. Analisis dicoba lagi otomatis…");
     else if (!status)
-      status = claimed ? "Sedang menganalisis foto…" : "Foto masuk antrean…";
+      status = tr(
+        claimed ? "Sedang menganalisis foto…" : "Foto masuk antrean…",
+      );
     setReanalysisProgress(percent, status, detail, { tone: "busy" });
   }
   async function watchAnalysis({ jobId, crop, photo, trigger } = {}) {
     const dialog = reanalysisDialog();
     if (!dialog || !jobId || !currentAccount) return;
     if (reanalysisBusy) {
-      showToast("Tunggu analisis ulang selesai dulu.");
+      showToast(tr("Tunggu analisis ulang selesai dulu."));
       return;
     }
     const owner = String(currentAccount.id),
@@ -979,11 +1089,12 @@
       );
     setProgressMode("photo");
     const cropNode = dialog.querySelector("#reanalysis-crop");
-    if (cropNode) cropNode.textContent = crop || "Foto tanaman";
+    if (cropNode)
+      cropNode.textContent = crop ? trCrop(crop) : tr("Foto tanaman");
     const img = dialog.querySelector("#reanalysis-photo");
     if (img && photo) {
       img.src = photo;
-      img.alt = "Foto tanaman yang sedang dianalisis";
+      img.alt = tr("Foto tanaman yang sedang dianalisis");
       img.hidden = false;
     } else if (img) {
       img.removeAttribute("src");
@@ -994,8 +1105,8 @@
       ?.setAttribute("aria-valuenow", "0");
     setReanalysisProgress(
       18,
-      "Foto terkirim. Membaca status antrean…",
-      "Hasilnya masuk ke Riwayat setelah selesai.",
+      tr("Foto terkirim. Membaca status antrean…"),
+      tr("Hasilnya masuk ke Riwayat setelah selesai."),
       { open: true, trigger, tone: "busy" },
     );
     for (let attempt = 0; attempt < 400; attempt++) {
@@ -1007,8 +1118,8 @@
         if (attempt % 3 === 2)
           setReanalysisProgress(
             current(),
-            "Koneksi terputus. Mencoba membaca status lagi…",
-            "Analisis tetap berjalan di server.",
+            tr("Koneksi terputus. Mencoba membaca status lagi…"),
+            tr("Analisis tetap berjalan di server."),
             { tone: "busy" },
           );
         await sleep(2500);
@@ -1022,15 +1133,15 @@
         continue;
       }
       const close = dialog.querySelector("#reanalysis-close-label");
-      if (close) close.textContent = "Tutup";
+      if (close) close.textContent = tr("Tutup");
       // Finished or refused: the reassurance "hasilnya tetap masuk ke Riwayat" no longer applies.
       const note = dialog.querySelector(".reanalysis-safe-note");
       if (note) note.hidden = true;
       if (job?.status === "done") {
         setReanalysisProgress(
           96,
-          "Menyimpan hasil ke Riwayat…",
-          "Analisis selesai.",
+          tr("Menyimpan hasil ke Riwayat…"),
+          tr("Analisis selesai."),
           { tone: "busy" },
         );
         // The Riwayat workflow saves a finished job as record_<jobId>; run it now instead of waiting for the next poll.
@@ -1055,23 +1166,30 @@
           };
         }
         const found = record
-          ? [record.cropName || record.crop, record.condition]
+          ? [
+              record.cropName || record.crop
+                ? trCrop(record.cropName || record.crop)
+                : "",
+              record.condition ? trParts(record.condition) : "",
+            ]
               .filter(Boolean)
               .join(": ")
           : "";
         setReanalysisProgress(
           100,
-          "Analisis selesai. Hasil sudah masuk ke Riwayat.",
-          found || "Buka Riwayat untuk melihat hasilnya.",
+          tr("Analisis selesai. Hasil sudah masuk ke Riwayat."),
+          found || tr("Buka Riwayat untuk melihat hasilnya."),
           { tone: "success" },
         );
         return;
       }
       setReanalysisProgress(
         current(),
-        "Analisis tidak selesai",
-        (job?.error || "Server tidak dapat menyelesaikan analisis foto ini.") +
-          " Lihat pilihan di daftar foto.",
+        tr("Analisis tidak selesai"),
+        (job?.error ||
+          tr("Server tidak dapat menyelesaikan analisis foto ini.")) +
+          " " +
+          tr("Lihat pilihan di daftar foto."),
         { tone: "error" },
       );
       return;
@@ -1081,7 +1199,7 @@
     const record = farmRecords.find((row) => row.id === id);
     if (!record) return;
     if (!reanalyzable(record)) {
-      showToast("Foto asli catatan ini tidak tersedia untuk analisis ulang.");
+      showToast(tr("Foto asli catatan ini tidak tersedia untuk analisis ulang."));
       return;
     }
     return runReanalysis(record, trigger);
@@ -1101,8 +1219,8 @@
       const actions = node("div", null, "assessment-dialog-actions");
       const close = node("button", null, "btn btn-quiet btn-icon btn-sm");
       close.type = "button";
-      close.setAttribute("aria-label", "Tutup analisis");
-      close.title = "Tutup analisis";
+      close.setAttribute("aria-label", tr("Tutup analisis"));
+      close.title = tr("Tutup analisis");
       const closeIcon = node("i");
       closeIcon.setAttribute("data-lucide", "x");
       closeIcon.setAttribute("aria-hidden", "true");
@@ -1112,14 +1230,21 @@
         closeDialog("assessment-dialog");
       };
       actions.append(close);
-      head.append(node("h3", "Analisis tanaman"), actions);
+      head.append(node("h3", tr("Analisis tanaman")), actions);
       panel.append(head, node("div", null, "assessment-dialog-body"));
       modal.append(panel);
       document.body.append(modal);
-      dialogNames["assessment-dialog"] = "Analisis tanaman";
+      dialogNames["assessment-dialog"] = tr("Analisis tanaman");
       try {
         if (typeof lucide !== "undefined") lucide.createIcons();
       } catch (_) {}
+    } else {
+      const close = modal.querySelector(".assessment-dialog-actions button");
+      if (close) {
+        close.setAttribute("aria-label", tr("Tutup analisis"));
+        close.title = tr("Tutup analisis");
+      }
+      dialogNames["assessment-dialog"] = tr("Analisis tanaman");
     }
     renderAssessmentDialog(modal, record);
     setDialogOpen("assessment-dialog");
@@ -1144,6 +1269,32 @@
     ])
       document.getElementById(id)?.replaceChildren();
   }
+  if (typeof root.addEventListener === "function") root.addEventListener("jk:langchange", () => {
+    const modal = document.getElementById("assessment-dialog");
+    if (
+      modal &&
+      !modal.classList.contains("hidden") &&
+      dialogRecordId &&
+      typeof farmRecords !== "undefined"
+    ) {
+      const record = farmRecords.find(
+        (row) => String(row.id) === String(dialogRecordId),
+      );
+      if (record) {
+        const close = modal.querySelector(".assessment-dialog-actions button");
+        if (close) {
+          close.setAttribute("aria-label", tr("Tutup analisis"));
+          close.title = tr("Tutup analisis");
+        }
+        if (typeof dialogNames !== "undefined")
+          dialogNames["assessment-dialog"] = tr("Analisis tanaman");
+        renderAssessmentDialog(modal, record);
+      }
+    }
+    const progress = reanalysisDialog();
+    if (progress && progress.dataset.mode)
+      applyProgressLabels(progress.dataset.mode);
+  });
   root.JagaAssessment = {
     render: renderAssessment,
     summary: renderSummary,
