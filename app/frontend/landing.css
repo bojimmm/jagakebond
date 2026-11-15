@@ -261,12 +261,78 @@
 }
 #auth-gate .auth-split-divider { background: var(--border); width: 1px; height: 100%; }
 #auth-gate .auth-brand-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   padding: var(--s400) clamp(var(--s400), 4vw, var(--s700)) var(--s400);
   background: #ffffff;
   overflow: hidden;
+}
+
+#auth-gate .auth-brand-panel > *:not(.auth-panel-ornament) {
+  position: relative;
+  z-index: 1;
+}
+
+#auth-gate .auth-panel-ornament {
+  position: absolute;
+  left: -48px;
+  bottom: -28px;
+  width: 340px;
+  max-width: 68%;
+  height: auto;
+  opacity: 0.075;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+#auth-gate .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--s300);
+}
+
+#auth-gate .hero-apk-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid #cce3d3;
+  background: #f4faf5;
+  color: var(--ink-800, #164e2a);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+#auth-gate .hero-apk-link:hover {
+  background: #e7f4ea;
+  border-color: var(--primary, #15803d);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20, 83, 45, 0.08);
+}
+
+#auth-gate .hero-apk-link i,
+#auth-gate .hero-apk-link svg {
+  width: 15px;
+  height: 15px;
+  color: var(--primary, #15803d);
+  flex-shrink: 0;
+}
+
+#auth-gate .hero-apk-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-500, #4b6353);
+  padding-left: 8px;
+  border-left: 1px solid #cce3d3;
 }
 #auth-gate .landing-brand {
   display: inline-flex;
@@ -864,4 +930,221 @@
   background: #ffffff;
   color: #166534;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+#auth-gate section.block,
+#auth-gate section.tagline {
+  position: relative;
+  overflow-x: clip;
+}
+
+#auth-gate section.block > .wrap,
+#auth-gate section.tagline > .wrap {
+  position: relative;
+  z-index: 1;
+}
+
+#auth-gate .section-ornament {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  height: auto;
+}
+
+#auth-gate .section-ornament-tr {
+  top: -28px;
+  right: max(-60px, calc((100% - 1240px) / 2 - 140px));
+  width: 300px;
+  max-width: 44vw;
+  opacity: 0.08;
+}
+
+#auth-gate .section-ornament-br {
+  bottom: -36px;
+  right: max(-50px, calc((100% - 1240px) / 2 - 120px));
+  width: 320px;
+  max-width: 46vw;
+  opacity: 0.075;
+}
+
+#auth-gate .section-ornament-bl {
+  bottom: -24px;
+  left: max(-60px, calc((100% - 1240px) / 2 - 130px));
+  width: 280px;
+  max-width: 42vw;
+  opacity: 0.075;
+}
+
+#auth-gate .section-ornament-ridge {
+  right: max(-40px, calc((100% - 1240px) / 2 - 100px));
+  top: 50%;
+  transform: translateY(-50%);
+  width: 340px;
+  max-width: 48vw;
+  opacity: 0.08;
+}
+
+#auth-gate .section-ornament-flip {
+  transform: scaleX(-1);
+}
+
+#auth-gate .section-ornament-on-dark {
+  right: max(-30px, calc((100% - 1240px) / 2 - 90px));
+  bottom: -18px;
+  width: 380px;
+  max-width: 52vw;
+  opacity: 0.09;
+  filter: brightness(0) invert(1);
+}
+
+#auth-gate .benefit {
+  display: flex;
+  flex-direction: column;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+#auth-gate .benefit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  border-color: #b7d7c2;
+}
+
+#auth-gate .benefit-shot {
+  margin: 0 0 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  aspect-ratio: 16 / 10;
+}
+
+#auth-gate .benefit-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  transition: transform 280ms ease;
+}
+
+#auth-gate .benefit:hover .benefit-shot img {
+  transform: scale(1.025);
+}
+
+#auth-gate .benefit-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 10px;
+}
+
+#auth-gate .benefit-head .ico {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+#auth-gate .benefit-head h3 {
+  margin: 0;
+}
+
+#auth-gate .proof-download-bar {
+  margin: var(--s400, 20px) 0 10px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 1px solid #cce3d3;
+  background: #f5fbf6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 20px;
+}
+
+#auth-gate .proof-download-copy {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+#auth-gate .proof-download-ico {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #e2f2e6;
+  color: var(--primary, #15803d);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#auth-gate .proof-download-ico i,
+#auth-gate .proof-download-ico svg {
+  width: 20px;
+  height: 20px;
+}
+
+#auth-gate .proof-download-title {
+  margin: 0;
+  color: var(--ink-900, #0d1f12);
+}
+
+#auth-gate .proof-download-sub {
+  margin: 2px 0 0;
+  color: var(--ink-600, #3f5546);
+}
+
+#auth-gate .proof-download-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#auth-gate .proof-download-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-500, #4b6353);
+}
+
+#auth-gate .final-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: var(--s400, 20px);
+}
+
+#auth-gate section.block.final .final-actions .btn {
+  margin-top: 0;
+}
+
+#auth-gate .btn-final-apk {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+}
+
+#auth-gate .btn-final-apk:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  #auth-gate .auth-panel-ornament {
+    width: 220px;
+    opacity: 0.045;
+  }
+  #auth-gate .section-ornament {
+    width: 200px;
+    opacity: 0.045;
+  }
+  #auth-gate .section-ornament-on-dark {
+    width: 240px;
+    opacity: 0.065;
+  }
 }

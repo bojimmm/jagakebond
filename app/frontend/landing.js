@@ -1200,10 +1200,34 @@
     window.requestAnimationFrame(render2DFallback);
   };
 
+  const syncApkMetadata = () => {
+    const links = Array.from(document.querySelectorAll('[data-apk-link]'));
+    if (!links.length) return;
+    fetch('/downloads/latest.json', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((info) => {
+        if (!info || !info.version) return;
+        const sizeStr = info.sizeMb ? String(info.sizeMb) : '6.9';
+        const isDefault = info.version === '0.2.4.28' && sizeStr === '6.9';
+        if (!isDefault) {
+          const formattedSize = document.documentElement.lang === 'en' ? sizeStr : sizeStr.replace('.', ',');
+          const metaText = `v${info.version} · ${formattedSize} MB`;
+          document.querySelectorAll('[data-apk-meta]').forEach((el) => {
+            el.textContent = metaText;
+          });
+        }
+        if (info.filename) {
+          links.forEach((a) => a.setAttribute('download', info.filename));
+        }
+      })
+      .catch(() => {});
+  };
+
   const wireAll = () => {
     wire();
     wireLandingChrome();
     initLandingTour();
+    syncApkMetadata();
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireAll); else wireAll();
 })();

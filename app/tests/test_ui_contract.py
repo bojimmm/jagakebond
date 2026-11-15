@@ -149,6 +149,31 @@ class UiContractTests(unittest.TestCase):
             self.assertIn('data-lang-choice="en"', page, page_name)
         self.assertIn('class="info-row info-row-lang"', HTML)
 
+        # APK downloads, Tutorial top nav rename, botanical ornaments, #fitur thumbnails, and ` | ` <title>.
+        self.assertIn('href="#cara">Tutorial</a>', HTML)
+        self.assertNotIn('href="#cara">Tutorial 3D</a>', HTML)
+        self.assertEqual(HTML.count('href="/downloads/jagakebond-latest.apk"'), 3)
+        self.assertIn("'/downloads/'", SW)
+        for img_name in (
+            "ornament-botanical-canopy.webp",
+            "ornament-contour-ridge.webp",
+            "ornament-botanical-corner.webp",
+            "feature-diagnosis.webp",
+            "feature-history.webp",
+            "feature-map.webp",
+            "feature-offline.webp",
+        ):
+            self.assertIn(img_name, HTML)
+            self.assertIn(f"/img/{img_name}", SW)
+            self.assertTrue((ROOT / "frontend" / "img" / img_name).exists(), img_name)
+        for page_name in ("index.html", "admin.html", "privacy.html", "terms.html", "tutorial-3d.html"):
+            page = (ROOT / "frontend" / page_name).read_text()
+            title_match = re.search(r"<title>([^<]+)</title>", page)
+            self.assertIsNotNone(title_match, page_name)
+            self.assertIn(" | ", title_match.group(1), page_name)
+            self.assertNotIn("—", title_match.group(1), page_name)
+            self.assertNotIn("·", title_match.group(1), page_name)
+
 
 if __name__ == "__main__":
     unittest.main()

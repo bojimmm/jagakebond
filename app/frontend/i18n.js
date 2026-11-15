@@ -171,9 +171,13 @@
   /* ------------------------------------------------------------ Exact Dictionaries */
   const EXACT_EN = {
     // Document & Navigation
-    'JagaKebond — Foto, Kenali, dan Rawat Tanaman Anda': 'JagaKebond — Snap, Identify, and Care for Your Crops',
-    'JagaKebond · Kebun Ciomas 3D': 'JagaKebond · Ciomas Farm 3D',
-    'JagaKebond · Diorama 3D Interaktif Kebun Ciomas': 'JagaKebond · Ciomas Farm Interactive 3D Diorama',
+    'JagaKebond | Foto, Kenali, dan Rawat Tanaman Anda': 'JagaKebond | Snap, Identify, and Care for Your Crops',
+    'JagaKebond — Foto, Kenali, dan Rawat Tanaman Anda': 'JagaKebond | Snap, Identify, and Care for Your Crops',
+    'JagaKebond | Kebun Ciomas 3D': 'JagaKebond | Ciomas Farm 3D',
+    'JagaKebond · Kebun Ciomas 3D': 'JagaKebond | Ciomas Farm 3D',
+    'JagaKebond | Diorama 3D Interaktif Kebun Ciomas': 'JagaKebond | Ciomas Farm Interactive 3D Diorama',
+    'JagaKebond · Diorama 3D Interaktif Kebun Ciomas': 'JagaKebond | Ciomas Farm Interactive 3D Diorama',
+    'Konsol Admin | JagaKebond': 'Admin Console | JagaKebond',
     'Navigasi utama': 'Main navigation',
     'Navigasi halaman': 'Page navigation',
     'Menu utama': 'Main menu',
@@ -191,7 +195,17 @@
     // Topbar & Mobile Drawer
     'Video': 'Video',
     'Manfaat': 'Benefits',
+    'Tutorial': 'Tutorial',
     'Tutorial 3D': '3D Tour',
+    'Unduh APK Android': 'Download Android APK',
+    'Pasang Aplikasi Android JagaKebond': 'Install JagaKebond Android App',
+    'Mendukung kamera lapangan, GPS & antrean sinkronisasi offline.': 'Supports field camera, GPS & offline sync queue.',
+    'Unduh APK': 'Download APK',
+    'v0.2.4.28 · 6,9 MB': 'v0.2.4.28 · 6.9 MB',
+    'Pratinjau diagnosis gejala antraknosa daun cabai di aplikasi JagaKebond': 'Preview of chili leaf anthracnose symptom diagnosis in JagaKebond app',
+    'Pratinjau riwayat kesehatan tanaman Cabai 1 dan Cabai 4': 'Preview of Chili 1 and Chili 4 crop health history',
+    'Pratinjau peta kebun interaktif dengan pin tanaman Cabai 1 dan Kopi 2': 'Preview of interactive farm map with Chili 1 and Coffee 2 crop pins',
+    'Pratinjau antrean draf offline Teh 7 yang siap disinkronkan': 'Preview of Tea 7 offline draft queue ready to sync',
     'FAQ': 'FAQ',
     'Masuk': 'Sign In',
     'Menu': 'Menu',
@@ -743,6 +757,8 @@
     'Layar Berikutnya →': 'Next Screen →',
 
     // Legal Pages Common & Headers/TOC (privacy.html & terms.html)
+    'Kebijakan Privasi | JagaKebond': 'Privacy Policy | JagaKebond',
+    'Ketentuan Layanan | JagaKebond': 'Terms of Service | JagaKebond',
     'Kebijakan Privasi — JagaKebond': 'Privacy Policy — JagaKebond',
     'Ketentuan Layanan — JagaKebond': 'Terms of Service — JagaKebond',
     'Kembali ke JagaKebond →': 'Back to JagaKebond →',

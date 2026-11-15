@@ -1,10 +1,10 @@
 /* Public static shell only. API responses, owned photos and map tiles are never cached.
    The shell cache name lives HERE and nowhere else: page code asks this worker to purge via postMessage. */
-const SHELL_CACHE = 'jk-v81';
+const SHELL_CACHE = 'jk-v82';
 const SHELL_ASSETS = [
   '/', '/index.html', '/manifest.webmanifest?v=3',
-  '/privacy.html', '/terms.html', '/legal.css?v=3', '/landing.css?v=13', '/landing.js?v=4',
-  '/polyfills.js?v=1', '/feature-loader.js?v=1', '/error-report.js?v=1', '/actions.js?v=1', '/i18n.js?v=4', '/app.js?v=56', '/styles.css?v=51', '/ui-kit.css?v=5', '/design-tokens.css?v=2', '/native-adapter.js?v=20',
+  '/privacy.html', '/terms.html', '/legal.css?v=3', '/landing.css?v=14', '/landing.js?v=5',
+  '/polyfills.js?v=1', '/feature-loader.js?v=1', '/error-report.js?v=1', '/actions.js?v=1', '/i18n.js?v=5', '/app.js?v=56', '/styles.css?v=51', '/ui-kit.css?v=5', '/design-tokens.css?v=2', '/native-adapter.js?v=20',
   '/vendor/gsap.min.js?v=1', '/vendor/ScrollTrigger.min.js?v=1', '/vendor/three.min.js?v=1',
   '/offline-store.js?v=15', '/offline-sync.js?v=20', '/session.js?v=4', '/google-signin.js?v=2', '/scan-flow.js?v=12', '/shell.js?v=5',
   '/workflow-state.js?v=1', '/daily-log.js?v=9', '/workflow-ui.js?v=18', '/local-media.js?v=6',
@@ -47,7 +47,16 @@ STATIC_PATHS.add('/img/crops/crop-cabai.webp');
 STATIC_PATHS.add('/img/crops/crop-kopi.webp');
 STATIC_PATHS.add('/img/crops/crop-jagung.webp');
 STATIC_PATHS.add('/img/crops/crop-teh.webp');
-const NEVER_CACHE = ['/api/', '/uploads/'];
+[
+  '/img/ornament-botanical-canopy.webp',
+  '/img/ornament-contour-ridge.webp',
+  '/img/ornament-botanical-corner.webp',
+  '/img/feature-diagnosis.webp',
+  '/img/feature-history.webp',
+  '/img/feature-map.webp',
+  '/img/feature-offline.webp',
+].forEach((p) => STATIC_PATHS.add(p));
+const NEVER_CACHE = ['/api/', '/uploads/', '/downloads/'];
 const isNeverCachePath = pathname => NEVER_CACHE.some(prefix => pathname.startsWith(prefix));
 
 /* A captive portal or an error page answers 200 with HTML for a script URL. Never cache that. */
