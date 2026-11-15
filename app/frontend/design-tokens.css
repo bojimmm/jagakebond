@@ -33,6 +33,7 @@
   --jk-s6: 24px;
   --jk-s8: 32px;
   /* radii: 12 / 8 rule. Cards, tiles, photos, big buttons, sheets and dialogs 12px; buttons, fields, tabs, chips and badges 8px */
+  --jk-radius-badge: 6px;
   --jk-radius-control: 8px;
   --jk-radius-card: 12px;
   /* control heights */

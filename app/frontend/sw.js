@@ -1,10 +1,11 @@
 /* Public static shell only. API responses, owned photos and map tiles are never cached.
    The shell cache name lives HERE and nowhere else: page code asks this worker to purge via postMessage. */
-const SHELL_CACHE = 'jk-v68';
+const SHELL_CACHE = 'jk-v72';
 const SHELL_ASSETS = [
   '/', '/index.html', '/manifest.webmanifest?v=3',
-  '/privacy.html', '/terms.html', '/legal.css?v=1', '/landing.css?v=6', '/landing.js?v=1',
-  '/polyfills.js?v=1', '/feature-loader.js?v=1', '/error-report.js?v=1', '/actions.js?v=1', '/app.js?v=51', '/styles.css?v=45', '/ui-kit.css?v=4', '/design-tokens.css?v=1', '/native-adapter.js?v=20',
+  '/privacy.html', '/terms.html', '/legal.css?v=1', '/landing.css?v=10', '/landing.js?v=3',
+  '/polyfills.js?v=1', '/feature-loader.js?v=1', '/error-report.js?v=1', '/actions.js?v=1', '/app.js?v=53', '/styles.css?v=47', '/ui-kit.css?v=5', '/design-tokens.css?v=2', '/native-adapter.js?v=20',
+  '/vendor/gsap.min.js?v=1', '/vendor/ScrollTrigger.min.js?v=1', '/vendor/three.min.js?v=1',
   '/offline-store.js?v=15', '/offline-sync.js?v=19', '/session.js?v=2', '/google-signin.js?v=1', '/scan-flow.js?v=10', '/shell.js?v=4',
   '/workflow-state.js?v=1', '/daily-log.js?v=7', '/workflow-ui.js?v=16', '/local-media.js?v=5',
   '/vendor/piexifjs/piexif.js',
@@ -26,8 +27,18 @@ const STATIC_PATHS = new Set(SHELL_ASSETS.map(asset => new URL(asset, self.locat
 // Decorative desktop art is cached on demand; phones need not download it at install.
 STATIC_PATHS.add('/img/landing-farmer.webp');
 STATIC_PATHS.add('/img/landing-app-home.png');
+STATIC_PATHS.add('/img/landing-app-home-scrolled.png');
 STATIC_PATHS.add('/img/landing-app-map.png');
 STATIC_PATHS.add('/img/landing-app-history.png');
+STATIC_PATHS.add('/img/landing-app-mobile.png');
+STATIC_PATHS.add('/img/mobile-home-scrolled.png');
+STATIC_PATHS.add('/img/mobile-hud.png');
+STATIC_PATHS.add('/img/mobile-scan.png');
+STATIC_PATHS.add('/img/mobile-map.png');
+STATIC_PATHS.add('/img/mobile-history.png');
+STATIC_PATHS.add('/img/jagakebond-explainer-poster.png');
+STATIC_PATHS.add('/img/jagakebond-explainer-opt-a.webm');
+STATIC_PATHS.add('/img/jagakebond-explainer-opt-a.mp4');
 const NEVER_CACHE = ['/api/', '/uploads/'];
 const isNeverCachePath = pathname => NEVER_CACHE.some(prefix => pathname.startsWith(prefix));
 

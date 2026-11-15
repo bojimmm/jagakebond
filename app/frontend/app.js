@@ -539,6 +539,85 @@
     try { applyDesktopNav(window.localStorage.getItem(NAV_COLLAPSED_KEY) === '1'); } catch (_) { applyDesktopNav(false); }
 
 
+    function syncSidebarAccountUi() {
+      const labelEl = document.getElementById('sidebar-account-label');
+      const subEl = document.getElementById('sidebar-account-sub');
+      const avEl = document.getElementById('sidebar-account-avatar');
+      if (!labelEl && !subEl && !avEl) return;
+      const name = String(currentAccount?.name || currentAccount?.email || 'Petani').trim();
+      const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'JK';
+      const roleLabel = currentAccount?.role === 'admin' ? 'Admin' : currentAccount?.role === 'priority' ? 'Prioritas' : 'Petani';
+      if (labelEl) labelEl.textContent = name;
+      if (subEl) subEl.textContent = currentAccount?.email ? (roleLabel + ' · ' + currentAccount.email) : 'Kelola akun & data';
+      if (avEl) avEl.textContent = initials;
+    }
+
+    function syncSidebarSyncBox() {
+      const box = document.getElementById('sidebar-sync-box');
+      if (!box) return;
+      const titleEl = document.getElementById('sidebar-sync-title');
+      const badgeEl = document.getElementById('sidebar-sync-badge');
+      const subEl = document.getElementById('sidebar-sync-sub');
+      const syncEl = document.getElementById('sync-status');
+      const offline = navigator.onLine === false || syncEl?.dataset?.tone === 'offline';
+      const activeSync = syncEl && !syncEl.classList.contains('hidden') && syncEl.dataset.tone;
+      if (offline) {
+        box.classList.remove('is-synced');
+        if (titleEl) titleEl.textContent = 'Mode Offline';
+        if (badgeEl) { badgeEl.className = 'badge badge-moderate'; badgeEl.textContent = 'Offline'; }
+        if (subEl) subEl.textContent = syncEl?.title || 'Foto disimpan lokal dan dikirim otomatis saat online.';
+      } else if (activeSync) {
+        const tone = syncEl.dataset.tone;
+        box.classList.remove('is-synced');
+        if (titleEl) titleEl.textContent = syncEl.textContent.trim() || 'Menunggu Sinkron';
+        if (badgeEl) {
+          badgeEl.className = 'badge ' + (tone === 'bad' ? 'badge-severe' : 'badge-moderate');
+          badgeEl.textContent = tone === 'bad' ? 'Perlu Cek' : 'Antre';
+        }
+        if (subEl) subEl.textContent = syncEl.title || 'Foto draf sedang diproses ke server.';
+      } else {
+        box.classList.add('is-synced');
+        if (titleEl) titleEl.textContent = 'Semua Foto Terkirim';
+        if (badgeEl) { badgeEl.className = 'badge badge-healthy'; badgeEl.textContent = 'Sinkron'; }
+        if (subEl) subEl.textContent = 'Data kebun tersimpan aman di perangkat & server.';
+      }
+    }
+
+    function updateTopPageSub(menu) {
+      const subEl = document.getElementById('top-page-sub');
+      if (!subEl) return;
+      const target = menu || currentMenuName || 'home';
+      if (target === 'home') {
+        const snapshotMoved = telemetrySnapshot && !nearbyFix(telemetrySnapshot, currentCoords.lat, currentCoords.lng);
+        const home = snapshotMoved ? currentCoords : (telemetrySnapshot || currentCoords);
+        const place = (!snapshotMoved && home.locationName) ? home.locationName : 'Lokasi Kebun';
+        const parts = [place];
+        if (typeof home.tempC === 'number') parts.push(Math.round(home.tempC) + '°C');
+        if (typeof home.rh === 'number') parts.push('RH ' + Math.round(home.rh) + '%');
+        subEl.textContent = parts.length > 1 ? parts.join(' · ') : 'Menunggu lokasi & cuaca kebun…';
+      } else if (target === 'scan') {
+        subEl.textContent = 'Kamera berstempel GPS & panduan tindakan';
+      } else if (target === 'map') {
+        const treeTotal = groupRecordsByCrop(farmRecords).length;
+        subEl.textContent = farmList.length
+          ? (farmList.length + ' Petak Aktif · ' + treeTotal + ' Tanaman Terpantau')
+          : 'Lihat posisi petak dan titik tanaman';
+      } else if (target === 'log') {
+        subEl.textContent = 'Progres pemulihan dan antrean offline';
+      }
+    }
+
+    if (typeof document !== 'undefined' && typeof MutationObserver !== 'undefined') {
+      const syncStatusNode = document.getElementById('sync-status');
+      if (syncStatusNode) {
+        new MutationObserver(syncSidebarSyncBox).observe(syncStatusNode, { attributes: true, childList: true, subtree: true });
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', syncSidebarSyncBox);
+      window.addEventListener('offline', syncSidebarSyncBox);
+    }
+
     // Public entry: the screen change, then whatever later scripts registered for it (JagaHooks 'menu-shown').
     function navigateToMenu(targetMenu) { navigateToMenuCore(targetMenu); JagaHooks.run('menu-shown', targetMenu); }
     function navigateToMenuCore(targetMenu) {
@@ -583,6 +662,18 @@
       });
       const title = document.getElementById('desktop-page-title');
       if (title) title.textContent = ({ home: 'Beranda', map: 'Peta', scan: 'Foto Tanaman', log: 'Riwayat' })[targetMenu] || 'Beranda';
+      const topTitle = document.getElementById('top-page-title');
+      if (topTitle) {
+        topTitle.textContent = ({
+          home: 'Beranda Kebun',
+          scan: 'Foto & Analisis Tanaman',
+          map: 'Peta Kebun Interaktif',
+          log: 'Riwayat Tanaman & Petak'
+        })[targetMenu] || 'Beranda Kebun';
+      }
+      updateTopPageSub(targetMenu);
+      syncSidebarAccountUi();
+      syncSidebarSyncBox();
 
       if (targetMenu === 'scan') {
         requestAnimationFrame(() => layoutScanFrame());
@@ -1518,6 +1609,7 @@
     function renderFarmPolygons() {
       const badge = document.getElementById('farm-count-badge');
       if (badge) badge.innerText = String(farmList.length);
+      if (typeof renderHomeMiniMap === 'function') renderHomeMiniMap();
       if (!farmLayer) return;
       farmLayer.clearLayers();
       if (selectedFarmId && !farmList.some(farm => farm.id === selectedFarmId)) selectedFarmId = null;
@@ -2391,6 +2483,16 @@
       document.getElementById('view-log')?.classList.toggle('timeline-open', inTimeline);
     }
 
+    function trendDotsHtml(records) {
+      if (!Array.isArray(records) || records.length === 0) return '';
+      const ordered = [...records].sort((a, b) => (recordMs(a) || 0) - (recordMs(b) || 0)).slice(-3);
+      return '<span class="trend-dots" aria-hidden="true">' + ordered.map(r => {
+        const s = recSeverity(r);
+        const cls = s === 'Severe' ? 'sev' : s === 'Moderate' ? 'mod' : s === 'Healthy' ? 'hl' : '';
+        return '<span class="tdot ' + cls + '"></span>';
+      }).join('') + '</span>';
+    }
+
     function treeCardHtml(g) {
       const rec = g.latest, meta = severityMeta(recSeverity(rec));
       const review = rec.needs_review === true;
@@ -2402,7 +2504,7 @@
         '<span class="tree-thumb"' + open + ' aria-hidden="true">' + thumbHtml(rec.imageUrl, '') + '</span>' +
         '<button type="button" class="tree-main"' + open + '>' +
           '<span class="tree-body">' +
-            '<span class="tree-name">' + escapeText(g.cropName) + '</span>' +
+            '<span class="tree-name">' + escapeText(g.cropName) + trendDotsHtml(g.records) + '</span>' +
             '<span class="tree-sub">' + escapeText(recordLabel(rec)) + (review ? ' · Perlu dicek' : '') + '</span>' +
             '<span class="card-status"><span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
               '<span class="tree-when">' + escapeText(formatWhenId(recordMs(rec))) + ' · ' + g.count + ' foto</span></span>' +
@@ -2606,27 +2708,45 @@
     /* ----------------------------------- Beranda ---------------------------------- */
     // `action` replaces the default tap (open the plant in Riwayat), e.g. the Peta plot sheet's own handler.
     function attentionItemHtml(group, action) {
-      const rec = group.latest, meta = severityMeta(recSeverity(rec));
+      const rec = group.latest;
+      const sev = recSeverity(rec);
+      const meta = severityMeta(sev);
       const review = rec.needs_review === true;
-      return '<button type="button" class="card card-tap att-item" ' + (action || '' + act('openCropFromHome', String(group.cropId ?? '')) + '') + '>' +
+      const farm = rec.farmId ? farmList.find(f => f.id === rec.farmId) : null;
+      const metaParts = [];
+      if (farm?.name) metaParts.push(farm.name);
+      metaParts.push(formatWhenId(recordMs(rec)));
+      if (Number.isFinite(rec.elevation)) metaParts.push(Math.round(rec.elevation) + ' m dpl');
+      const actionPill = action ? '' : '<span class="att-action-pill' + (sev === 'Severe' ? ' is-severe' : '') + '">' + (sev === 'Severe' ? 'Diagnosis' : 'Riwayat') + '</span>';
+      return '<button type="button" class="card card-tap att-item" ' + (action || act('openCropFromHome', String(group.cropId ?? ''))) + '>' +
         thumbHtml(rec.imageUrl, '') +
-        '<span class="att-body">' +
-          '<span class="att-name">' + escapeText(group.cropName) + '</span>' +
-          '<span class="att-sub">' + escapeText(recordLabel(rec)) + (review ? ' · Perlu dicek' : '') + '</span>' +
-          '<span class="card-status"><span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
-            '<span class="att-when">' + escapeText(formatWhenId(recordMs(rec))) + '</span></span>' +
+        '<span class="att-item-body">' +
+          '<span class="att-item-top"><span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
+            '<span class="att-item-name">' + escapeText(group.cropName) + '</span>' +
+            trendDotsHtml(group.records) +
+          '</span>' +
+          '<span class="att-item-cond">' + escapeText(recordLabel(rec)) + (review ? ' · Perlu dicek' : '') + '</span>' +
+          '<span class="att-item-meta">' + escapeText(metaParts.join(' · ')) + '</span>' +
         '</span>' +
+        actionPill +
       '</button>';
     }
 
     function renderHomeSummary() {
       const ready = loadedOnce || farmRecords.length > 0;
-      if (skipUnchanged('home', recordsSig() + '|' + ready)) return;
+      if (skipUnchanged('home', recordsSig() + '|' + ready + '|' + farmList.length)) return;
       const groups = groupRecordsByCrop(farmRecords);
       const counts = treeCounts(groups);
       setText('stat-total-scans', ready ? counts.all : '—');
       setText('stat-critical-count', ready ? counts.Severe : '—');
       setText('stat-moderate-count', ready ? counts.Moderate : '—');
+      setText('stat-healthy-count', ready ? (counts.Healthy || 0) : '—');
+      const sideBadge = document.getElementById('side-critical-badge');
+      if (sideBadge) {
+        const crit = Number(counts.Severe) || 0;
+        sideBadge.textContent = String(crit);
+        sideBadge.classList.toggle('hidden', !ready || crit <= 0);
+      }
       const empty = ready && farmRecords.length === 0;
       toggleHidden('home-empty', empty);
       toggleHidden('home-actions', !empty);
@@ -2634,6 +2754,9 @@
       toggleHidden('home-attention', !empty);
       toggleHidden('home-recent', !empty);
       toggleHidden('home-daily', !empty);   // first use: one clear action, nothing to summarise yet
+      syncSidebarAccountUi();
+      syncSidebarSyncBox();
+      updateTopPageSub(currentMenuName);
       const list = document.getElementById('home-attention-list');
       const more = document.getElementById('home-attention-more');
       if (!list) return;
@@ -2643,9 +2766,9 @@
       if (attention.length === 0) {
         list.innerHTML = '<div class="notice notice-ok"><i data-lucide="circle-check"></i><span>Semua tanaman terakhir terlihat sehat.</span></div>';
       } else {
-        list.innerHTML = attention.slice(0, 3).map(group => attentionItemHtml(group)).join('');
+        list.innerHTML = attention.slice(0, 4).map(group => attentionItemHtml(group)).join('');
       }
-      if (more) more.classList.toggle('hidden', attention.length <= 3);
+      if (more) more.classList.toggle('hidden', attention.length <= 4);
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
@@ -2653,23 +2776,24 @@
       const container = document.getElementById('home-history-carousel');
       if (!container) return;
       if (skipUnchanged('carousel', recordsSig())) return;
-      // 12 trees: enough to fill a wide desktop row, so the slider has something to slide.
-      const groups = groupRecordsByCrop(farmRecords).slice(0, 12);
+      const groups = groupRecordsByCrop(farmRecords).slice(0, 4);
       if (groups.length === 0) {
-        container.innerHTML = '<div class="card w-full t-body t-muted text-center">Belum ada foto tanaman.</div>';
+        container.innerHTML = '<div class="card w-full t-body t-muted text-center" style="grid-column:1 / -1;">Belum ada foto tanaman.</div>';
         updateCarouselNav();
         return;
       }
       container.innerHTML = groups.map(g => {
         const meta = severityMeta(recSeverity(g.latest));
         const src = imageAttribute(g.latest.imageUrl);
-        return '<button type="button" ' + act('openCropFromHome', String(g.cropId ?? '')) + ' class="history-card thumb-fill snap-start" aria-label="' + escapeText(g.cropName) + ', ' + meta.label + '">' +
-          (src ? '<img src="' + src + '" alt="" loading="lazy" decoding="async">' : '') +
-          '<span class="history-shade"></span>' +
-          '<span class="history-badge ' + meta.badgeClass + '">' + meta.label + '</span>' +
-          (g.count > 1 ? '<span class="history-count">' + g.count + ' foto</span>' : '') +
-          '<span class="history-text"><span class="history-name">' + escapeText(g.cropName) + '</span>' +
-          '<span class="history-sub">' + escapeText(recordLabel(g.latest)) + '</span></span>' +
+        return '<button type="button" ' + act('openCropFromHome', String(g.cropId ?? '')) + ' class="recent-card" aria-label="' + escapeText(g.cropName) + ', ' + meta.label + '">' +
+          (src ? '<img class="recent-img" src="' + src + '" alt="' + escapeText(g.cropName) + '" loading="lazy" decoding="async">' : '<div class="recent-img"></div>') +
+          '<div class="recent-body">' +
+            '<div class="recent-body-top">' +
+              '<strong>' + escapeText(g.cropName) + '</strong>' +
+              '<span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
+            '</div>' +
+            '<span class="recent-sub">' + escapeText(recordLabel(g.latest)) + ' · ' + escapeText(formatWhenId(recordMs(g.latest))) + '</span>' +
+          '</div>' +
         '</button>';
       }).join('');
       updateCarouselNav();
@@ -3214,6 +3338,7 @@
         '</div>' +
       '</article>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
+      requestAnimationFrame(updateHomeScrollCues);
     }
 
     // Named actions for the two handlers that used to read app state inline (0.2.4.16, CSP without 'unsafe-inline').
@@ -3297,8 +3422,119 @@
       return 'Kelembapan sedang';
     }
 
-    function setAccuracyDot(meters,status='Lokasi belum tersedia'){const el=document.getElementById('home-accuracy-tag');if(!el)return;const value=Number.isFinite(meters)&&meters>=0?meters:null;const kind=value===null?'unknown':value<50?'good':value<=100?'fair':'poor';el.dataset.accuracy=kind;el.textContent='';el.setAttribute('aria-label',value===null?status:`Akurasi GPS ${kind==='good'?'baik':kind==='fair'?'sedang':'rendah'}`);el.title=el.getAttribute('aria-label');}
-    function updateAccuracyDot(meters){setAccuracyDot(meters);}
+    function setAccuracyDot(meters, status = 'Lokasi belum tersedia') {
+      const value = Number.isFinite(meters) && meters >= 0 ? meters : null;
+      const kind = value === null ? 'unknown' : value < 50 ? 'good' : value <= 100 ? 'fair' : 'poor';
+      const label = value === null ? status : `Akurasi GPS ${kind === 'good' ? 'baik' : kind === 'fair' ? 'sedang' : 'rendah'}`;
+      ['home-accuracy-tag', 'header-gps-indicator'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.dataset.accuracy = kind;
+        el.textContent = '';
+        el.setAttribute('aria-label', label);
+        el.title = label;
+      });
+    }
+    function updateAccuracyDot(meters) { setAccuracyDot(meters); }
+
+    function updateHomeScrollCues() {}
+    function scrollHomePane() {}
+    function scheduleHomeScrollPeek() {}
+    function renderHomeMiniMap(groupsArg) {
+      const canvas = document.getElementById('home-mini-map-canvas');
+      if (!canvas || !canvas.getContext) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#edf4ee';
+      ctx.fillRect(0, 0, W, H);
+
+      /* Soft cartographic contour lines */
+      ctx.strokeStyle = 'rgba(21, 128, 61, 0.08)';
+      ctx.lineWidth = 1.25;
+      for (let i = -1; i < 6; i++) {
+        ctx.beginPath();
+        ctx.ellipse(W * 0.52, H * 0.55, 70 + i * 48, 34 + i * 24, -0.18, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      const groups = Array.isArray(groupsArg) ? groupsArg : (typeof groupRecordsByCrop === 'function' ? groupRecordsByCrop(farmRecords) : []);
+      const metaEl = document.getElementById('home-map-meta');
+      if (metaEl) {
+        if (farmList.length || groups.length) {
+          metaEl.textContent = `${farmList.length} petak aktif · ${groups.length} tanaman tercatat`;
+        } else {
+          metaEl.textContent = 'Ketuk untuk menandai batas petak di peta';
+        }
+      }
+
+      const polys = (farmList || []).filter(f => Array.isArray(f.ring) && f.ring.length >= 3);
+      const pts = [];
+      (farmRecords || []).forEach(r => {
+        if (Number.isFinite(Number(r.lat)) && Number.isFinite(Number(r.lng))) {
+          pts.push({ lat: Number(r.lat), lng: Number(r.lng), sev: recSeverity(r) });
+        }
+      });
+
+      const allCoords = [];
+      polys.forEach(f => f.ring.forEach(p => { if (Array.isArray(p) && p.length >= 2) allCoords.push([Number(p[0]), Number(p[1])]); }));
+      pts.forEach(p => allCoords.push([p.lat, p.lng]));
+
+      if (!allCoords.length) {
+        ctx.strokeStyle = 'rgba(21, 128, 61, 0.25)';
+        ctx.setLineDash([6, 5]);
+        ctx.strokeRect(36, 32, W - 72, H - 64);
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#475569';
+        ctx.font = '600 13px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Belum ada poligon atau pin kebun', W / 2, H / 2 + 4);
+        return;
+      }
+
+      let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+      allCoords.forEach(([la, ln]) => {
+        if (la < minLat) minLat = la;
+        if (la > maxLat) maxLat = la;
+        if (ln < minLng) minLng = ln;
+        if (ln > maxLng) maxLng = ln;
+      });
+      const midLatRad = ((minLat + maxLat) * 0.5) * Math.PI / 180;
+      const cosLat = Math.max(0.2, Math.cos(midLatRad));
+      const pad = 26;
+      const spanX = Math.max(0.0004, (maxLng - minLng) * cosLat);
+      const spanY = Math.max(0.0004, maxLat - minLat);
+      const scale = Math.min((W - pad * 2) / spanX, (H - pad * 2) / spanY);
+      const offsetX = (W - spanX * scale) * 0.5;
+      const offsetY = (H - spanY * scale) * 0.5;
+      const proj = (la, ln) => [
+        offsetX + ((ln - minLng) * cosLat) * scale,
+        H - (offsetY + (la - minLat) * scale)
+      ];
+
+      const strokes = ['#7c3aed', '#15803d', '#0284c7', '#b45309'];
+      const fills = ['rgba(124, 58, 237, 0.14)', 'rgba(21, 128, 61, 0.14)', 'rgba(2, 132, 199, 0.14)', 'rgba(180, 83, 9, 0.14)'];
+      polys.forEach((f, idx) => {
+        ctx.beginPath();
+        f.ring.forEach((p, i) => {
+          const [x, y] = proj(Number(p[0]), Number(p[1]));
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.fillStyle = fills[idx % fills.length];
+        ctx.fill();
+        ctx.strokeStyle = strokes[idx % strokes.length];
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+      });
+
+      const dotCols = { Severe: '#dc2626', Moderate: '#eab308', Healthy: '#16a34a', Unknown: '#64748b' };
+      pts.forEach(p => {
+        const [x, y] = proj(p.lat, p.lng);
+        ctx.beginPath(); ctx.arc(x, y, 6.2, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, 4.4, 0, Math.PI * 2); ctx.fillStyle = dotCols[p.sev] || '#64748b'; ctx.fill();
+      });
+    }
 
     /* Plants in the tapped plot, as the same cards Beranda uses (photo, condition, status, date), most urgent
        first. A card still opens that plant's map sheet, so the farmer stays on Peta. */
@@ -3422,10 +3658,16 @@
 
       if (liveMsl) liveMsl.innerText = Number.isFinite(currentCoords.elevation) ? Math.round(currentCoords.elevation) + ' m dpl' : '— m dpl';
       if (zoneLabel) {
-        if (!hasElev) zoneLabel.innerText = telemetryRequest?.pending ? 'memuat…' : telemetrySnapshot ? 'tidak tersedia' : 'menunggu GPS';
-        else if (elev < 400) zoneLabel.innerText = 'dataran rendah';
-        else if (elev <= 800) zoneLabel.innerText = 'dataran sedang';
-        else zoneLabel.innerText = 'dataran tinggi';
+        if (!hasElev) zoneLabel.innerText = telemetryRequest?.pending ? 'Memuat zona…' : telemetrySnapshot ? 'Zona tidak tersedia' : 'Menunggu GPS';
+        else if (elev < 400) zoneLabel.innerText = 'Zona Dataran Rendah';
+        else if (elev <= 800) zoneLabel.innerText = 'Zona Dataran Menengah';
+        else zoneLabel.innerText = 'Zona Dataran Tinggi';
+      }
+      const coordStatusEl = document.getElementById('home-coord-status');
+      if (coordStatusEl) {
+        coordStatusEl.innerText = validCoordinates(currentCoords.lat, currentCoords.lng)
+          ? (gpsFailure ? 'Koordinat Terakhir' : 'Koordinat Terkunci')
+          : (gpsFailure || 'Menunggu GPS');
       }
 
       const tempEl = document.getElementById('home-temp-val');
@@ -3435,13 +3677,21 @@
         ? Math.round(home.tempC) + '°C' : '—';
       if (rhEl) rhEl.innerText = (typeof home.rh === 'number')
         ? Math.round(home.rh) + '%' : '—';
-      if (noteEl) noteEl.innerText = home.rh === null ? (telemetryRequest?.pending ? 'Memuat cuaca…' : telemetrySnapshot ? 'Cuaca tidak tersedia' : 'Menunggu data cuaca') : weatherNote(home.rh);
+      if (noteEl) {
+        if (home.rh === null) {
+          noteEl.textContent = telemetryRequest?.pending ? 'Memuat cuaca lokal…' : telemetrySnapshot ? 'Data cuaca tidak tersedia.' : 'Menunggu data cuaca lokal untuk peringatan kelembapan & jamur.';
+        } else if (home.rh >= 75) {
+          noteEl.innerHTML = '<strong>Lembap tinggi: Waspada Jamur &amp; Antraknosa.</strong> ' + escapeText(weatherNote(home.rh));
+        } else {
+          noteEl.textContent = weatherNote(home.rh);
+        }
+      }
       // No reading yet: show only the plain note, not "— · —".
       const weatherLine = document.getElementById('home-weather-line');
       weatherLine?.classList?.toggle('is-empty', typeof home.tempC !== 'number' && typeof home.rh !== 'number');
 
-      const accTag = document.getElementById('home-accuracy-tag');
       updateAccuracyDot(currentCoords.accuracy);
+      updateTopPageSub(currentMenuName);
 
       const liveCoordinates = document.getElementById('home-live-coordinates');
       if(liveCoordinates) liveCoordinates.textContent = validCoordinates(currentCoords.lat,currentCoords.lng) ? `Koordinat ${gpsFailure ? 'terakhir' : 'GPS (WGS84)'}: ${currentCoords.lat.toFixed(6)}, ${currentCoords.lng.toFixed(6)}` : (gpsFailure || 'Koordinat: menunggu GPS');
@@ -3819,6 +4069,8 @@
       }
     }
 
+    window.scrollHomePane = scrollHomePane;
+    window.addEventListener('resize', updateHomeScrollCues, { passive: true });
     /* Small public surface for the other scripts (shell.js back button, tests). */
     window.JagaUx = {
       openTreeTimeline, closeTreeTimeline, openLogWithFilter,

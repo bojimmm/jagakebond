@@ -431,12 +431,14 @@ async function loadOverview(opts = {}) {
   if (!OVERVIEW.data && !opts.silent) panel.innerHTML = loadingBlock('Memuat ringkasan…');
   const seq = ++OVERVIEW.seq;
   try {
-    const [overview, health, storage] = await Promise.all([
+    const [overview, health, storage, accounts] = await Promise.all([
       api('/api/admin/overview'), api('/api/admin/health'),
       api('/api/admin/storage').catch((error) => (ME ? { unavailable: true, error: error.message } : null)),
+      api('/api/admin/accounts?limit=6').catch(() => null),
     ]);
     if (seq !== OVERVIEW.seq || !ME) return;
-    OVERVIEW.data = { overview: overview || {}, health: health || {}, storage: storage || { unavailable: true } };
+    const quotaAccounts = Array.isArray(accounts) ? accounts : ((accounts && accounts.items) || []);
+    OVERVIEW.data = { overview: overview || {}, health: health || {}, storage: storage || { unavailable: true }, quotaAccounts };
     OVERVIEW.at = Date.now();
     renderOverview();
   } catch (error) {
@@ -531,22 +533,57 @@ function storageCard(s) {
     + '<div id="inventory-result" role="status" aria-live="polite">' + inventoryHtml(OVERVIEW.inventory) + '</div></section>';
 }
 
+function quotaBarHtml(a) {
+  const used = Number.isFinite(a.fastUsed) ? a.fastUsed : 0;
+  const quota = Number.isFinite(a.fastQuota) && a.fastQuota > 0 ? a.fastQuota : null;
+  if (!quota) return '<span class="t-meta">' + esc(quotaText(a)) + '</span>';
+  const pct = Math.max(0, Math.min(100, Math.round((used / quota) * 100)));
+  const fillCls = pct >= 100 ? ' is-bad' : pct >= 80 ? ' is-warn' : '';
+  return '<div class="quota-wrap"><div class="quota-track"><div class="quota-fill' + fillCls + '" style="width:' + pct + '%"></div></div>'
+    + '<span class="t-meta tnum">' + esc(quotaText(a)) + '</span></div>';
+}
+
+function quotaOverviewCard(accounts) {
+  if (!Array.isArray(accounts) || !accounts.length) return '';
+  const rows = accounts.slice(0, 6).map((a) => '<tr role="row">'
+    + '<td role="cell"><div class="bold break">' + esc(a.name || a.email) + '</div>'
+    + (a.name ? '<div class="t-meta break">' + esc(a.email) + '</div>' : '') + '</td>'
+    + '<td role="cell" class="fit">' + badge(ROLE_LABEL[a.role] || a.role, ROLE_BADGE[a.role]) + '</td>'
+    + '<td role="cell">' + quotaBarHtml(a) + '</td>'
+    + '<td role="cell" class="t-meta tnum">' + num(a.recordCount) + ' catatan · ' + num(a.jobCount) + ' foto</td></tr>').join('');
+  return '<section class="card a-stack-16" aria-labelledby="card-quota-overview">'
+    + '<div class="a-row a-between"><h3 id="card-quota-overview" class="t-title">Ringkasan Penggunaan Kuota Jalur Cepat</h3>'
+    + '<button type="button" class="btn btn-secondary btn-sm" data-action="goto-tab" data-tab="accounts">Semua akun</button></div>'
+    + '<table class="rtable" role="table"><caption class="sr-only">Penggunaan kuota jalur cepat</caption>'
+    + '<thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Akun</th><th role="columnheader" scope="col">Peran</th><th role="columnheader" scope="col">Kuota Hari Ini</th><th role="columnheader" scope="col">Aktivitas</th></tr></thead>'
+    + '<tbody role="rowgroup">' + rows + '</tbody></table></section>';
+}
+
 function renderOverview() {
   const d = OVERVIEW.data;
   if (!d) return;
   const o = d.overview, h = d.health;
   const pipe = o.pipeline || { level: 'ok', title: 'Semua berjalan baik', issues: [] };
   const level = pipe.level === 'bad' ? 'bad' : pipe.level === 'warn' ? 'warn' : 'ok';
-  const levelIcon = { ok: 'circle-check', warn: 'triangle-alert', bad: 'circle-alert' }[level];
+  const bannerCls = level === 'bad' ? ' is-bad' : level === 'warn' ? ' is-warn' : '';
+  const statusLabel = level === 'ok' ? 'Semua Layanan Sehat · Router AI Aktif' : level === 'warn' ? 'Peringatan Layanan' : 'Gangguan Layanan';
   const issues = (pipe.issues || []).map((i) => '<li><span class="t-body">' + esc(i.text) + '</span>' + issueAction(i) + '</li>').join('');
-  const banners = [];
-  if (o.encryption && o.encryption.available === false && !(pipe.issues || []).some((i) => i.code === 'encryption_off')) banners.push(esc(o.encryption.detail));
   const by = o.byStatus || {};
   const html = '<h2 class="sr-only">Beranda</h2>'
-    + '<section class="card health health-' + level + '" aria-labelledby="health-title"><div class="a-row"><span class="health-icon">' + icon(levelIcon) + '</span>'
-    + '<div class="a-grow"><h2 id="health-title" class="t-title">' + esc(pipe.title || '') + '</h2><p class="t-meta">Diperbarui ' + fmtAgo(OVERVIEW.at) + '</p></div>'
-    + '<button type="button" class="btn btn-secondary btn-sm btn-icon" data-action="overview-refresh" aria-label="Muat ulang beranda">' + icon('refresh-cw') + '</button></div>'
-    + (issues ? '<ul class="issues">' + issues + '</ul>' : '<p class="t-body mt3">Worker aktif, router terhubung, dan antrean berjalan lancar.</p>') + '</section>'
+    + '<section class="health-banner' + bannerCls + '" aria-labelledby="health-title"><div class="health-banner-head">'
+    + '<div class="a-grow"><span class="status-pill"><span class="dot"></span><span>' + esc(statusLabel) + '</span></span>'
+    + '<h2 id="health-title">' + esc(pipe.title || '') + '</h2>'
+    + '<p class="t-meta mt1">Diperbarui ' + fmtAgo(OVERVIEW.at) + ' · Worker aktif &amp; antrean terpantau</p></div>'
+    + '<div class="a-row-8 a-none"><button type="button" class="btn btn-primary btn-sm" data-action="goto-tab" data-tab="accounts">' + icon('users') + '<span>Kelola Akun Petani</span></button>'
+    + '<button type="button" class="btn btn-secondary btn-sm btn-icon" data-action="overview-refresh" aria-label="Muat ulang beranda">' + icon('refresh-cw') + '</button></div></div>'
+    + (issues ? '<ul class="issues">' + issues + '</ul>' : '') + '</section>'
+    + '<div class="kpi-grid tnum">'
+    + '<div class="kpi-card"><span class="kpi-label">Akun Terdaftar</span><span class="kpi-val">' + num(o.accounts) + '</span><span class="kpi-sub">' + num(o.activeAccounts) + ' aktif · ' + num(o.activeSessions) + ' sesi</span></div>'
+    + '<div class="kpi-card"><span class="kpi-label">Analisis 24 Jam</span><span class="kpi-val">' + num(o.jobs24h) + '</span><span class="kpi-sub">' + num(o.jobs24hDone) + ' selesai · ' + num(o.jobs24hRejected || 0) + ' ditolak</span></div>'
+    + '<div class="kpi-card"><span class="kpi-label">Kesalahan Aplikasi</span><span class="kpi-val">' + num(o.clientErrors24h || 0) + '</span><span class="kpi-sub">Laporan HP dalam 24 jam</span></div>'
+    + '<div class="kpi-card"><span class="kpi-label">Antrean &amp; Basis Data</span><span class="kpi-val">' + num((by.queued || 0) + (by.claimed || 0)) + '</span><span class="kpi-sub">' + esc(fmtBytes(o.dbBytes)) + ' · skema v' + esc(o.schemaVersion || '?') + '</span></div>'
+    + '</div>'
+    + quotaOverviewCard(d.quotaAccounts)
     + '<section class="card" aria-labelledby="quick-title"><h3 id="quick-title" class="section-title">Pekerjaan cepat</h3>'
     + '<div class="btn-stack quick"><button type="button" class="btn btn-primary" data-action="quick-create-account">' + icon('user-plus') + '<span class="btn-label">Buat akun petani</span></button>'
     + '<button type="button" class="btn btn-secondary" data-action="quick-problem-queue">' + icon('rotate-ccw') + '<span class="btn-label">Lihat foto bermasalah</span></button>'
@@ -652,7 +689,7 @@ function accountRow(a) {
     + (a.name ? '<div class="t-meta break">' + who + '</div>' : '') + '</td>'
     + '<td role="cell" class="fit">' + badge(ROLE_LABEL[a.role] || a.role, ROLE_BADGE[a.role]) + (a.isActive === false ? ' ' + badge('Nonaktif', 'badge-severe') : '')
     + (a.googleLinked ? ' ' + badge('Google', 'badge-unknown') : '') + '</td>'
-    + '<td role="cell"><span class="sm-only t-muted">Analisis cepat hari ini: </span>' + esc(quotaText(a)) + '</td>'
+    + '<td role="cell"><span class="sm-only t-muted">Analisis cepat hari ini: </span>' + quotaBarHtml(a) + '</td>'
     + '<td role="cell" class="t-meta">' + num(a.recordCount) + ' catatan · ' + num(a.jobCount) + ' foto · ' + num(a.farmCount) + ' petak</td>'
     + '<td role="cell" class="t-meta"><span class="sm-only">Masuk terakhir </span>' + esc(a.lastLoginMs ? fmtAgo(a.lastLoginMs) : 'belum pernah') + ' · ' + num(a.sessionCount) + ' sesi</td>'
     + '<td role="cell" class="acts"><div class="btn-row">'

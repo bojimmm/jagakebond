@@ -136,7 +136,7 @@ test('offline-sync.js: timeouts and backoff constants follow contract 5.9', () =
 test('service worker: one cache name, HTML for a script is never cached, tiles never cached (5.7)', () => {
   const sw = read('sw.js');
   assert.equal((sw.match(/jk-v\d+/g) || []).length, 1, 'the cache name appears once');
-  assert.match(sw, /const SHELL_CACHE = 'jk-v68';/);
+  assert.match(sw, /const SHELL_CACHE = 'jk-v72';/);
   for (const page of ['app.js', 'session.js', 'shell.js', 'scan-flow.js', 'workflow-ui.js']) assert.doesNotMatch(read(page), /jk-v\d+/, page + ' must not name a cache');
   assert.match(sw, /isValidShellResponse/);
   assert.match(sw, /url\.origin !== self\.location\.origin\) return;/);

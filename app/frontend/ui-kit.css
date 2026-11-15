@@ -120,7 +120,7 @@
   box-sizing: border-box;
   height: 28px;
   padding: 0 10px;
-  border-radius: var(--jk-radius-control);
+  border-radius: var(--jk-radius-badge);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -161,7 +161,7 @@
 .chip.is-active, .chip[aria-pressed="true"] { background: var(--jk-green-700); border-color: var(--jk-green-700); color: var(--jk-surface); }
 .chip-count {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px;
+  min-width: 24px; height: 24px; padding: 0 6px; border-radius: var(--jk-radius-badge);
   background: #f1f5f9; color: var(--jk-text); font-size: 13px; font-weight: 700;
 }
 .chip.is-active .chip-count, .chip[aria-pressed="true"] .chip-count { background: rgba(255, 255, 255, 0.22); color: var(--jk-surface); }
