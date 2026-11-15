@@ -1,17 +1,17 @@
 /* Public static shell only. API responses, owned photos and map tiles are never cached.
    The shell cache name lives HERE and nowhere else: page code asks this worker to purge via postMessage. */
-const SHELL_CACHE = 'jk-v76';
+const SHELL_CACHE = 'jk-v78';
 const SHELL_ASSETS = [
   '/', '/index.html', '/manifest.webmanifest?v=3',
   '/privacy.html', '/terms.html', '/legal.css?v=1', '/landing.css?v=11', '/landing.js?v=3',
-  '/polyfills.js?v=1', '/feature-loader.js?v=1', '/error-report.js?v=1', '/actions.js?v=1', '/app.js?v=54', '/styles.css?v=48', '/ui-kit.css?v=5', '/design-tokens.css?v=2', '/native-adapter.js?v=20',
+  '/polyfills.js?v=1', '/feature-loader.js?v=1', '/error-report.js?v=1', '/actions.js?v=1', '/app.js?v=55', '/styles.css?v=50', '/ui-kit.css?v=5', '/design-tokens.css?v=2', '/native-adapter.js?v=20',
   '/vendor/gsap.min.js?v=1', '/vendor/ScrollTrigger.min.js?v=1', '/vendor/three.min.js?v=1',
-  '/offline-store.js?v=15', '/offline-sync.js?v=19', '/session.js?v=2', '/google-signin.js?v=1', '/scan-flow.js?v=10', '/shell.js?v=4',
-  '/workflow-state.js?v=1', '/daily-log.js?v=7', '/workflow-ui.js?v=16', '/local-media.js?v=5',
+  '/offline-store.js?v=15', '/offline-sync.js?v=19', '/session.js?v=3', '/google-signin.js?v=1', '/scan-flow.js?v=11', '/shell.js?v=4',
+  '/workflow-state.js?v=1', '/daily-log.js?v=8', '/workflow-ui.js?v=17', '/local-media.js?v=5',
   '/vendor/piexifjs/piexif.js',
-  '/tour.js?v=7', '/tour.css?v=3', '/plot-summary.js?v=4',
+  '/tour.js?v=7', '/tour.css?v=3', '/plot-summary.js?v=5',
   '/farm-membership.js?v=2', '/problem-registry.js?v=1', '/assessment-ui.js?v=16', '/assessment.css?v=13',
-  '/vendor/tailwind.generated.css?v=26',
+  '/vendor/tailwind.generated.css?v=27',
   '/vendor/lucide-0.468.0.umd.min.js',
   '/vendor/leaflet/leaflet-1.9.4.js', '/vendor/leaflet/leaflet-1.9.4.css',
   '/vendor/leaflet/images/layers.png', '/vendor/leaflet/images/layers-2x.png',

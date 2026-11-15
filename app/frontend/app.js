@@ -31,6 +31,9 @@
     let stampedImageBlobUrl = null;
     let liveMediaStream = null;
     let cameraFacing = 'environment';
+    let cameraZoom = 1;
+    const autoDailyAttemptedKeys = new Set();
+    let dailyArchiveRunning = false;
     let photoMode = 'live'; // 'live' | 'gallery'
     let selectedPhotoDateString = null;
     let selectedPhotoTimestampMs = null;
@@ -232,6 +235,9 @@
       if (jobPollTimer) { clearTimeout(jobPollTimer); jobPollTimer = null; }
       if (submittedPollTimer) { clearInterval(submittedPollTimer); submittedPollTimer = null; }
       stopLiveCameraStream();
+      cameraZoom = 1;
+      autoDailyAttemptedKeys.clear();
+      dailyArchiveRunning = false;
       farmRecords = [];
       dailyRecommendations = [];
       farmList = [];
@@ -340,11 +346,16 @@
        "Belum dinilai" for an unknown severity. Server-owned fields are kept as they are otherwise. */
     function canonicalCropName(value) {
       if (typeof value !== 'string') return value;
+      const trimmed = value.trim().replace(/\s+/g, ' ');
+      if (!trimmed) return value;
       const aliases = new Set(['ketapang','sea almond','tropical almond','indian almond','terminalia catappa']);
-      const key = value.trim().replace(/\s+/g,' ').toLowerCase();
+      const key = trimmed.toLowerCase();
       const parts = /^([^()]+)\s*\(([^()]+)\)$/.exec(key);
-      return aliases.has(key) || (parts && aliases.has(parts[1].trim()) && aliases.has(parts[2].trim()))
-        ? 'Ketapang (Tropical Almond)' : value;
+      if (aliases.has(key) || (parts && aliases.has(parts[1].trim()) && aliases.has(parts[2].trim()))) {
+        return 'Ketapang';
+      }
+      const stripped = trimmed.replace(/\s*\([^()]+\)\s*$/, '').trim();
+      return stripped || trimmed;
     }
 
     function normalizeRecord(rec) {
@@ -380,6 +391,7 @@
         loadedOnce = true;
         lastDataRefreshMs = Date.now();
         refreshAllHistoryViews();
+        void syncAutoDailyArchive();
       } catch (error) {
         showToast(userMessage(error));
       }
@@ -432,6 +444,90 @@
       if (generation === accountGeneration) renderFastQuota();
     }
 
+    function accountInitials(account) {
+      const name = String(account?.name || account?.email || 'Petani').trim();
+      return name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'JK';
+    }
+
+    function renderAvatarCircle(el, url, initials) {
+      if (!el) return;
+      const cleanUrl = typeof url === 'string' && url.startsWith('https://') ? url : '';
+      if (!cleanUrl) {
+        el.replaceChildren(document.createTextNode(initials));
+        return;
+      }
+      const existing = el.querySelector('img');
+      if (existing && existing.getAttribute('src') === cleanUrl) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', () => {
+        if (img.parentElement === el) el.replaceChildren(document.createTextNode(initials));
+      });
+      img.src = cleanUrl;
+      el.replaceChildren(img);
+    }
+
+    function syncAccountModalAvatarUi() {
+      const account = currentAccount;
+      const initials = accountInitials(account);
+      renderAvatarCircle(document.getElementById('account-modal-avatar'), account?.avatarUrl, initials);
+      const controls = document.getElementById('account-avatar-controls');
+      const toggle = document.getElementById('account-avatar-toggle');
+      const note = document.getElementById('account-avatar-note');
+      const hasAvatar = Boolean(account?.avatarUrl);
+      const canRestore = Boolean(account?.canRestoreGoogleAvatar);
+      if (controls && toggle) {
+        if (hasAvatar) {
+          controls.classList.remove('hidden');
+          toggle.textContent = 'Sembunyikan Foto Google';
+        } else if (canRestore) {
+          controls.classList.remove('hidden');
+          toggle.textContent = 'Tampilkan Foto Google';
+        } else {
+          controls.classList.add('hidden');
+          toggle.textContent = '';
+        }
+      }
+      if (note) {
+        if (hasAvatar) {
+          note.classList.add('hidden');
+          note.textContent = '';
+        } else if (canRestore) {
+          note.classList.remove('hidden');
+          note.textContent = 'Foto profil Google sedang disembunyikan. Anda dapat menampilkannya lagi kapan saja.';
+        } else {
+          note.classList.remove('hidden');
+          note.textContent = 'Masuk dengan Google untuk menampilkan foto profil akun Anda.';
+        }
+      }
+    }
+
+    async function toggleAccountAvatar() {
+      if (!currentAccount) return;
+      const btn = document.getElementById('account-avatar-toggle');
+      if (btn && btn.disabled) return;
+      const generation = accountGeneration;
+      const owner = currentAccount.id;
+      const hide = Boolean(currentAccount.avatarUrl);
+      if (btn) btn.disabled = true;
+      try {
+        const result = await api('/api/auth/avatar', { method: hide ? 'DELETE' : 'PUT' });
+        if (generation !== accountGeneration || currentAccount?.id !== owner) return;
+        if (result?.account) {
+          currentAccount = result.account;
+          if (typeof rememberAccount === 'function') rememberAccount(currentAccount);
+        }
+        syncSidebarAccountUi();
+        syncAccountModalAvatarUi();
+        showToast(hide ? 'Foto profil disembunyikan.' : 'Foto profil ditampilkan.');
+      } catch (error) {
+        showToast(userMessage(error));
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     async function openAccountModal() {
       if (!currentAccount) { showAuthGate(''); return; }
       const generation = accountGeneration;
@@ -444,6 +540,7 @@
       document.getElementById('pw-current').value = '';
       document.getElementById('pw-new').value = '';
       document.getElementById('pw-error').classList.add('hidden');
+      syncAccountModalAvatarUi();
       setDialogOpen('modal-account');
       icons();
       await refreshAccountQuota();
@@ -451,6 +548,8 @@
       document.getElementById('account-role').innerText =
         currentAccount.role === 'admin' ? 'Admin' : currentAccount.role === 'priority' ? 'Prioritas' : 'Normal';
       document.getElementById('account-quota').innerText = fastQuotaShort(currentAccount);
+      syncSidebarAccountUi();
+      syncAccountModalAvatarUi();
     }
     // Short value for the account sheet: "2 dari 3 tersisa".
     function fastQuotaShort(account) {
@@ -540,16 +639,43 @@
 
 
     function syncSidebarAccountUi() {
+      const account = currentAccount;
       const labelEl = document.getElementById('sidebar-account-label');
       const subEl = document.getElementById('sidebar-account-sub');
       const avEl = document.getElementById('sidebar-account-avatar');
-      if (!labelEl && !subEl && !avEl) return;
-      const name = String(currentAccount?.name || currentAccount?.email || 'Petani').trim();
-      const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'JK';
-      const roleLabel = currentAccount?.role === 'admin' ? 'Admin' : currentAccount?.role === 'priority' ? 'Prioritas' : 'Petani';
+      const btnAv = document.getElementById('account-btn-avatar');
+      const btnIcon = document.getElementById('account-btn-icon');
+      const chipEl = document.getElementById('account-chip-label');
+      const initials = accountInitials(account);
+      const avatarUrl = typeof account?.avatarUrl === 'string' && account.avatarUrl.startsWith('https://') ? account.avatarUrl : '';
+      if (avEl) renderAvatarCircle(avEl, avatarUrl, initials);
+      if (btnAv) {
+        if (avatarUrl) {
+          let img = btnAv.querySelector('img');
+          if (!img) {
+            img = document.createElement('img');
+            img.alt = '';
+            btnAv.replaceChildren(img);
+          }
+          img.referrerPolicy = 'no-referrer';
+          img.onerror = () => {
+            btnAv.classList.add('hidden');
+            if (btnIcon) { btnIcon.classList.remove('hidden'); btnIcon.removeAttribute('hidden'); }
+          };
+          if (img.getAttribute('src') !== avatarUrl) img.src = avatarUrl;
+          btnAv.classList.remove('hidden');
+          if (btnIcon) { btnIcon.classList.add('hidden'); btnIcon.setAttribute('hidden', ''); }
+        } else {
+          btnAv.classList.add('hidden');
+          if (btnIcon) { btnIcon.classList.remove('hidden'); btnIcon.removeAttribute('hidden'); }
+        }
+      }
+      if (!labelEl && !subEl && !chipEl) return;
+      const name = String(account?.name || account?.email || 'Petani').trim();
+      const roleLabel = account?.role === 'admin' ? 'Admin' : account?.role === 'priority' ? 'Prioritas' : 'Petani';
       if (labelEl) labelEl.textContent = name;
-      if (subEl) subEl.textContent = currentAccount?.email ? (roleLabel + ' · ' + currentAccount.email) : 'Kelola akun & data';
-      if (avEl) avEl.textContent = initials;
+      if (subEl) subEl.textContent = account?.email ? (roleLabel + ' · ' + account.email) : 'Kelola akun & data';
+      if (chipEl) chipEl.textContent = account ? (account.name || String(account.email || 'Akun').split('@')[0]) : 'Masuk';
     }
 
     function syncSidebarSyncBox() {
@@ -665,11 +791,11 @@
       const topTitle = document.getElementById('top-page-title');
       if (topTitle) {
         topTitle.textContent = ({
-          home: 'Beranda Kebun',
+          home: 'Beranda',
           scan: 'Foto & Analisis Tanaman',
           map: 'Peta Kebun Interaktif',
           log: 'Riwayat Tanaman & Petak'
-        })[targetMenu] || 'Beranda Kebun';
+        })[targetMenu] || 'Beranda';
       }
       updateTopPageSub(targetMenu);
       syncSidebarAccountUi();
@@ -1485,9 +1611,9 @@
       const titleEl = document.getElementById('farm-modal-title');
       const areaEl = document.getElementById('farm-modal-area');
       const errorEl = document.getElementById('farm-modal-error');
-      if (titleEl) titleEl.innerText = title || 'Simpan petak';
+      if (titleEl) titleEl.innerText = title || 'Simpan Petak';
       const saveButton = document.getElementById('farm-modal-save');
-      if (saveButton) saveButton.innerText = editingFarmId ? 'Simpan perubahan' : 'Simpan petak';
+      if (saveButton) saveButton.innerText = editingFarmId ? 'Simpan perubahan' : 'Simpan Petak';
       document.getElementById('farm-edit-geometry')?.classList.toggle('hidden', !editingFarmId);
       if (areaEl) {
         areaEl.innerText = 'Luas: ' + formatArea(pendingFarmArea) + ' · ' + (ring.length - 1) + ' titik';
@@ -1681,7 +1807,7 @@
             '<span class="farm-sub">' + escapeText(farm.crop || 'Tanaman belum diisi') + ' · ' + escapeText(formatArea(farm.areaM2)) + '</span>' +
             '<span class="farm-sub">' + related + ' foto · ' + corners + ' sudut</span>' +
           '</button>' +
-          '<button type="button"' + act('openFarmEdit', String(farm.id ?? '')) + ' class="btn btn-secondary btn-sm" aria-label="Ubah petak ' + escapeText(farm.name) + '"><span>Ubah</span></button>' +
+          '<button type="button"' + act('openFarmEdit', String(farm.id ?? '')) + ' class="btn btn-secondary btn-icon btn-sm" title="Ubah petak" aria-label="Ubah petak ' + escapeText(farm.name) + '"><i data-lucide="pencil"></i></button>' +
           '<button type="button"' + act('deleteFarm', String(farm.id ?? '')) + ' class="btn btn-danger btn-icon btn-sm" title="Hapus petak" aria-label="Hapus petak ' + escapeText(farm.name) + '"><i data-lucide="trash-2"></i></button>' +
         '</div>';
       }).join('');
@@ -1753,7 +1879,7 @@
       document.getElementById('farm-note-input').value = farm.note || '';
       pendingFarmRing = farm.ring.map(point => point.slice());
       pendingFarmArea = turfAreaM2(pendingFarmRing);
-      openFarmModal(pendingFarmRing, 'Ubah petak');
+      openFarmModal(pendingFarmRing, 'Ubah Petak');
     }
 
     function editFarmGeometry() {
@@ -1776,20 +1902,20 @@
       if (!validFarmRing(ring)) {
               document.getElementById('farm-edit-toolbar')?.classList.add('hidden');
               setDialogOpen('modal-farm');
-              document.getElementById('farm-modal-title').innerText = 'Ubah petak';
+              document.getElementById('farm-modal-title').innerText = 'Ubah Petak';
               document.getElementById('farm-modal-area').innerText = 'Batas tidak valid';
         farmModalError('Batas tidak valid. Periksa koordinat atau garis yang berpotongan.');
         return;
       }
       document.getElementById('farm-edit-toolbar')?.classList.add('hidden');
-      openFarmModal(ring, 'Ubah petak');
+      openFarmModal(ring, 'Ubah Petak');
     }
 
     function deleteFarm(farmId) {
       const farm = farmList.find(f => f.id === farmId);
       if (!farm) return;
       confirmAction({
-        title: 'Hapus petak ini?',
+        title: 'Hapus Petak Ini?',
         message: farm.name + ' akan dihapus. Catatan analisis di dalamnya tetap tersimpan.',
         okLabel: 'Hapus',
       }).then(async (ok) => {
@@ -2545,16 +2671,6 @@
       document.getElementById('view-log')?.classList.toggle('timeline-open', inTimeline);
     }
 
-    function trendDotsHtml(records) {
-      if (!Array.isArray(records) || records.length === 0) return '';
-      const ordered = [...records].sort((a, b) => (recordMs(a) || 0) - (recordMs(b) || 0)).slice(-3);
-      return '<span class="trend-dots" aria-hidden="true">' + ordered.map(r => {
-        const s = recSeverity(r);
-        const cls = s === 'Severe' ? 'sev' : s === 'Moderate' ? 'mod' : s === 'Healthy' ? 'hl' : '';
-        return '<span class="tdot ' + cls + '"></span>';
-      }).join('') + '</span>';
-    }
-
     function treeCardHtml(g) {
       const rec = g.latest, meta = severityMeta(recSeverity(rec));
       const review = rec.needs_review === true;
@@ -2566,7 +2682,7 @@
         '<span class="tree-thumb"' + open + ' aria-hidden="true">' + thumbHtml(rec.imageUrl, '') + '</span>' +
         '<button type="button" class="tree-main"' + open + '>' +
           '<span class="tree-body">' +
-            '<span class="tree-name">' + escapeText(g.cropName) + trendDotsHtml(g.records) + '</span>' +
+            '<span class="tree-name">' + escapeText(g.cropName) + '</span>' +
             '<span class="tree-sub">' + escapeText(recordLabel(rec)) + (review ? ' · Perlu dicek' : '') + '</span>' +
             '<span class="card-status"><span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
               '<span class="tree-when">' + escapeText(formatWhenId(recordMs(rec))) + ' · ' + g.count + ' foto</span></span>' +
@@ -2666,7 +2782,7 @@
       if (open) {
         container.innerHTML = timelineHtml(open);
       } else if (allGroups.length === 0) {
-        container.innerHTML = '<div class="card empty-card"><span class="home-empty-icon"><i data-lucide="leaf"></i></span><h3 class="t-title">Belum ada foto tanaman</h3><p class="t-body t-muted">Foto satu tanaman untuk memulai riwayatnya.</p>' +
+        container.innerHTML = '<div class="card empty-card"><span class="home-empty-icon"><i data-lucide="leaf"></i></span><h3 class="t-title">Belum Ada Foto Tanaman</h3><p class="t-body t-muted">Foto satu tanaman untuk memulai riwayatnya.</p>' +
           '<button type="button" class="btn btn-primary btn-block" ' + act('navigateToMenu', 'scan') + '><i data-lucide="camera"></i><span>Foto Tanaman</span></button></div>';
       } else {
         const groups = allGroups
@@ -2674,7 +2790,7 @@
           .sort((a, b) => attentionRank(a) - attentionRank(b) || (recordMs(b.latest) || 0) - (recordMs(a.latest) || 0));
         container.innerHTML = groups.length
           ? groups.map(treeCardHtml).join('')
-          : '<div class="card empty-card"><h3 class="t-title">Tidak ada tanaman yang cocok</h3><p class="t-body t-muted">Coba pilih status lain atau hapus kata pencarian.</p>' +
+          : '<div class="card empty-card"><h3 class="t-title">Tidak Ada Tanaman yang Cocok</h3><p class="t-body t-muted">Coba pilih status lain atau hapus kata pencarian.</p>' +
             '<button type="button" class="btn btn-secondary btn-block" ' + act('resetLogFilters') + '><span>Tampilkan semua</span></button></div>';
       }
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -2779,13 +2895,12 @@
       if (farm?.name) metaParts.push(farm.name);
       metaParts.push(formatWhenId(recordMs(rec)));
       if (Number.isFinite(rec.elevation)) metaParts.push(Math.round(rec.elevation) + ' m dpl');
-      const actionPill = action ? '' : '<span class="att-action-pill' + (sev === 'Severe' ? ' is-severe' : '') + '">' + (sev === 'Severe' ? 'Diagnosis' : 'Riwayat') + '</span>';
+      const actionPill = action ? '' : '<span class="att-action-pill">Lihat Detail</span>';
       return '<button type="button" class="card card-tap att-item" ' + (action || act('openCropFromHome', String(group.cropId ?? ''))) + '>' +
         thumbHtml(rec.imageUrl, '') +
         '<span class="att-item-body">' +
           '<span class="att-item-top"><span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
             '<span class="att-item-name">' + escapeText(group.cropName) + '</span>' +
-            trendDotsHtml(group.records) +
           '</span>' +
           '<span class="att-item-cond">' + escapeText(recordLabel(rec)) + (review ? ' · Perlu dicek' : '') + '</span>' +
           '<span class="att-item-meta">' + escapeText(metaParts.join(' · ')) + '</span>' +
@@ -3015,7 +3130,7 @@
       if (skipUnchanged('farmlog', recordsSig() + '|' + farmList.map(f => f.id + f.name + f.areaM2).join(','))) return;
 
       if (farmList.length === 0) {
-        box.innerHTML = '<div class="card empty-card"><span class="home-empty-icon"><i data-lucide="land-plot"></i></span><h3 class="t-title">Belum ada petak</h3>' +
+        box.innerHTML = '<div class="card empty-card"><span class="home-empty-icon"><i data-lucide="land-plot"></i></span><h3 class="t-title">Belum Ada Petak</h3>' +
           '<p class="t-body t-muted">Gambar batas kebun di menu Peta untuk mengelompokkan riwayat.</p></div>';
         icons();
         return;
@@ -3047,7 +3162,7 @@
         return '<section class="card farm-log-card">' +
           '<div class="farm-log-head"><div class="min-w-0"><h3 class="t-title truncate">' + escapeText(title) + '</h3><p class="t-meta">' + escapeText(subtitle) + '</p></div>' +
           '<span class="badge badge-info">' + records.length + ' foto</span></div>' +
-          (farmId ? '<button type="button" class="btn btn-secondary btn-sm btn-block farm-log-summary" ' + act('JagaPlotSummary.open', String(farmId)) + '><i data-lucide="clipboard-list"></i><span>Ringkasan dan saran petak</span></button>' : '') +
+          (farmId ? '<button type="button" class="btn btn-secondary btn-sm btn-block farm-log-summary" ' + act('JagaPlotSummary.open', String(farmId)) + '><i data-lucide="clipboard-list"></i><span>Ringkasan dan Saran Petak</span></button>' : '') +
           sorted.map(recordRow).join('') +
         '</section>';
       };
@@ -3369,9 +3484,98 @@
       midnight.setHours(24,0,0,50);
       dailyRefreshTimer = setTimeout(() => {
         dailyRefreshTimer = null;
-        if (currentAccount && !document.hidden) { renderDailyRecommendations(); scheduleDailyRefresh(); }
+        if (currentAccount && !document.hidden) {
+          void syncAutoDailyArchive();
+          renderDailyRecommendations();
+          scheduleDailyRefresh();
+        }
       }, Math.max(50,midnight.getTime()-now.getTime()));
     }
+
+    async function syncAutoDailyArchive() {
+      if (!currentAccount || !window.JagaDailyLog || !Array.isArray(farmRecords) || !farmRecords.length) return;
+      if (dailyArchiveRunning || navigator.onLine === false) return;
+      const generation = accountGeneration;
+      const owner = String(currentAccount.id || '');
+      if (!owner) return;
+      dailyArchiveRunning = true;
+      try {
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const todayKey = window.JagaDailyLog.dateKey(Date.now(), timeZone);
+        const existingDates = new Set();
+        for (const d of dailyRecommendations || []) {
+          const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(d?.date || ''));
+          if (m) existingDates.add(m[1]);
+        }
+        const serverRecords = farmRecords.filter(rec =>
+          rec && !(rec.source === 'manual' && !rec.imageUrl) && !rec.offline && !rec.pending && !rec.localOnly
+        );
+        const pastKeys = new Set();
+        for (const rec of serverRecords) {
+          const saved = rec.uploadedMs ?? rec.createdMs;
+          const at = saved == null || saved === '' ? NaN : Number(saved);
+          if (!Number.isFinite(at) || !Number.isFinite(new Date(at).getTime())) continue;
+          const k = window.JagaDailyLog.dateKey(at, timeZone);
+          if (k && k < todayKey) pastKeys.add(k);
+        }
+        const missing = [...pastKeys]
+          .filter(k => !existingDates.has(k) && !autoDailyAttemptedKeys.has(k))
+          .sort().reverse().slice(0, 14);
+        if (!missing.length) return;
+        const normalized = serverRecords.map(rec => ({
+          ...rec,
+          condition: window.JagaAssessment?.label(rec) || rec.condition,
+          severity: recSeverity(rec),
+          observedSeverity: null
+        }));
+        const ownerSlug = owner.replace(/[^A-Za-z0-9_-]/g, '');
+        let changed = false;
+        for (const dateKey of missing) {
+          if (generation !== accountGeneration || String(currentAccount?.id || '') !== owner) return;
+          autoDailyAttemptedKeys.add(dateKey);
+          const derived = window.JagaDailyLog.build(normalized, Date.now(), timeZone, dateKey);
+          if (!derived || !derived.crops || !derived.crops.length) continue;
+          const heading = window.JagaDailyLog.labelDate(dateKey, true);
+          const summary = window.JagaDailyLog.narrative(derived, heading);
+          const title = 'Ringkasan ' + window.JagaDailyLog.shortDate(dateKey);
+          const parts = dateKey.split('-').map(Number);
+          const timestampMs = Date.UTC(parts[0], parts[1] - 1, parts[2], 15, 0, 0);
+          const autoId = ('auto-daily-' + ownerSlug + '-' + dateKey).slice(0, 120);
+          try {
+            const saved = await api('/api/daily', {
+              method: 'POST',
+              body: {
+                id: autoId,
+                date: `${dateKey} (${timeZone})`,
+                timestampMs,
+                title,
+                summary,
+                actions: [],
+                sourceRecordIds: derived.sourceRecordIds || [],
+                zones: []
+              }
+            });
+            if (generation !== accountGeneration || String(currentAccount?.id || '') !== owner) return;
+            if (saved && saved.id) {
+              const idx = dailyRecommendations.findIndex(x => x.id === saved.id);
+              if (idx >= 0) dailyRecommendations[idx] = saved;
+              else dailyRecommendations.unshift(saved);
+              changed = true;
+            }
+          } catch (err) {
+            if (err && (err.offline || (err.status && err.status >= 500))) autoDailyAttemptedKeys.delete(dateKey);
+          }
+        }
+        if (changed && generation === accountGeneration && String(currentAccount?.id || '') === owner) {
+          dailyRecommendations.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+          await cacheAccountData(owner, 'daily', dailyRecommendations).catch(() => undefined);
+          renderDailyRecommendations();
+        }
+      } finally {
+        dailyArchiveRunning = false;
+      }
+    }
+
     function renderDailyRecommendations() {
       renderHomeDaily();
       if (activeLogTab === 'daily') renderDailyList();
@@ -3396,7 +3600,7 @@
         '<p class="daily-narrative daily-clamp">' + escapeText(draft.summary) + '</p>' +
         '<div class="btn-row">' +
           '<button type="button" class="btn btn-secondary btn-sm" ' + act('speakHomeDaily') + '><i data-lucide="volume-2"></i><span>Dengarkan</span></button>' +
-          '<button type="button" class="btn btn-secondary btn-sm" ' + act('switchLogTabFromHome', 'daily') + '><span>Lihat semua</span></button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" ' + act('switchLogTabFromHome', 'daily') + '><span>Lihat Semua</span></button>' +
         '</div>' +
       '</article>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3438,9 +3642,9 @@
       const draft = buildDailyDraft();
       if (skipUnchanged('dailylist', draft.summary + '|' + JSON.stringify(dailyRecommendations.map(d => [d.id, d.title, d.summary, d.date, d.timestampMs, (d.actions || []).length])))) return;
       const today = '<article class="card daily-item daily-live">' +
-        '<div><h3 class="t-title">Ringkasan hari ini</h3><p class="t-meta">' + escapeText(window.JagaDailyLog.labelDate(draft.date,true)) + '</p></div>' +
+        '<div><h3 class="t-title">Ringkasan Hari Ini</h3><p class="t-meta">' + escapeText(window.JagaDailyLog.labelDate(draft.date,true)) + '</p></div>' +
         '<p class="daily-narrative t-body">' + escapeText(draft.summary) + '</p>' +
-        '<div class="btn-row"><button type="button" class="btn btn-secondary btn-sm" ' + act('openDailyModal') + '><i data-lucide="plus"></i><span>Tulis catatan</span></button></div></article>';
+        '<div class="btn-row"><button type="button" class="btn btn-secondary btn-sm" ' + act('openDailyModal') + '><i data-lucide="plus"></i><span>Tulis Catatan</span></button></div></article>';
       box.innerHTML = today + [...dailyRecommendations]
         .sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0))
         .map(d => {
@@ -3709,8 +3913,7 @@
     });
     function updateDashboardTelemetry() { updateDashboardTelemetryCore(); JagaHooks.run('telemetry-shown'); }
     function updateDashboardTelemetryCore() {
-      const snapshotMoved = telemetrySnapshot && !nearbyFix(telemetrySnapshot,currentCoords.lat,currentCoords.lng);
-      const home = snapshotMoved ? currentCoords : (telemetrySnapshot || currentCoords);
+      const home = telemetrySnapshot || currentCoords;
       const elev = home.elevation;
       const hasElev = typeof elev === 'number' && isFinite(elev);
       const elevEl = document.getElementById('home-elev-val');
@@ -3766,26 +3969,20 @@
       const weatherStamp = document.getElementById('live-weather-stamp');
       if (weatherStamp) weatherStamp.innerText = currentCoords.weather || '—';
 
-      // One source of truth for every place-name surface: the home card, the
-      // camera HUD and therefore the burned-in stamp.
-      const movedNow = telemetrySnapshot && !nearbyFix(telemetrySnapshot,currentCoords.lat,currentCoords.lng);
+      // One source of truth for the location card, HUD, and capture stamp (30-min cadence unless manually refreshed).
       const coordinateLabel = validCoordinates(currentCoords.lat,currentCoords.lng) ? currentCoords.lat.toFixed(5)+', '+currentCoords.lng.toFixed(5) : (gpsFailure || 'Lokasi belum terbaca');
-      const placeLabel = movedNow ? coordinateLabel : ((telemetrySnapshot || currentCoords).locationName ? (telemetrySnapshot || currentCoords).locationName : coordinateLabel);
+      const placeLabel = home.locationName || coordinateLabel;
       const homeLocEl = document.getElementById('home-location-text');
       const liveLocEl = document.getElementById('live-location-name');
       if (homeLocEl) homeLocEl.innerText = placeLabel;
-      if (liveLocEl) liveLocEl.innerText = currentCoords.locationName || 'Lokasi berubah — menunggu pembaruan';
+      if (liveLocEl) liveLocEl.innerText = currentCoords.locationName || home.locationName || 'Menunggu lokasi…';
       const statusEl = document.getElementById('home-telemetry-status');
       if (statusEl) {
         if (gpsFailure && !validCoordinates(currentCoords.lat,currentCoords.lng)) statusEl.innerText = gpsFailure + '. Aktifkan izin lokasi lalu ketuk Perbarui. Foto galeri dapat diberi pin secara manual.';
         else if (telemetryRequest?.pending) statusEl.innerText = 'Memperbarui lokasi dan cuaca…';
         else if (telemetryError) statusEl.innerText = 'Data belum dapat diperbarui. Koordinat tetap tersedia; coba tombol perbarui.';
         else if (!telemetrySnapshot) statusEl.innerText = 'Menunggu data lokasi dan cuaca';
-        else {
-          const moved = !nearbyFix(telemetrySnapshot, currentCoords.lat, currentCoords.lng);
-          const updated = new Date(telemetrySnapshot.updatedMs).toLocaleString();
-          statusEl.innerText = moved ? 'Data terakhir ' + updated + ' • perangkat berpindah; diperbarui otomatis sebentar lagi' : 'Diperbarui ' + updated;
-        }
+        else statusEl.innerText = 'Diperbarui ' + new Date(telemetrySnapshot.updatedMs).toLocaleString();
       }
 
     }
@@ -3804,7 +4001,7 @@
     }
     if (typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', () => {
       if (document.hidden) { if (dailyRefreshTimer) { clearTimeout(dailyRefreshTimer); dailyRefreshTimer = null; } if (watchId !== null) stopLiveLocationWatcher(true); }
-      else if (currentAccount) { renderDailyRecommendations(); scheduleDailyRefresh(); if (watchWanted && watchId === null) startLiveLocationWatcher(); }
+      else if (currentAccount) { void syncAutoDailyArchive(); renderDailyRecommendations(); scheduleDailyRefresh(); if (watchWanted && watchId === null) startLiveLocationWatcher(); }
     });
     function startLiveLocationWatcher() {
       watchWanted = true;
@@ -3842,8 +4039,7 @@
     let telemetryError = false;
     let telemetryLastAttemptMs = null;
     let telemetryAttemptGeneration = null;
-    const TELEMETRY_REFRESH_MS = 60 * 60 * 1000;
-    const TELEMETRY_MOVED_REFRESH_MS = 60 * 1000;   // moved > 50 m from the last sample: refresh, at most once a minute
+    const TELEMETRY_REFRESH_MS = 30 * 60 * 1000;   // refresh location/weather card every 30 min unless manually requested
     function nearbyFix(first, lat, lng) {
       if (!first) return false;
       const radians = Math.PI / 180;
@@ -3874,8 +4070,8 @@
       currentCoords.lng = lng;
       currentCoords.accuracy = typeof accuracyMeters === 'number' ? accuracyMeters : null;
       if (queuedPlaceSearch && !nearbyFix(queuedPlaceSearch,lat,lng)) queuedPlaceSearch = null;
-      const reuse = telemetrySample?.generation === generation && nearbyFix(telemetrySample,lat,lng);
-      if (!reuse) {
+      const hasSnapshot = telemetrySnapshot && telemetrySample?.generation === generation;
+      if (!hasSnapshot && forceTelemetry) {
         currentCoords.elevation = null;
         currentCoords.locationName = null;
         currentCoords.weather = null;
@@ -3897,8 +4093,8 @@
         telemetryAttemptGeneration = generation;
         telemetryLastAttemptMs = null;
       }
-      const refreshAfter = reuse ? TELEMETRY_REFRESH_MS : TELEMETRY_MOVED_REFRESH_MS;
-      if (!forceTelemetry && telemetryLastAttemptMs !== null && now - telemetryLastAttemptMs < refreshAfter) return;
+      if (!forceTelemetry && hasSnapshot && telemetryLastAttemptMs !== null && now - telemetryLastAttemptMs < TELEMETRY_REFRESH_MS) return;
+      if (!forceTelemetry && !hasSnapshot && telemetryLastAttemptMs !== null && now - telemetryLastAttemptMs < 60 * 1000) return;
       if (telemetryRequest?.pending) return;
       const fix = ++locationGeneration;
       const request = telemetryRequest = {lat,lng,generation,startedMs:now,pending:true};
@@ -3911,7 +4107,6 @@
       api('/api/telemetry?lat=' + lat + '&lng=' + lng + (placeHint ? '&placeHint=' + encodeURIComponent(placeHint) : ''))
         .then((data) => {
           if (!data || fix !== locationGeneration || generation !== accountGeneration) return;
-          if (!nearbyFix(request,currentCoords.lat,currentCoords.lng)) return;
           telemetrySample = {lat,lng,generation,receivedMs:Date.now()};
           const elev = Array.isArray(data.elevation) ? data.elevation[0] : data.elevation;
           const fresh = {
@@ -4013,11 +4208,11 @@
     let activeDialog = null;
     const dialogStack = [];
     const dialogInert = new Map();
-    const dialogNames = {'modal-account':'Akun saya','modal-crop-assign':'Pilih tanaman',
-      'modal-daily':'Catatan harian','modal-status':'Ubah status pengamatan',
-      'modal-date-picker':'Waktu pengambilan foto','modal-farm':'Simpan petak',
-      'modal-confirm':'Konfirmasi','photo-viewer':'Foto pengamatan',
-      'modal-reanalysis-progress':'Analisis ulang'};
+    const dialogNames = {'modal-account':'Akun Saya','modal-crop-assign':'Pilih Tanaman',
+      'modal-daily':'Catatan Harian','modal-status':'Ubah Status Pengamatan',
+      'modal-date-picker':'Waktu Pengambilan Foto','modal-farm':'Simpan Petak',
+      'modal-confirm':'Konfirmasi','photo-viewer':'Foto Pengamatan',
+      'modal-reanalysis-progress':'Analisis Ulang'};
     function dialogFocusable(modal) {
       const selector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], summary, [tabindex]:not([tabindex="-1"])';
       return [...modal.querySelectorAll(selector)].filter(node => {

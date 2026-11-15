@@ -151,12 +151,18 @@
       try {
         canReanalyze = root.JagaAssessment?.canReanalyze?.(g.latest) === true;
       } catch (_) {}
+      const rawName = String(g.latest.cropName || g.cropName || sp);
+      const itemName =
+        typeof root.canonicalCropName === "function"
+          ? root.canonicalCropName(rawName)
+          : rawName.replace(/\s*\([^)]*\)\s*$/, "").trim() || sp;
       s.items.push({
         id: String(g.latest.id || ""),
-        name: String(g.latest.cropName || g.cropName || sp),
+        name: itemName,
         severity: sev,
         label,
         canReanalyze,
+        needsReview: g.latest.needs_review === true || sev === "Unknown",
       });
       if (sev === "Severe") severe.push(sp);
       if (g.latest.needs_review === true) review.push(sp);
@@ -227,14 +233,14 @@
       ),
     };
     model.status = !groups.length
-      ? { tone: "unknown", label: "Belum ada data" }
+      ? { tone: "unknown", label: "Belum Ada Data" }
       : counts.Severe
-        ? { tone: "severe", label: "Perlu tindakan" }
+        ? { tone: "severe", label: "Perlu Tindakan" }
         : counts.Moderate
-          ? { tone: "moderate", label: "Perlu dipantau" }
+          ? { tone: "moderate", label: "Perlu Dipantau" }
           : counts.Healthy === groups.length
             ? { tone: "healthy", label: "Baik" }
-            : { tone: "unknown", label: "Belum pasti" };
+            : { tone: "unknown", label: "Belum Pasti" };
     model.findings = findings(model);
     model.advice = advice(model);
     return model;
@@ -334,7 +340,7 @@
           .join(" · ")
       : "Belum ada tanaman";
     return (
-      '<span class="plot-teaser-main"><span class="plot-teaser-title">Ringkasan petak</span><span class="plot-teaser-sub">' +
+      '<span class="plot-teaser-main"><span class="plot-teaser-title">Ringkasan Petak</span><span class="plot-teaser-sub">' +
       esc(parts) +
       "</span></span>" +
       '<span class="' +
@@ -407,17 +413,55 @@
     if (m.species.length)
       html +=
         '<section class="plot-block"><h4 class="plot-h">Jenis Tanaman dan Masalahnya</h4>' +
+        '<div class="plot-species-list">' +
         m.species
           .map((s) => {
-            const probs = [...s.problems.entries()].sort((a, b) => b[1] - a[1]);
+            const renderIssueTag = (item) => {
+              if (item.severity === "Healthy") {
+                return '<span class="t-meta plot-plant-label">Kondisi sehat</span>';
+              }
+              const k = kindOf(item.label);
+              const kindBadge =
+                k !== "lain"
+                  ? '<span class="plot-kind plot-kind-' +
+                    k +
+                    '">' +
+                    KIND_LABEL[k] +
+                    "</span>"
+                  : "";
+              return (
+                '<div class="plot-issue-wrap">' +
+                kindBadge +
+                '<span class="t-meta plot-plant-label">' +
+                esc(item.label) +
+                "</span></div>"
+              );
+            };
+            const reanalyzeBtn = (item) =>
+              item.canReanalyze && item.id && item.needsReview
+                ? '<button type="button" class="btn btn-secondary btn-icon btn-sm plot-reanalyze" data-act="JagaAssessment.reanalyze" data-args="' +
+                  esc(JSON.stringify([item.id, "$this"])) +
+                  '" aria-label="Analisis ulang foto ' +
+                  esc(item.name) +
+                  '" title="Analisis ulang"><i data-lucide="refresh-cw" aria-hidden="true"></i></button>'
+                : "";
+            if (s.items.length === 1) {
+              const single = s.items[0];
+              return (
+                '<div class="plot-species"><div class="plot-species-top"><div class="plot-species-title"><b>' +
+                esc(s.name) +
+                '</b><span class="t-meta">1 tanaman</span></div><span class="' +
+                toneBadge(severityTone(single.severity)) +
+                '">' +
+                esc(severityLabel(single.severity)) +
+                '</span></div><div class="plot-species-single-foot">' +
+                renderIssueTag(single) +
+                reanalyzeBtn(single) +
+                "</div></div>"
+              );
+            }
             const items = s.items
               .map((item) => {
-                const reanalyze =
-                  item.canReanalyze && item.id
-                    ? '<button type="button" class="btn btn-secondary btn-sm plot-reanalyze" data-act="JagaAssessment.reanalyze" data-args="' +
-                      esc(JSON.stringify([item.id, "$this"])) +
-                      '"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>Analisis Ulang</span></button>'
-                    : "";
                 return (
                   '<div class="plot-plant-row"><div class="plot-plant-main"><b class="plot-plant-name">' +
                   esc(item.name) +
@@ -425,47 +469,28 @@
                   toneBadge(severityTone(item.severity)) +
                   '">' +
                   esc(severityLabel(item.severity)) +
-                  '</span><span class="t-meta plot-plant-label">' +
-                  esc(item.label) +
-                  "</span></div>" +
-                  reanalyze +
-                  "</div>"
+                  "</span></div><div class=\"plot-plant-side\">" +
+                  renderIssueTag(item) +
+                  reanalyzeBtn(item) +
+                  "</div></div>"
                 );
               })
               .join("");
             return (
-              '<div class="plot-species"><div class="plot-species-top"><b>' +
+              '<div class="plot-species"><div class="plot-species-top"><div class="plot-species-title"><b>' +
               esc(s.name) +
-              '</b><span class="t-meta">' +
+              "</b></div>" +
+              '<span class="t-meta">' +
               s.plants +
               " tanaman" +
-              (s.sick ? " · " + s.sick + " bermasalah" : " · sehat") +
-              "</span></div>" +
-              (probs.length
-                ? '<ul class="plot-problems">' +
-                  probs
-                    .map(
-                      ([label, n]) =>
-                        '<li><span class="plot-kind plot-kind-' +
-                        kindOf(label) +
-                        '">' +
-                        KIND_LABEL[kindOf(label)] +
-                        "</span><span>" +
-                        esc(label) +
-                        '</span><span class="t-meta">' +
-                        n +
-                        " tanaman</span></li>",
-                    )
-                    .join("") +
-                  "</ul>"
-                : "") +
-              '<div class="plot-plant-list">' +
+              (s.sick ? " · " + s.sick + " bermasalah" : " · semua sehat") +
+              '</span></div><div class="plot-plant-list">' +
               items +
               "</div></div>"
             );
           })
           .join("") +
-        "</section>";
+        "</div></section>";
     if (m.findings.length)
       html +=
         '<section class="plot-block"><h4 class="plot-h">Temuan</h4><ul class="plot-list">' +

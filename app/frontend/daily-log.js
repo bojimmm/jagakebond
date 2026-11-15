@@ -8,8 +8,8 @@
     const today=dateKey(now,timeZone);const [year,month,day]=today.split('-').map(Number);
     return dateKey(Date.UTC(year,month-1,day-1,12), 'UTC');
   }
-  function build(records,now=Date.now(),timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone){
-    const today=dateKey(now,timeZone),latest=new Map();let unknownUpdateTimes=0,photoCount=0;
+  function build(records,now=Date.now(),timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone,targetKey=null){
+    const today=targetKey||dateKey(now,timeZone),latest=new Map();let unknownUpdateTimes=0,photoCount=0;
     for(const row of records||[]){
       const id=row.cropId??row.id;if(id==null)continue;
       // Upload/creation is stable: changing a status or the EXIF capture date cannot move a photo into today.
@@ -30,9 +30,9 @@
   function shortDate(key){const p=parseKey(key);return p?`${p.d} ${MONTHS[p.m-1]}`:'';}
   // Structured, plain summary: what was uploaded today, the active cases, and safe next steps.
   // It never claims a trend (better/worse/recovered): upload time is not observation time.
-  function narrative(draft){
+  function narrative(draft,customHeading=null){
     const crops=draft.crops||[],labels={Healthy:'Sehat',Moderate:'Waspada',Severe:'Kritis'};
-    const when=`Hari ini (${labelDate(draft.date)})`,lines=[when,''];
+    const when=customHeading||`Hari ini (${labelDate(draft.date)})`,lines=[when,''];
     if(!crops.length){
       lines.push('• Belum ada foto tanaman yang diunggah hari ini.','• Tidak adanya foto bukan berarti semua tanaman sehat.');
       lines.push('','Saran:','• Foto tanaman yang ingin dicatat untuk mulai mengisi ringkasan hari ini.');

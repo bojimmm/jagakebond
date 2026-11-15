@@ -1208,7 +1208,7 @@ async function saveLocationEditor() {
     };
     let lat = parse("location-lat"),
       lng = parse("location-lng");
-    const farmId = document.getElementById("location-plot").value;
+    let farmId = document.getElementById("location-plot").value;
     if (farmId) {
       const farm = farmList.find((f) => f.id === farmId);
       if (!farm) throw Error("Petak tidak tersedia.");
@@ -1216,27 +1216,66 @@ async function saveLocationEditor() {
     }
     if (!JagaWorkflow.validPoint(lat, lng))
       throw Error("Isi lintang −90…90 dan bujur −180…180, atau pilih petak.");
+    if (!farmId && typeof farmContainingPoint === "function") {
+      farmId = farmContainingPoint(lat, lng) || "";
+    }
     const farm = farmList.find((f) => f.id === farmId);
+    const saveBtn = document.getElementById("location-save");
+    const prevBtnText = saveBtn ? saveBtn.textContent : "";
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Memperbarui lokasi…";
+    }
+    let telem = null;
+    try {
+      if (navigator.onLine !== false) {
+        telem = await Promise.race([
+          api("/api/telemetry?lat=" + encodeURIComponent(lat) + "&lng=" + encodeURIComponent(lng)),
+          new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
+        ]);
+      }
+    } catch (_) {
+      telem = null;
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = prevBtnText || "Simpan Lokasi";
+      }
+    }
+    if (!workflowGuard(target.owner, target.generation)) return;
+    const rawElev = Array.isArray(telem?.elevation) ? telem.elevation[0] : telem?.elevation;
+    const elev = Number.isFinite(Number(rawElev)) ? Math.round(Number(rawElev)) : null;
+    const placeName = typeof telem?.locationName === "string" && telem.locationName.trim() ? telem.locationName.trim() : null;
+    const weather = typeof telem?.weather === "string" && telem.weather.trim() ? telem.weather.trim() : null;
+    const locationLabel = farm && placeName
+      ? farm.name + " · " + placeName
+      : placeName || (farm ? "Petak " + farm.name : lat.toFixed(5) + ", " + lng.toFixed(5));
     const patch = {
       lat,
       lng,
       farmId: farmId || null,
       accuracy: null,
-      elevation: null,
-      weather: null,
-      locationName: farm
-        ? "Petak " + farm.name
-        : lat.toFixed(5) + ", " + lng.toFixed(5),
+      elevation: elev,
+      weather,
+      locationName: locationLabel,
       locationSource: farmId ? "plot" : "manual",
     };
     if (target.kind === "capture") {
+      if (!Number.isFinite(selectedPhotoTimestampMs)) {
+        const now = new Date();
+        selectedPhotoTimestampMs = now.getTime();
+        selectedPhotoDateString = typeof formatPhotoDate === "function" ? formatPhotoDate(now, "waktu unggah perangkat") : null;
+      }
       selectedPhotoMetadata = Object.freeze({
         ...selectedPhotoMetadata,
         ...patch,
+        captureTimeMs: selectedPhotoTimestampMs,
+        photoDate: selectedPhotoDateString,
       });
       activeOfflineCapture = null;
       document.getElementById("capture-location-summary").textContent =
         patch.locationName;
+      if (typeof renderScanHead === "function") renderScanHead(scanState, {});
       if (typeof updateScanLocationChip === "function")
         updateScanLocationChip();
     } else if (target.kind === "draft") {
@@ -1519,9 +1558,9 @@ function installWorkflowUi() {
   modal.id = "modal-location";
   modal.className = "hidden workflow-modal";
   modal.innerHTML =
-    '<section class="workflow-dialog" role="document"><header><h2>Atur Lokasi</h2><button type="button" id="location-close" class="btn btn-secondary btn-sm" aria-label="Tutup pengaturan lokasi"><i data-lucide="x" aria-hidden="true"></i></button></header><p>Geser pin ke lokasi foto. Titik dari peta atau petak merupakan lokasi manual, bukan hasil pengukuran GPS.</p><div id="location-map" aria-label="Peta pilih lokasi"></div><label>Petak<select id="location-plot"></select></label><details class="fold loc-manual"><summary class="btn btn-secondary btn-block">Atur Koordinat Manual</summary><div class="workflow-coordinate-grid"><label>Lintang (derajat)<input id="location-lat" type="number" step="any" min="-90" max="90" inputmode="decimal"></label><label>Bujur (derajat)<input id="location-lng" type="number" step="any" min="-180" max="180" inputmode="decimal"></label></div></details><p id="location-error" role="alert"></p><p>Memilih petak menaruh pin di tengah petak. Sesuaikan pin bila lokasi tanaman berbeda.</p><button type="button" id="location-save" class="btn btn-primary btn-block">Simpan Lokasi</button></section>';
+    '<section class="workflow-dialog" role="document"><header><h2>Atur Lokasi</h2><button type="button" id="location-close" class="btn btn-secondary btn-sm" aria-label="Tutup pengaturan lokasi"><i data-lucide="x" aria-hidden="true"></i></button></header><p>Geser pin ke lokasi foto atau pilih petak tempat tanaman berada.</p><div id="location-map" aria-label="Peta pilih lokasi"></div><label>Petak<select id="location-plot"></select></label><details class="fold loc-manual"><summary class="btn btn-secondary btn-block">Atur Koordinat Manual</summary><div class="workflow-coordinate-grid"><label>Lintang (derajat)<input id="location-lat" type="number" step="any" min="-90" max="90" inputmode="decimal"></label><label>Bujur (derajat)<input id="location-lng" type="number" step="any" min="-180" max="180" inputmode="decimal"></label></div></details><p id="location-error" role="alert"></p><p>Memilih petak menaruh pin di tengah petak. Sesuaikan pin bila lokasi tanaman berbeda.</p><button type="button" id="location-save" class="btn btn-primary btn-block">Simpan Lokasi</button></section>';
   document.body.append(modal);
-  dialogNames["modal-location"] = "Lokasi foto atau tanaman";
+  dialogNames["modal-location"] = "Lokasi Foto atau Tanaman";
   document.getElementById("location-close").onclick = () =>
     closeDialog("modal-location");
   document.getElementById("location-save").onclick = saveLocationEditor;

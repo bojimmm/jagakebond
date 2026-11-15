@@ -207,11 +207,14 @@ def require_worker(request: Request) -> None:
 
 def public_account(account: dict[str, Any]) -> dict[str, Any]:
     tier = queue.fast_quota_snapshot(account)
+    stored_avatar = str(account.get("avatar_url") or "")
     return {
         "id": account["id"],
         "email": account["email"],
         "name": account["name"],
         "role": account["role"],
+        "avatarUrl": db.public_avatar_url(stored_avatar),
+        "canRestoreGoogleAvatar": stored_avatar.startswith("hidden:https://"),
         "dailyQuota": tier["fastQuota"] or 0,
         **tier,
         "isActive": bool(account["is_active"]),
@@ -360,6 +363,34 @@ def change_password(response: Response, request: Request,
     settings_store.audit("account.password", account["email"], f"{revoked} sesi lain dicabut",
                         account["email"], account["id"])
     return {"ok": True, "revokedSessions": revoked, "csrf": csrf}
+
+
+@router.delete("/avatar")
+def hide_avatar(request: Request) -> dict[str, Any]:
+    """Hide the signed-in account's Google profile picture while preserving the URL for restore."""
+    account = current_account(request)
+    stored = str(account.get("avatar_url") or "").strip()
+    if stored.startswith("https://"):
+        new_val = "hidden:" + stored
+        with db.transaction() as tx:
+            tx.execute("UPDATE accounts SET avatar_url = ?, updated_ms = ? WHERE id = ?",
+                       (new_val, db.now_ms(), account["id"]))
+        account = find_by_id(account["id"]) or account
+    return {"ok": True, "account": public_account(account)}
+
+
+@router.put("/avatar")
+def restore_avatar(request: Request) -> dict[str, Any]:
+    """Restore a previously hidden Google profile picture for the signed-in account."""
+    account = current_account(request)
+    stored = str(account.get("avatar_url") or "").strip()
+    if stored.startswith("hidden:https://"):
+        new_val = stored[len("hidden:"):]
+        with db.transaction() as tx:
+            tx.execute("UPDATE accounts SET avatar_url = ?, updated_ms = ? WHERE id = ?",
+                       (new_val, db.now_ms(), account["id"]))
+        account = find_by_id(account["id"]) or account
+    return {"ok": True, "account": public_account(account)}
 
 
 @router.get("/sessions")

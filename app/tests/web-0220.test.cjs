@@ -136,20 +136,40 @@ test('offline-sync.js: timeouts and backoff constants follow contract 5.9', () =
 test('service worker: one cache name, HTML for a script is never cached, tiles never cached (5.7)', () => {
   const sw = read('sw.js');
   assert.equal((sw.match(/jk-v\d+/g) || []).length, 1, 'the cache name appears once');
-  assert.match(sw, /const SHELL_CACHE = 'jk-v74';/);
+  assert.match(sw, /const SHELL_CACHE = 'jk-v78';/);
   for (const page of ['app.js', 'session.js', 'shell.js', 'scan-flow.js', 'workflow-ui.js']) assert.doesNotMatch(read(page), /jk-v\d+/, page + ' must not name a cache');
   assert.match(sw, /isValidShellResponse/);
   assert.match(sw, /url\.origin !== self\.location\.origin\) return;/);
 });
 
-test('known species aliases are consistent without merging plants or renaming nicknames', () => {
+test('known species aliases and parenthetical English stripping stay consistent', () => {
  const ctx=browserLike();vm.createContext(ctx);
  vm.runInContext(slice(APP,'    function canonicalCropName(value) {','    async function loadDaily() {'),ctx);
  for(const label of ['Ketapang (Sea Almond)','Ketapang (Tropical Almond)','Sea Almond','Terminalia catappa','  ketapang (INDIAN ALMOND)  ']) {
    const row=ctx.normalizeRecord({id:label,cropId:label,crop:label,cropName:label});
-   assert.equal(row.crop,'Ketapang (Tropical Almond)');assert.equal(row.cropName,row.crop);assert.equal(row.cropId,label);
+   assert.equal(row.crop,'Ketapang');assert.equal(row.cropName,row.crop);assert.equal(row.cropId,label);
  }
- for(const label of ['Almond','Ketapang depan rumah','Ketapang Kencana','Pisang (Banana)','Ketapang (unknown)'])assert.equal(ctx.canonicalCropName(label),label);
+ for(const label of ['Almond','Ketapang depan rumah','Ketapang Kencana'])assert.equal(ctx.canonicalCropName(label),label);
+ assert.equal(ctx.canonicalCropName('Pisang (Banana)'),'Pisang');
+ assert.equal(ctx.canonicalCropName('Tomat (Tomato)'),'Tomat');
+});
+
+test('ui revisions: camera zoom, 30-min telemetry, auto daily archive, profile avatar, Proper Case', () => {
+  const html = read('index.html');
+  const css = read('styles.css');
+  const plotJs = read('plot-summary.js');
+  assert.match(html, /id="btn-cam-zoom"/);
+  assert.match(html, /id="btn-flip-cam"/);
+  assert.doesNotMatch(html, /class="reticle-corner/);
+  assert.match(APP, /TELEMETRY_REFRESH_MS = 30 \* 60 \* 1000;/);
+  assert.doesNotMatch(APP, /TELEMETRY_MOVED_REFRESH_MS/);
+  assert.match(APP, /async function syncAutoDailyArchive\(/);
+  assert.match(APP, /function toggleAccountAvatar\(/);
+  assert.doesNotMatch(css, /\.badge::before\s*\{/);
+  assert.match(plotJs, /Perlu Tindakan/);
+  assert.match(plotJs, /Perlu Dipantau/);
+  assert.match(plotJs, /Belum Ada Data/);
+  assert.doesNotMatch(APP, /trendDotsHtml\(/);
 });
 
 
@@ -189,6 +209,149 @@ test('active pest and disease findings coexist while unsupported alternatives st
   assert.equal(ctx.label({assessment:{
     possible_causes:['Dugaan antraknosa.','Dugaan ulat grayak.']
   }}), 'Belum Dapat Dipastikan');
+});
+
+test('telemetry refresh interval: 30-min gate unless forced manually', async () => {
+  let fakeNow = 1_700_000_000_000;
+  const FakeDate = Object.assign(function (...a) { return a.length ? new Date(...a) : new Date(fakeNow); }, {
+    now: () => fakeNow,
+    UTC: Date.UTC,
+  });
+  const calls = [];
+  const ctx = browserLike({
+    Date: FakeDate,
+    currentAccount: { id: 'u1' },
+    accountGeneration: 1,
+    locationGeneration: 0,
+    telemetryAttemptGeneration: 0,
+    telemetryLastAttemptMs: null,
+    telemetryRequest: null,
+    telemetrySample: null,
+    telemetrySnapshot: null,
+    telemetryError: false,
+    gpsFailure: '',
+    currentCoords: { lat: null, lng: null, accuracy: null },
+    mapInstance: null,
+    mapCenteredOnFix: false,
+    validCoordinates: (a, b) => Number.isFinite(a) && Number.isFinite(b),
+    updateDashboardTelemetry() {},
+    showToast() {},
+    api: async (url) => {
+      calls.push(url);
+      return { elevation: 724, locationName: 'Ciomas', tempC: 24, rh: 82, weather: 'Cerah' };
+    },
+  });
+  vm.createContext(ctx);
+  vm.runInContext(slice(APP, 'const TELEMETRY_REFRESH_MS = 30 * 60 * 1000;', '    function requestLiveLocation('), ctx);
+  assert.equal(vm.runInContext('TELEMETRY_REFRESH_MS', ctx), 30 * 60 * 1000);
+
+  ctx.applyLiveGpsReading(-6.61, 106.76, 5, false, fakeNow);
+  await new Promise(r => setImmediate(r));
+  assert.equal(calls.length, 1);
+
+  fakeNow += 29 * 60 * 1000;
+  ctx.applyLiveGpsReading(-6.61, 106.76, 6, false, fakeNow);
+  await new Promise(r => setImmediate(r));
+  assert.equal(calls.length, 1, 'auto GPS fix inside 30 min window must not refetch telemetry');
+
+  ctx.applyLiveGpsReading(-6.61, 106.76, 6, true, fakeNow);
+  await new Promise(r => setImmediate(r));
+  assert.equal(calls.length, 2, 'manual refresh bypasses 30 min cooldown');
+
+  fakeNow += 30 * 60 * 1000 + 1;
+  ctx.applyLiveGpsReading(-6.61, 106.76, 6, false, fakeNow);
+  await new Promise(r => setImmediate(r));
+  assert.equal(calls.length, 3, 'auto GPS fix after 30 min refreshes telemetry');
+});
+
+test('syncAutoDailyArchive: archives past days once idempotently and clears attempt on 5xx', async () => {
+  const posted = [];
+  const cached = [];
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const ctx = browserLike({
+    currentAccount: { id: 'usr_9' },
+    accountGeneration: 1,
+    dailyArchiveRunning: false,
+    autoDailyAttemptedKeys: new Set(),
+    dailyRecommendations: [],
+    farmRecords: [],
+    recSeverity: r => r.severity || 'Healthy',
+    cacheAccountData: async (owner, kind, data) => { cached.push({ owner, kind, count: data.length }); },
+    renderDailyRecommendations() {},
+  });
+  vm.createContext(ctx);
+  vm.runInContext(read('daily-log.js') + '\n' + read('assessment-ui.js'), ctx);
+  ctx.window.JagaDailyLog = ctx.JagaDailyLog;
+  const dayMs = 86400 * 1000;
+  const t3 = Date.now() - 3 * dayMs;
+  const t4 = Date.now() - 4 * dayMs;
+  const t5 = Date.now() - 5 * dayMs;
+  const k3 = ctx.JagaDailyLog.dateKey(t3, tz);
+  const k4 = ctx.JagaDailyLog.dateKey(t4, tz);
+  const k5 = ctx.JagaDailyLog.dateKey(t5, tz);
+  ctx.dailyRecommendations = [{ id: 'manual-1', date: `${k3} (${tz})`, timestampMs: 1 }];
+  ctx.farmRecords = [
+    { id: 'rec-old-1', crop: 'Cabai', condition: 'Bercak Daun', severity: 'Moderate', uploadedMs: t5 },
+    { id: 'rec-fail-day', crop: 'Kopi', condition: 'Karat Daun', severity: 'Severe', uploadedMs: t4 },
+    { id: 'rec-already', crop: 'Teh', condition: 'Sehat', severity: 'Healthy', uploadedMs: t3 },
+    { id: 'rec-today', crop: 'Tomat', condition: 'Sehat', severity: 'Healthy', uploadedMs: Date.now() },
+    { id: 'rec-local', crop: 'Jagung', condition: 'Sehat', severity: 'Healthy', localOnly: true, uploadedMs: Date.now() - 10 * dayMs },
+  ];
+  let failOnce = true;
+  ctx.api = async (url, opts) => {
+    posted.push(opts.body);
+    if (opts.body.id === `auto-daily-usr_9-${k4}` && failOnce) {
+      failOnce = false;
+      throw Object.assign(new Error('Service unavailable'), { status: 503 });
+    }
+    return opts.body;
+  };
+  vm.runInContext(slice(APP, '    async function syncAutoDailyArchive() {', '    function renderDailyRecommendations() {'), ctx);
+
+  await ctx.syncAutoDailyArchive();
+  assert.deepEqual(posted.map(b => b.id).sort(), [`auto-daily-usr_9-${k5}`, `auto-daily-usr_9-${k4}`].sort());
+  assert.equal(ctx.dailyRecommendations.length, 2);
+  assert.equal(cached.length, 1);
+
+  await ctx.syncAutoDailyArchive();
+  assert.deepEqual(posted.map(b => b.id), [`auto-daily-usr_9-${k4}`, `auto-daily-usr_9-${k5}`, `auto-daily-usr_9-${k4}`]);
+  assert.equal(posted.filter(b => b.id === `auto-daily-usr_9-${k5}`).length, 1, 'already archived day is not reposted');
+  assert.equal(posted.filter(b => b.id === `auto-daily-usr_9-${k4}`).length, 2, '503 day clears attempted key and retries');
+});
+
+test('scan-flow.js: toggleCameraZoom flips between 1x and 2x and updates video class', async () => {
+  const classes = new Set();
+  const btn = stubElement();
+  btn.classList = {
+    add: c => classes.add('btn:' + c),
+    remove: c => classes.delete('btn:' + c),
+    toggle: (c, on) => on ? classes.add('btn:' + c) : classes.delete('btn:' + c),
+    contains: c => classes.has('btn:' + c),
+  };
+  const video = stubElement();
+  video.classList = {
+    toggle: (c, on) => on ? classes.add('vid:' + c) : classes.delete('vid:' + c),
+    contains: c => classes.has('vid:' + c),
+  };
+  const ctx = browserLike({
+    cameraZoom: 1,
+    liveMediaStream: null,
+  });
+  ctx.document.getElementById = id => (id === 'btn-cam-zoom' ? btn : id === 'camera-stream' ? video : null);
+  vm.createContext(ctx);
+  vm.runInContext(read('scan-flow.js'), ctx);
+
+  await ctx.toggleCameraZoom();
+  assert.equal(ctx.cameraZoom, 2);
+  assert.equal(btn.textContent, '2×');
+  assert.ok(classes.has('btn:is-active'));
+  assert.ok(classes.has('vid:is-zoom-2x'));
+
+  await ctx.toggleCameraZoom();
+  assert.equal(ctx.cameraZoom, 1);
+  assert.equal(btn.textContent, '1×');
+  assert.ok(!classes.has('btn:is-active'));
+  assert.ok(!classes.has('vid:is-zoom-2x'));
 });
 
 

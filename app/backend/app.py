@@ -131,7 +131,8 @@ ADMIN_CSP = (
 APP_CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org "
-    "https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' data: blob:; "
+    "https://server.arcgisonline.com https://*.googleusercontent.com https://*.ggpht.com; "
+    "font-src 'self' data:; connect-src 'self' data: blob:; "
     "media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; "
     "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 )
@@ -141,7 +142,7 @@ APP_CSP_GOOGLE = (
     "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; "
     "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; "
     "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org "
-    "https://server.arcgisonline.com; font-src 'self' data:; "
+    "https://server.arcgisonline.com https://*.googleusercontent.com https://*.ggpht.com; font-src 'self' data:; "
     "connect-src 'self' data: blob: https://accounts.google.com/gsi/; "
     "frame-src 'self' https://accounts.google.com/gsi/; "
     "media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; "

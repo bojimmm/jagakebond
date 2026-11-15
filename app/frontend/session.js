@@ -256,6 +256,7 @@ async function afterSignIn(account, options = {}) {
   if (typeof startLiveLocationWatcher === 'function') startLiveLocationWatcher();   // GPS only once signed in
   const chip = document.getElementById('account-chip-label');
   if (chip) chip.innerText = account.name || String(account.email || 'Akun').split('@')[0];
+  if (typeof syncSidebarAccountUi === 'function') syncSidebarAccountUi();
   loadedOnce = false;
   expandedCropId = null;
   if (!offline) {

@@ -30,6 +30,7 @@ let lastResultRecord = null;
 let lastFailedCapture = null;        // { clientRequestId, jobId } of the capture whose failure card is on screen
 let foregroundJobId = null;          // the job the foreground tracker is watching (the background poller skips it)
 let cameraEndedRestarts = [];
+let cameraHardwareZoom = false;
 let scanChipTimer = null;
 let assignChoice = null;
 
@@ -91,12 +92,10 @@ function liveLocationModel() {
 function photoLocationModel(meta) {
   if (!meta) return liveLocationModel();
   const hasPoint = validCoordinates(meta.lat, meta.lng);
-  if (meta.locationSource === 'plot') return { tone: 'ok', text: placeShort(meta.locationName) || 'Lokasi: petak' };
-  if (meta.locationSource === 'manual') return { tone: 'ok', text: 'Lokasi dipilih sendiri' };
   if (hasPoint) {
     const place = placeShort(meta.locationName);
     const acc = Number.isFinite(meta.accuracy) ? ' ±' + Math.round(meta.accuracy) + ' m' : '';
-    return { tone: Number.isFinite(meta.accuracy) && meta.accuracy > GPS_WEAK_ACCURACY_M ? 'warn' : 'ok', text: 'Lokasi: ' + (place ? place : 'terbaca') + acc };
+    return { tone: Number.isFinite(meta.accuracy) && meta.accuracy > GPS_WEAK_ACCURACY_M ? 'warn' : 'ok', text: 'Lokasi: ' + (place ? place : 'tercatat') + acc };
   }
   return { tone: 'none', text: 'Lokasi belum terbaca' };
 }
@@ -136,16 +135,17 @@ function renderScanHead(state, info) {
   if (offline) offline.classList.toggle('hidden', !(state === 'review' && (!navigator.onLine || (typeof offlineMode !== 'undefined' && offlineMode))));
   if (date) {
     const when = selectedPhotoMetadata && Number.isFinite(selectedPhotoMetadata.captureTimeMs) ? friendlyTime(selectedPhotoMetadata.captureTimeMs) : '';
-    const unknownDate = state === 'review' && photoMode === 'gallery' && !when;
-    date.classList.toggle('hidden', state === 'live');
-    date.textContent = unknownDate ? 'Tanggal foto belum diketahui. Akan dicatat sebagai hari ini.' : (when ? (photoMode === 'gallery' ? 'Foto lama · ' : 'Diambil ') + when : '');
+    date.classList.toggle('hidden', state === 'live' || !when);
+    date.textContent = when ? 'Diambil ' + when : '';
     const setDate = scanEl('scan-set-date');
     if (setDate) setDate.classList.toggle('hidden', !(state === 'review' && photoMode === 'gallery'));
   }
   // The sent/failed cards carry their own title; the head then only shows when and where the photo was taken.
-  const titles = { preparing:'Menyiapkan Foto…', review: 'Foto siap dianalisis', sending: 'Mengirim foto…', result: 'Hasil analisis' };
+  const titles = { preparing:'Menyiapkan Foto…', review: 'Foto Siap Dianalisis', sending: 'Mengirim foto…', result: 'Hasil analisis' };
   if (title) { title.textContent = titles[state] || ''; title.classList.toggle('hidden', !titles[state]); }
-  if (text) text.textContent = info.headText || (state === 'review' ? (photoMode === 'gallery' ? 'Foto dari galeri' : 'Foto baru dari kamera') : '');
+  const hasPoint = selectedPhotoMetadata && validCoordinates(selectedPhotoMetadata.lat, selectedPhotoMetadata.lng);
+  const reviewSub = (photoMode === 'gallery' && !hasPoint) ? 'Foto dari galeri' : 'Foto siap dikirim untuk analisis';
+  if (text) text.textContent = info.headText || (state === 'review' ? reviewSub : '');
 }
 function resetScanControls() {
   setScanState(selectedImageBase64 ? 'review' : 'live');
@@ -192,6 +192,38 @@ async function requestCameraStream() {
     return navigator.mediaDevices.getUserMedia({ video: base, audio: false });
   }
 }
+function updateCameraZoomUi() {
+  const z = typeof cameraZoom === 'number' && cameraZoom === 2 ? 2 : 1;
+  const btn = scanEl('btn-cam-zoom');
+  if (btn) {
+    btn.textContent = z === 2 ? '2×' : '1×';
+    btn.classList.toggle('is-active', z === 2);
+    btn.setAttribute('aria-pressed', String(z === 2));
+  }
+  const videoEl = scanEl('camera-stream');
+  if (videoEl) videoEl.classList.toggle('is-zoom-2x', z === 2 && !cameraHardwareZoom);
+}
+async function applyCameraZoom(track) {
+  const z = typeof cameraZoom === 'number' && cameraZoom === 2 ? 2 : 1;
+  cameraHardwareZoom = false;
+  if (track && typeof track.getCapabilities === 'function' && typeof track.applyConstraints === 'function') {
+    try {
+      const caps = track.getCapabilities();
+      if (caps && caps.zoom && Number(caps.zoom.max) >= 2 && Number(caps.zoom.min || 1) <= 2) {
+        const target = z === 2 ? 2 : Math.max(Number(caps.zoom.min || 1), 1);
+        await track.applyConstraints({ advanced: [{ zoom: target }] });
+        cameraHardwareZoom = true;
+      }
+    } catch (_) { cameraHardwareZoom = false; }
+  }
+  updateCameraZoomUi();
+}
+async function toggleCameraZoom() {
+  const next = typeof cameraZoom === 'number' && cameraZoom === 2 ? 1 : 2;
+  if (typeof cameraZoom !== 'undefined') cameraZoom = next;
+  const track = liveMediaStream?.getVideoTracks?.()[0] || null;
+  await applyCameraZoom(track);
+}
 async function startLiveCameraStream() {
   const videoEl = scanEl('camera-stream');
   if (!videoEl || selectedImageBase64) return;
@@ -206,6 +238,8 @@ async function startLiveCameraStream() {
     if (generation !== cameraRequestGeneration || !videoEl.isConnected) { stream.getTracks().forEach(track => track.stop()); return; }
     liveMediaStream = stream;
     videoEl.srcObject = stream;
+    await applyCameraZoom(stream.getVideoTracks()[0]);
+    if (generation !== cameraRequestGeneration || !videoEl.isConnected) return;
     videoEl.onplaying = () => { if (generation === cameraRequestGeneration && videoEl.readyState >= 2) { videoEl.classList.remove('hidden'); scanEl('camera-loading')?.classList.add('hidden'); } };
     // A track ends when another app takes the camera or the phone sleeps: bring it back (at most 3 times a minute).
     stream.getVideoTracks().forEach(track => track.addEventListener('ended', () => {
@@ -249,10 +283,14 @@ document.addEventListener('visibilitychange', () => {
 /* ------------------------------------------------------------------ capture: crop + compress */
 /* The viewfinder is a 3:4 frame showing the camera feed `object-cover`, so the farmer composes ONE crop of the sensor.
    Crop to that frame, then shrink to what the server uses (1600 px stored, 1024 px shown to the model). */
-function renderCapture(source, sourceW, sourceH) {
+function renderCapture(source, sourceW, sourceH, zoomFactor = 1) {
   let cropW = sourceW;
   let cropH = Math.round(sourceW / CAPTURE_ASPECT);
   if (cropH > sourceH) { cropH = sourceH; cropW = Math.round(sourceH * CAPTURE_ASPECT); }
+  if (Number.isFinite(zoomFactor) && zoomFactor > 1) {
+    cropW = Math.max(1, Math.round(cropW / zoomFactor));
+    cropH = Math.max(1, Math.round(cropH / zoomFactor));
+  }
   const cropX = Math.round((sourceW - cropW) / 2);
   const cropY = Math.round((sourceH - cropH) / 2);
   const scale = Math.min(1, CAPTURE_MAX_PX / Math.max(cropW, cropH));
@@ -308,7 +346,8 @@ function showReviewPhoto() {
   if (imgEl) { imgEl.src = selectedImageBase64; imgEl.classList.remove('hidden'); }
   scanEl('camera-loading')?.classList.add('hidden');
   const badge = scanEl('stamp-source-badge');
-  if (badge) badge.innerText = photoMode === 'live' ? 'Foto Baru' : 'Foto Galeri';
+  const hasPoint = selectedPhotoMetadata && validCoordinates(selectedPhotoMetadata.lat, selectedPhotoMetadata.lng);
+  if (badge) badge.innerText = (photoMode === 'live' || hasPoint) ? 'Foto Baru' : 'Foto Galeri';
 }
 async function handleImageSelected(event) {
   const input = event.target;
@@ -368,14 +407,33 @@ async function handleImageSelected(event) {
   selectedImageBase64 = inferenceImage;
   capturePhotoSnapshot = inferenceImage;
 
-  // File modification time is not capture provenance; a missing EXIF time stays unknown until the farmer sets it.
   if (detectedDate) {
     selectedPhotoDateString = formatPhotoDate(detectedDate, 'EXIF; zona waktu tidak diketahui');
     selectedPhotoTimestampMs = detectedDate.getTime();
-  } else { selectedPhotoDateString = null; selectedPhotoTimestampMs = null; }
-  selectedPhotoMetadata = Object.freeze({ source: 'gallery-exif', importedAtMs:Date.now(), captureTimeMs: detectedDate ? detectedDate.getTime() : null,
+  } else {
+    const captureNow = new Date();
+    selectedPhotoDateString = formatPhotoDate(captureNow, 'waktu unggah perangkat');
+    selectedPhotoTimestampMs = captureNow.getTime();
+  }
+  selectedPhotoMetadata = Object.freeze({ source: detectedGps ? 'gallery-exif' : 'gallery-unknown', importedAtMs: Date.now(), captureTimeMs: selectedPhotoTimestampMs,
     photoDate: selectedPhotoDateString, lat: detectedGps ? detectedGps.lat : null, lng: detectedGps ? detectedGps.lng : null,
     elevation: detectedGps ? detectedGps.altitude : null, accuracy: detectedGps ? detectedGps.accuracy : null, locationName: null, weather: null });
+  if (detectedGps && navigator.onLine !== false) {
+    api('/api/telemetry?lat=' + encodeURIComponent(detectedGps.lat) + '&lng=' + encodeURIComponent(detectedGps.lng))
+      .then((telem) => {
+        if (!selectionCurrent() || !telem) return;
+        const rawElev = Array.isArray(telem.elevation) ? telem.elevation[0] : telem.elevation;
+        const elev = Number.isFinite(Number(rawElev)) ? Math.round(Number(rawElev)) : (selectedPhotoMetadata?.elevation ?? null);
+        selectedPhotoMetadata = Object.freeze({
+          ...selectedPhotoMetadata,
+          locationName: telem.locationName || selectedPhotoMetadata.locationName,
+          elevation: elev,
+          weather: telem.weather || selectedPhotoMetadata.weather,
+        });
+        updateScanLocationChip();
+      })
+      .catch(() => undefined);
+  }
   showReviewPhoto();
   setScanState('review');
   renderFastQuota();
@@ -423,12 +481,17 @@ function confirmCustomDateTime() {
 function takeSnapshotForReview() {
   const videoEl = scanEl('camera-stream');
   if (videoEl && !videoEl.classList.contains('hidden') && videoEl.videoWidth) {
+    const digitalZoom = (typeof cameraZoom === 'number' && cameraZoom === 2 && !cameraHardwareZoom) ? 2 : 1;
+    const origW = Math.max(1, Math.round(videoEl.videoWidth / digitalZoom));
+    const origH = Math.max(1, Math.round(videoEl.videoHeight / digitalZoom));
+    const origX = Math.round((videoEl.videoWidth - origW) / 2);
+    const origY = Math.round((videoEl.videoHeight - origH) / 2);
     const originalCanvas = document.createElement('canvas');
-    originalCanvas.width = videoEl.videoWidth;
-    originalCanvas.height = videoEl.videoHeight;
-    originalCanvas.getContext('2d').drawImage(videoEl, 0, 0);
+    originalCanvas.width = origW;
+    originalCanvas.height = origH;
+    originalCanvas.getContext('2d').drawImage(videoEl, origX, origY, origW, origH, 0, 0, origW, origH);
     fullCapturePhoto = originalCanvas.toDataURL('image/jpeg', 0.94);
-    selectedImageBase64 = renderCapture(videoEl, videoEl.videoWidth, videoEl.videoHeight);
+    selectedImageBase64 = renderCapture(videoEl, videoEl.videoWidth, videoEl.videoHeight, digitalZoom);
     capturePhotoSnapshot = selectedImageBase64;
     photoMode = 'live';
     try { if (navigator.vibrate) navigator.vibrate(20); } catch (_) { /* no haptics on this device */ }
@@ -464,6 +527,9 @@ function resetToLiveCameraCore() {
   // The previous capture (if still saving/sending) finishes on its own: its `stale()` guard keeps it away from this
   // screen, and the draft is safe on the phone. It must not keep the next photo from being sent.
   scanBusy = false;
+  if (typeof cameraZoom !== 'undefined') cameraZoom = 1;
+  cameraHardwareZoom = false;
+  updateCameraZoomUi();
   foregroundJobId = null;
   selectedImageBase64 = null;
   stampedImageBlobUrl = null;

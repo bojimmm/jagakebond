@@ -25,7 +25,7 @@
   <script defer src="error-report.js?v=1"></script>
   <script defer src="actions.js?v=1"></script>
   <link rel="stylesheet" href="design-tokens.css?v=2">
-  <link rel="stylesheet" href="vendor/tailwind.generated.css?v=26">
+  <link rel="stylesheet" href="vendor/tailwind.generated.css?v=27">
   <link rel="stylesheet" href="ui-kit.css?v=5">
   <link rel="stylesheet" href="vendor/leaflet/leaflet-1.9.4.css">
   <script defer src="vendor/lucide-0.468.0.umd.min.js"></script>
@@ -37,7 +37,7 @@
   <!-- Map and photo metadata libraries load when their feature is first opened. -->
 
   <!-- App styles -->
-  <link rel="stylesheet" href="styles.css?v=48">
+  <link rel="stylesheet" href="styles.css?v=50">
   <link rel="stylesheet" href="landing.css?v=11">
   <link rel="stylesheet" href="assessment.css?v=13">
   <link rel="stylesheet" href="tour.css?v=3">
@@ -123,7 +123,7 @@
             <div class="landing-art-backdrop" aria-hidden="true"></div>
             <figure class="landing-app-shot landing-app-map">
               <picture>
-                <source media="(min-width: 641px)" srcset="img/landing-app-map.png?v=3">
+                <source media="(min-width: 641px)" srcset="img/landing-app-map.png?v=4">
                 <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Peta Bedeng Cabai dengan empat tanaman, satu Kritis, satu Waspada, dan dua Sehat." width="416" height="264" decoding="async">
               </picture>
               <figcaption>Contoh Peta Bedeng Cabai dengan empat tanaman.</figcaption>
@@ -133,11 +133,11 @@
               <img src="img/login-hero.svg" alt="" width="480" height="480" decoding="async">
             </picture>
             <figure class="landing-app-shot landing-app-home">
-              <picture><source media="(min-width: 641px)" srcset="img/landing-app-home.png?v=4"><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Beranda JagaKebond dengan ringkasan kebun." width="780" height="552" decoding="async"></picture>
+              <picture><source media="(min-width: 641px)" srcset="img/landing-app-home.png?v=5"><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Beranda JagaKebond dengan ringkasan kebun." width="780" height="552" decoding="async"></picture>
               <figcaption>Contoh Beranda JagaKebond dengan ringkasan kebun.</figcaption>
             </figure>
             <figure class="landing-app-shot landing-app-history">
-              <picture><source media="(min-width: 641px)" srcset="img/landing-app-history.png?v=7"><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Riwayat Cabai dengan daun rusak, status Kritis, dan tiga foto." width="716" height="212" decoding="async"></picture>
+              <picture><source media="(min-width: 641px)" srcset="img/landing-app-history.png?v=8"><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Riwayat Cabai dengan daun rusak, status Kritis, dan tiga foto." width="716" height="212" decoding="async"></picture>
               <figcaption>Contoh Riwayat Cabai dengan status Kritis dan tiga foto.</figcaption>
             </figure>
           </div>
@@ -475,13 +475,13 @@
       <div class="header-brand flex items-center gap-2.5 min-w-0">
         <img src="/icons/logo-256.png?v=3" alt="" class="header-mobile-logo w-8 h-8 object-contain shrink-0">
         <div class="top-title-group min-w-0">
-          <h1 id="top-page-title" class="top-page-title truncate">Beranda Kebun</h1>
-          <p id="top-page-sub" class="top-page-sub truncate">Menunggu lokasi &amp; cuaca kebun…</p>
+          <h1 id="top-page-title" class="top-page-title truncate">Beranda</h1>
         </div>
       </div>
       <span id="desktop-page-title" class="sr-only">Beranda</span>
       <button type="button" data-act="openAccountModal" class="btn btn-secondary btn-sm account-btn" title="Akun saya" aria-label="Akun saya">
-        <i data-lucide="user-round"></i>
+        <span id="account-btn-avatar" class="account-btn-avatar hidden"><img alt=""></span>
+        <i id="account-btn-icon" data-lucide="user-round"></i>
         <span id="account-chip-label" class="btn-label">Masuk</span>
       </button>
     </header>
@@ -509,7 +509,7 @@
                     <span id="home-zone-label">Zona Kebun</span>
                     <span aria-hidden="true"> · </span>
                     <span id="home-coord-status">Menunggu GPS</span>
-                    <span id="home-accuracy-tag" class="accuracy-dot gps-sat-badge is-inline" data-accuracy="unknown" role="img" aria-label="GPS belum tersedia" title="GPS belum tersedia"></span>
+                    <span id="home-accuracy-tag" class="accuracy-dot" data-accuracy="unknown" role="img" aria-label="GPS belum tersedia" title="GPS belum tersedia"></span>
                   </p>
                 </div>
                 <button type="button" data-act="requestLiveLocation" data-args="[true]" class="btn btn-secondary btn-icon" title="Perbarui lokasi" aria-label="Perbarui lokasi">
@@ -541,7 +541,7 @@
             <!-- Pertama kali pakai: friendly guidance instead of empty tiles. -->
             <section id="home-empty" class="card home-empty hidden" aria-label="Mulai">
               <span class="home-empty-icon" aria-hidden="true"><i data-lucide="leaf"></i></span>
-              <h2 class="t-title">Mulai dengan memotret satu tanaman</h2>
+              <h2 class="t-title">Mulai dengan Memotret Satu Tanaman</h2>
               <p class="t-body t-muted">Foto satu daun atau buah. Hasil dan saran muncul di sini dan di Riwayat.</p>
               <button type="button" data-act="openCamera" class="btn btn-primary btn-lg btn-block">
                 <i data-lucide="camera"></i><span>Ambil foto pertama</span>
@@ -568,7 +568,7 @@
             <section id="home-attention" class="card home-section-card" aria-labelledby="home-attention-title">
               <div class="home-section-head">
                 <h2 id="home-attention-title" class="section-title">Perlu Perhatian Segera</h2>
-                <button type="button" id="home-attention-more" data-act="openLogWithFilter" data-args="[&quot;all&quot;]" class="btn btn-soft btn-sm hidden">Lihat semua</button>
+                <button type="button" id="home-attention-more" data-act="openLogWithFilter" data-args="[&quot;all&quot;]" class="btn btn-soft btn-sm hidden">Lihat Semua</button>
               </div>
               <div id="home-attention-list" class="flex flex-col gap-3">
                 <div class="skeleton" style="height:76px"></div>
@@ -582,7 +582,7 @@
             <section id="home-recent" class="card home-section-card" aria-labelledby="home-recent-title">
               <div class="home-section-head">
                 <h2 id="home-recent-title" class="section-title">Foto Terbaru Kebun</h2>
-                <button type="button" data-act="navigateToMenu" data-args="[&quot;log&quot;]" class="btn btn-soft btn-sm">Lihat semua</button>
+                <button type="button" data-act="navigateToMenu" data-args="[&quot;log&quot;]" class="btn btn-soft btn-sm">Lihat Semua</button>
               </div>
               <div id="home-history-carousel" class="recent-grid">
                 <!-- Injected via JavaScript -->
@@ -594,7 +594,7 @@
               <div class="home-section-head">
                 <h2 id="home-daily-title" class="section-title">Catatan Harian</h2>
                 <button type="button" data-act="openDailyModal" class="btn btn-soft btn-sm">
-                  <i data-lucide="plus"></i><span>+ Tulis Catatan</span>
+                  <i data-lucide="plus"></i><span>Tulis Catatan</span>
                 </button>
               </div>
               <div id="home-daily-card">
@@ -622,16 +622,14 @@
         <div class="scan-body">
           <div id="scan-stage">
             <div id="scan-frame" class="relative bg-black overflow-hidden aspect-[3/4]">
-              <button data-act="toggleCameraFacing" id="btn-flip-cam" aria-label="Putar kamera depan atau belakang" class="btn btn-glass btn-sm scan-flip">
-                <i data-lucide="switch-camera"></i>
-                <span class="btn-label">Putar</span>
-              </button>
+              <div class="scan-cam-controls">
+                <button type="button" data-act="toggleCameraZoom" id="btn-cam-zoom" aria-label="Perbesar kamera 2x" aria-pressed="false" class="scan-cam-btn" title="Zoom 2x">1×</button>
+                <button type="button" data-act="toggleCameraFacing" id="btn-flip-cam" aria-label="Putar kamera depan atau belakang" class="scan-cam-btn" title="Putar kamera">
+                  <i data-lucide="switch-camera" aria-hidden="true"></i>
+                </button>
+              </div>
 
               <div class="scan-reticle-overlay" aria-hidden="true">
-                <span class="reticle-corner tl"></span>
-                <span class="reticle-corner tr"></span>
-                <span class="reticle-corner bl"></span>
-                <span class="reticle-corner br"></span>
                 <div class="reticle-coach">Arahkan daun/buah ke dalam bingkai · Jarak 15–25 cm</div>
               </div>
 
@@ -645,7 +643,7 @@
 
           <div class="scan-info" id="scan-info">
             <div id="scan-status-head" class="scan-status-head hidden">
-              <h3 id="photo-review-label" class="t-title">Foto siap dianalisis</h3>
+              <h3 id="photo-review-label" class="t-title">Foto Siap Dianalisis</h3>
               <p id="scan-status-text" class="t-meta"></p>
               <p id="scan-photo-date" class="t-meta hidden"></p>
             </div>
@@ -741,7 +739,7 @@
             <div class="notice notice-ok scan-sent-card">
               <i data-lucide="check-circle-2" aria-hidden="true"></i>
               <div class="scan-notice-body">
-                <h3 id="sent-title" class="t-title">Foto terkirim</h3>
+                <h3 id="sent-title" class="t-title">Foto Terkirim</h3>
                 <p id="sent-text" class="t-body">Hasil biasanya muncul dalam beberapa menit.</p>
                 <p id="sent-status" class="t-meta" aria-live="polite"></p>
               </div>
@@ -763,7 +761,7 @@
             <div class="notice notice-error scan-failed-card">
               <i data-lucide="alert-triangle" aria-hidden="true"></i>
               <div class="scan-notice-body">
-                <h3 id="analysis-failed-title" class="t-title">Analisis gagal</h3>
+                <h3 id="analysis-failed-title" class="t-title">Analisis Gagal</h3>
                 <p id="analysis-failed-text" class="t-body">—</p>
               </div>
             </div>
@@ -791,7 +789,7 @@
               </div>
               <h3 id="res-crop-condition" class="t-title">—</h3>
               <div class="scan-result-section">
-                <p class="section-title">Yang perlu dilakukan</p>
+                <p class="section-title">Yang Perlu Dilakukan</p>
                 <p id="res-geo-brief" class="t-body">—</p>
               </div>
               <div id="res-assessment"></div>
@@ -809,7 +807,7 @@
             <div id="res-confidence-warning" class="notice notice-warn hidden">
               <i data-lucide="camera" aria-hidden="true"></i>
               <div class="scan-notice-body">
-                <p id="res-confidence-title" class="t-title">AI kurang yakin</p>
+                <p id="res-confidence-title" class="t-title">AI Kurang Yakin</p>
                 <p id="res-confidence-advice" class="t-body">—</p>
                 <button type="button" data-act="retakeForBetterPhoto" class="btn btn-secondary btn-sm"><i data-lucide="refresh-cw"></i><span class="btn-label">Foto ulang</span></button>
               </div>
@@ -1063,7 +1061,7 @@
       <div class="modal-sheet animate-sheet-up">
         <div class="modal-head">
           <div class="min-w-0">
-            <h3 class="t-title">Simpan ke tanaman</h3>
+            <h3 class="t-title">Simpan ke Tanaman</h3>
             <p class="t-meta">Ada tanaman sejenis di dekat foto ini. Pilih yang sama, atau buat tanaman baru.</p>
           </div>
           <button type="button" data-act="closeCropAssignModal" class="btn btn-quiet btn-icon" aria-label="Tutup">
@@ -1081,7 +1079,7 @@
       <div class="modal-sheet animate-sheet-up">
         <div class="modal-head">
           <div class="min-w-0">
-            <h3 class="t-title">Tulis catatan harian</h3>
+            <h3 class="t-title">Tulis Catatan Harian</h3>
             <p id="daily-source-date" class="t-meta">Untuk hari ini</p>
           </div>
           <button type="button" data-act="closeDailyModal" class="btn btn-quiet btn-icon" aria-label="Tutup">
@@ -1132,7 +1130,7 @@
       <div class="modal-sheet animate-sheet-up">
         <div class="modal-head">
           <div class="min-w-0">
-            <h3 class="t-title">Ubah status</h3>
+            <h3 class="t-title">Ubah Status</h3>
             <p class="t-meta" id="status-modal-subtitle">Pilih status sesuai hasil pengecekan di kebun</p>
           </div>
           <button type="button" data-act="closeStatusModal" class="btn btn-quiet btn-icon" aria-label="Tutup">
@@ -1153,7 +1151,7 @@
       <div class="modal-sheet animate-sheet-up">
         <div class="modal-head">
           <div class="min-w-0">
-            <h3 class="t-title">Ubah data tanaman</h3>
+            <h3 class="t-title">Ubah Data Tanaman</h3>
             <p class="t-meta">Perbarui jenis, tanggal, status, atau dugaan hama dan penyakit pada foto ini.</p>
           </div>
           <button type="button" data-act="closeRecordEdit" class="btn btn-quiet btn-icon" aria-label="Tutup">
@@ -1210,7 +1208,7 @@
       <div class="modal-sheet animate-sheet-up plot-summary-sheet">
         <div class="modal-head">
           <div class="min-w-0">
-            <p class="t-meta">Ringkasan petak</p>
+            <p class="t-meta">Ringkasan Petak</p>
             <h3 class="t-title truncate" id="plot-summary-title">Petak</h3>
           </div>
           <button type="button" data-act="JagaPlotSummary.close" class="btn btn-quiet btn-icon" aria-label="Tutup ringkasan">
@@ -1230,7 +1228,7 @@
       <div class="modal-sheet animate-sheet-up">
         <div class="modal-head">
           <div class="min-w-0">
-            <h3 class="t-title">Kapan foto ini diambil?</h3>
+            <h3 class="t-title">Kapan Foto Ini Diambil?</h3>
             <p class="t-meta">Foto ini tidak punya tanggal. Pilih kapan foto diambil.</p>
           </div>
           <button type="button" data-act="closeDatePickerModal" class="btn btn-quiet btn-icon" aria-label="Tutup">
@@ -1257,14 +1255,22 @@
     <div id="modal-account" class="hidden absolute inset-0 z-50 bg-slate-950/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div class="modal-sheet animate-sheet-up">
         <div class="modal-head">
-          <div class="min-w-0">
-            <h3 class="t-title truncate" id="account-name">—</h3>
-            <p class="t-meta truncate" id="account-email">—</p>
+          <div class="account-modal-profile">
+            <span id="account-modal-avatar" class="account-avatar-lg">JK</span>
+            <div class="min-w-0">
+              <h3 class="t-title truncate" id="account-name">—</h3>
+              <p class="t-meta truncate" id="account-email">—</p>
+            </div>
           </div>
           <button type="button" data-act="closeAccountModal" class="btn btn-quiet btn-icon" aria-label="Tutup">
             <i data-lucide="x"></i>
           </button>
         </div>
+
+        <div id="account-avatar-controls" class="account-avatar-controls hidden">
+          <button type="button" id="account-avatar-toggle" data-act="toggleAccountAvatar" class="btn btn-secondary btn-sm"></button>
+        </div>
+        <p id="account-avatar-note" class="t-meta hidden"></p>
 
         <div class="info-box">
           <div class="info-row"><span>Peran</span><span id="account-role">—</span></div>
@@ -1337,7 +1343,7 @@
       <div class="modal-sheet animate-sheet-up">
         <div class="modal-head">
           <div class="min-w-0">
-            <h3 class="t-title" id="farm-modal-title">Simpan petak</h3>
+            <h3 class="t-title" id="farm-modal-title">Simpan Petak</h3>
             <p class="t-meta" id="farm-modal-area">Luas: —</p>
           </div>
           <button type="button" data-act="cancelFarmDraw" class="btn btn-quiet btn-icon" aria-label="Tutup">
@@ -1374,11 +1380,11 @@
 
     <section id="farm-crops-sheet" class="farm-crops-sheet hidden" aria-label="Tanaman dalam petak">
       <header><div class="farm-crops-heading">
-          <h3 id="farm-crops-title" class="truncate">Tanaman dalam petak</h3>
+          <h3 id="farm-crops-title" class="truncate">Tanaman dalam Petak</h3>
           <p id="farm-crops-count" class="t-meta" hidden></p>
         </div>
         <div class="farm-crops-actions">
-          <button type="button" id="farm-crops-edit" class="btn btn-secondary btn-sm" data-act="editSelectedFarm" aria-label="Ubah petak"><i data-lucide="pencil"></i><span>Ubah</span></button>
+          <button type="button" id="farm-crops-edit" class="btn btn-secondary btn-icon btn-sm" data-act="editSelectedFarm" aria-label="Ubah petak" title="Ubah petak"><i data-lucide="pencil" aria-hidden="true"></i></button>
           <button type="button" class="btn btn-quiet btn-icon" data-act="closeFarmCrops" aria-label="Tutup daftar tanaman" title="Tutup"><i data-lucide="x"></i></button>
         </div>
       </header>
@@ -1390,7 +1396,7 @@
     <div id="farm-sheet" hidden class="map-sheet farm-list-sheet transform translate-y-[150%] transition-transform duration-300">
       <div class="sheet-head farm-sheet-head">
         <div class="min-w-0">
-          <h3 class="t-title">Petak saya</h3>
+          <h3 class="t-title">Petak Saya</h3>
           <p class="t-meta" id="farm-sheet-subtitle">—</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -1414,7 +1420,7 @@
         <header class="assessment-dialog-head">
           <div class="reanalysis-head-copy">
             <p id="reanalysis-crop" class="reanalysis-kicker">Foto tanaman</p>
-            <h3 id="reanalysis-title">Analisis ulang</h3>
+            <h3 id="reanalysis-title">Analisis Ulang</h3>
           </div>
           <button id="reanalysis-close" type="button" class="btn btn-quiet btn-icon btn-sm" aria-label="Sembunyikan kemajuan analisis ulang">
             <i data-lucide="x" aria-hidden="true"></i>
@@ -1455,7 +1461,7 @@
     <div id="modal-confirm" class="hidden absolute inset-0 z-[60] bg-slate-950/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div class="modal-sheet animate-sheet-up">
         <div class="min-w-0">
-          <h3 id="confirm-title" class="t-title">Hapus catatan ini?</h3>
+          <h3 id="confirm-title" class="t-title">Hapus Catatan Ini?</h3>
           <p id="confirm-message" class="t-body t-muted confirm-message">Tindakan ini tidak bisa dibatalkan.</p>
         </div>
         <div class="dialog-actions">
@@ -1497,21 +1503,21 @@
   <script defer src="offline-sync.js?v=19"></script>
   <script defer src="farm-membership.js?v=2"></script>
   <script defer src="workflow-state.js?v=1"></script>
-  <script defer src="daily-log.js?v=7"></script>
+  <script defer src="daily-log.js?v=8"></script>
   <script defer src="local-media.js?v=5"></script>
   <script defer src="vendor/gsap.min.js?v=1"></script>
   <script defer src="vendor/ScrollTrigger.min.js?v=1"></script>
   <script defer src="vendor/three.min.js?v=1"></script>
-  <script defer src="app.js?v=54"></script>
+  <script defer src="app.js?v=55"></script>
   <!-- WEB 0.2.2.0: session/API client, scan flow and app-shell extras. Since 0.2.4.16 workflow-ui.js extends app.js through JagaHooks (actions.js) instead of re-assigning its functions. -->
-  <script defer src="session.js?v=2"></script>
+  <script defer src="session.js?v=3"></script>
   <script defer src="google-signin.js?v=1"></script>
-  <script defer src="scan-flow.js?v=10"></script>
+  <script defer src="scan-flow.js?v=11"></script>
   <script defer src="shell.js?v=4"></script>
-  <script defer src="workflow-ui.js?v=16"></script>
+  <script defer src="workflow-ui.js?v=17"></script>
   <script defer src="problem-registry.js?v=1"></script>
   <script defer src="assessment-ui.js?v=16"></script>
-  <script defer src="plot-summary.js?v=4"></script>
+  <script defer src="plot-summary.js?v=5"></script>
   <script defer src="landing.js?v=3"></script>
   <script defer src="tour.js?v=7"></script>
 </body>

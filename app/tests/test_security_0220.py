@@ -190,7 +190,8 @@ CONTRACT_ADMIN_CSP = (
 CONTRACT_APP_CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org "
-    "https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' data: blob:; "
+    "https://server.arcgisonline.com https://*.googleusercontent.com https://*.ggpht.com; "
+    "font-src 'self' data:; connect-src 'self' data: blob:; "
     "media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; "
     "base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 BASELINE = {"x-content-type-options": "nosniff", "x-frame-options": "DENY",

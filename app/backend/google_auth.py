@@ -367,11 +367,39 @@ def linked_account_ids(account_ids: list[str]) -> set[str]:
     return {row["account_id"] for row in rows}
 
 
+def _clean_picture_url(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    raw = value.strip()
+    if not raw or len(raw) > 512 or any(ch.isspace() or ord(ch) < 32 for ch in raw):
+        return None
+    try:
+        from urllib.parse import urlsplit
+        parsed = urlsplit(raw)
+    except ValueError:
+        return None
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or not host:
+        return None
+    if not (host == "googleusercontent.com" or host.endswith(".googleusercontent.com")
+            or host == "ggpht.com" or host.endswith(".ggpht.com")):
+        return None
+    return raw
+
+
 def _sign_in(response: Response, request: Request, account: dict[str, Any], sub: str, ip: str,
-             linked_now: bool) -> dict[str, Any]:
+             linked_now: bool, picture: str | None = None) -> dict[str, Any]:
     now = db.now_ms()
+    avatar_update: str | None = None
+    if picture:
+        existing_avatar = str(account.get("avatar_url") or "")
+        avatar_update = ("hidden:" + picture) if existing_avatar.startswith("hidden:") else picture
     with db.transaction() as tx:
-        tx.execute("UPDATE accounts SET last_login_ms = ? WHERE id = ?", (now, account["id"]))
+        if avatar_update is not None:
+            tx.execute("UPDATE accounts SET last_login_ms = ?, avatar_url = ? WHERE id = ?",
+                       (now, avatar_update, account["id"]))
+        else:
+            tx.execute("UPDATE accounts SET last_login_ms = ? WHERE id = ?", (now, account["id"]))
         tx.execute("UPDATE google_identities SET last_login_ms = ? WHERE sub = ?", (now, sub))
     security.session_purge_expired()
     ttl_days = auth.session_ttl_days(account["role"])
@@ -512,7 +540,7 @@ def google_sign_in(response: Response, request: Request, payload: dict[str, Any]
                                                   "google_link_conflict")
                 linked_now = True
     if account:
-        return _sign_in(response, request, account, sub, ip, linked_now)
+        return _sign_in(response, request, account, sub, ip, linked_now, _clean_picture_url(claims.get("picture")))
 
     _request_registration(sub, email, name, ip)
     return JSONResponse(status_code=202, content={"ok": False, "code": "registration_pending",

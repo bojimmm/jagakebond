@@ -595,12 +595,12 @@ Aturan menjawab:
 - Jangan mengarang koordinat GPS, elevasi, atau data cuaca yang tidak ada pada konteks lahan.
 - Jika foto kurang jelas atau informasi tidak cukup, set confidence rendah dan needs_review=true.
 - "symptoms_id" berisi gejala yang terlihat pada foto; "immediate_action_id" berisi tindakan yang disarankan.
-- "crop" WAJIB berisi NAMA BAKU tanaman, bukan nama daerah yang dipakai petani. Tulis nama baku
-  Indonesia, lalu nama umum Inggris dalam tanda kurung bila berbeda.
-  Contoh: petani menulis "cengek" -> "Cabai Rawit (Bird's Eye Chilli)"; "cabe" -> "Cabai (Chili)";
-  "ketela" -> "Singkong (Cassava)".
-- Untuk Terminalia catappa, selalu tulis "Ketapang (Tropical Almond)"; jangan berganti
-  menjadi Sea Almond atau Indian Almond untuk spesies yang sama.
+- "crop" WAJIB berisi NAMA BAKU tanaman dalam bahasa Indonesia saja, bukan nama daerah dan tanpa
+  terjemahan Inggris di dalam tanda kurung.
+  Contoh: petani menulis "cengek" -> "Cabai Rawit"; "cabe" -> "Cabai";
+  "ketela" -> "Singkong"; "tomat" -> "Tomat".
+- Untuk Terminalia catappa, selalu tulis "Ketapang"; jangan menulis Sea Almond, Indian Almond,
+  atau Tropical Almond untuk spesies yang sama.
 - Kalau petani menyebut nama tanaman pada konteks lahan, jadikan itu petunjuk saja. Bila foto
   tidak mendukung, ikuti foto dan jelaskan singkat di symptoms_id. Bila petani tidak menyebut
   apa pun, tentukan sendiri jenis tanamannya dari foto dan tetap pakai nama baku.

@@ -33,6 +33,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from . import auth, db, google_auth, queue, security, settings_store, storage, textsafe, input_catalog
 from .analysis_contract import AnalysisContractError
+from .crop_names import canonical_crop_name
 
 
 class CodedHTTPException(HTTPException):
@@ -707,7 +708,7 @@ async def telemetry(lat: float, lng: float,
 # confidence gate sets them) so a client cannot clear a review flag. Severity is editable for manual records;
 # AI records use observedSeverity to keep the original model assessment intact.
 RECORD_PUT_ALLOWLIST = ("observedSeverity", "severity", "condition", "crop", "cropName", "immediate_action",
-                        "farmId", "cropId", "lat", "lng", "locationName")
+                        "farmId", "cropId", "lat", "lng", "elevation", "locationName")
 
 
 RECORDS_DEFAULT_PAGE = 200
@@ -942,6 +943,8 @@ def create_record(payload: dict[str, Any] = Body(...),
         "confidence": _fnum(authoritative.get("confidence") if authoritative is not None else payload.get("confidence")),
         "farm_id": source_context.get("farmId") if job else payload.get("farmId"),
         "extra_json": db.to_json({**({"assessment": authoritative.get("assessment"), "uploadedMs": job["created_ms"], "captureTimeSource": "exif" if "EXIF" in str(source_context.get("photoDate") or "") else "manual" if "manual" in str(source_context.get("photoDate") or "") else "device", "captureTimeKnown": isinstance(source_context.get("photoTimestampMs"), (int,float)) and not isinstance(source_context.get("photoTimestampMs"), bool) and math.isfinite(source_context["photoTimestampMs"]) and source_context["photoTimestampMs"] >= 0} if job else {}),
+            **({"weather": textsafe.one_line(source_context.get("weather") or payload.get("weather"), WEATHER_MAX)}
+               if textsafe.one_line(source_context.get("weather") or payload.get("weather"), WEATHER_MAX) else {}),
             **({"locationSource": source_context.get("locationSource")}
                if job and source_context.get("locationSource") in ("manual", "plot", "gps", "camera-capture", "gallery-exif", "gallery-unknown", "unknown") else {})}),
         "device_id": job["device_id"] if job else payload.get("deviceId"),
@@ -1011,6 +1014,13 @@ def _clean_record_update(payload: dict[str, Any], row: dict[str, Any]) -> dict[s
     for key in ("condition", "crop", "cropName", "locationName"):
         if key in out:
             out[key] = _plain_text(out[key], RECORD_NAME_MAX, key)
+    if "elevation" in out:
+        val = _fnum(out["elevation"])
+        if out["elevation"] is not None and (val is None or not -500 <= val <= 9000):
+            raise HTTPException(status_code=400, detail="Ketinggian tidak valid.")
+        out["elevation"] = val
+    if "weather" in out:
+        out["weather"] = _plain_text(out["weather"], 80, "weather")
     for key in ("cropId", "farmId"):
         if key in out:
             out[key] = _clean_id(out[key], key)
@@ -1064,9 +1074,14 @@ def update_record(record_id: str, payload: dict[str, Any] = Body(...),
     extra = dict(extra) if isinstance(extra, dict) else {}
     if "observedProblems" in payload:
         extra["observedProblems"] = payload["observedProblems"]
+    if "weather" in payload:
+        if payload["weather"]:
+            extra["weather"] = payload["weather"]
+        else:
+            extra.pop("weather", None)
     if location_keys & payload.keys() or "locationSource" in payload:
         extra["locationSource"] = payload.get("locationSource") or ("manual" if location_keys & payload.keys() else None)
-    if location_keys & payload.keys() or "locationSource" in payload or "observedProblems" in payload:
+    if location_keys & payload.keys() or "locationSource" in payload or "observedProblems" in payload or "weather" in payload:
         fields["extra_json"] = db.to_json(extra)
     if correction:
         fields.update(correction)
@@ -1098,7 +1113,8 @@ def update_record(record_id: str, payload: dict[str, Any] = Body(...),
                         siblings += 1
                 changes = []
                 if "crop" in correction:
-                    changes.append(f"jenis: {row['crop'] or '-'} → {correction['crop']}" + (f" (+{siblings} foto lain)" if siblings else ""))
+                    before_crop = canonical_crop_name(row['crop']) or '-'
+                    changes.append(f"jenis: {before_crop} → {correction['crop']}" + (f" (+{siblings} foto lain)" if siblings else ""))
                 if "date" in correction:
                     changes.append(f"tanggal: {row['date'] or '-'} → {correction['date']}")
                 settings_store.audit_tx(tx, "record.correct", record_id, "; ".join(changes),
@@ -1134,7 +1150,7 @@ def _record_correction(payload: dict[str, Any]) -> dict[str, Any]:
         name = _plain_text(payload.get("correctedCrop"), RECORD_NAME_MAX, "correctedCrop")
         if not name:
             raise HTTPException(status_code=400, detail="Jenis tanaman wajib diisi.")
-        out["crop"] = name
+        out["crop"] = canonical_crop_name(name)
     if "correctedTimestampMs" in payload:
         value = payload.get("correctedTimestampMs")
         if (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
@@ -1149,8 +1165,8 @@ def _corrected_extra(extra: dict[str, Any], row: dict[str, Any], correction: dic
     marked = [f for f in extra.get("corrected", []) if f in ("crop", "date")] if isinstance(extra.get("corrected"), list) else []
     if "crop" in correction:
         if row.get("source") == "ai" and "aiCrop" not in extra:
-            extra["aiCrop"] = row.get("crop")
-        back_to_ai = "aiCrop" in extra and correction["crop"] == extra["aiCrop"]
+            extra["aiCrop"] = canonical_crop_name(row.get("crop"))
+        back_to_ai = "aiCrop" in extra and canonical_crop_name(correction["crop"]) == canonical_crop_name(extra["aiCrop"])
         marked = [f for f in marked if f != "crop"] + ([] if back_to_ai else ["crop"])
     if "timestamp_ms" in correction:
         if "originalTimestampMs" not in extra:
