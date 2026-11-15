@@ -1,6 +1,6 @@
 /* Public static shell only. API responses, owned photos and map tiles are never cached.
    The shell cache name lives HERE and nowhere else: page code asks this worker to purge via postMessage. */
-const SHELL_CACHE = 'jk-v75';
+const SHELL_CACHE = 'jk-v76';
 const SHELL_ASSETS = [
   '/', '/index.html', '/manifest.webmanifest?v=3',
   '/privacy.html', '/terms.html', '/legal.css?v=1', '/landing.css?v=11', '/landing.js?v=3',
@@ -40,6 +40,8 @@ STATIC_PATHS.add('/img/jagakebond-explainer-poster.png');
 STATIC_PATHS.add('/img/jagakebond-explainer-opt-a.webm');
 STATIC_PATHS.add('/img/jagakebond-explainer-opt-a.mp4');
 STATIC_PATHS.add('/tutorial-3d.html');
+STATIC_PATHS.add('/tutorial-3d.js');
+STATIC_PATHS.add('/vendor/three-r170.min.js');
 STATIC_PATHS.add('/img/camera-target.webp');
 STATIC_PATHS.add('/img/crops/crop-cabai.webp');
 STATIC_PATHS.add('/img/crops/crop-kopi.webp');
