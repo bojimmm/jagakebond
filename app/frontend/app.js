@@ -1938,36 +1938,55 @@
 
     const MAP_PIN_PHOTO_ZOOM = 18;
     const MAP_PIN_STACK_LIMIT = 3;
-    const MAP_PIN_BODY = '<svg class="map-pin-body" viewBox="0 0 48 58" focusable="false">' +
+    const MAP_PIN_BODY_BACK = '<svg class="map-pin-body map-pin-back" viewBox="0 0 48 58" focusable="false">' +
+      '<path d="M24 1.5A22.5 22.5 0 0 1 46.5 24C46.5 35.7 37.1 43.3 26.5 54.8Q24 57.7 21.5 54.8C10.9 43.3 1.5 35.7 1.5 24A22.5 22.5 0 0 1 24 1.5Z"/></svg>';
+    const MAP_PIN_BODY_DEEP = '<svg class="map-pin-body map-pin-back is-deep" viewBox="0 0 48 58" focusable="false">' +
+      '<path d="M24 1.5A22.5 22.5 0 0 1 46.5 24C46.5 35.7 37.1 43.3 26.5 54.8Q24 57.7 21.5 54.8C10.9 43.3 1.5 35.7 1.5 24A22.5 22.5 0 0 1 24 1.5Z"/></svg>';
+    const MAP_PIN_BODY_FRONT = '<svg class="map-pin-body" viewBox="0 0 48 58" focusable="false">' +
       '<path d="M24 1.5A22.5 22.5 0 0 1 46.5 24C46.5 35.7 37.1 43.3 26.5 54.8Q24 57.7 21.5 54.8C10.9 43.3 1.5 35.7 1.5 24A22.5 22.5 0 0 1 24 1.5Z"/></svg>';
     const MAP_PIN_VISIBLE_LIMIT = 40;
     const MAP_PIN_REQUEST_LIMIT = 4;
     const MAP_PIN_CACHE_LIMIT = 96;
-    const MAP_PIN_MAX_BYTES = 16 * 1024;
+    const MAP_PIN_MAX_BYTES = 128 * 1024;
     const mapPinPhotoCache = new Map();
     const mapPinRequests = new Map();
     let visibleMapPhotoPins = new Map();
     const nearbyMapPhotos = new Map();
     let nearbyMapPhotoObserver = null;
 
-    function mapPinMetrics(zoom) {
-      const scale = zoom < MAP_PIN_PHOTO_ZOOM ? 0.74
-        : 1 + 0.10 * Math.min(4, zoom - MAP_PIN_PHOTO_ZOOM);
-      return { scale, width: Math.max(44, 2 * Math.ceil(26 * scale)), height: Math.ceil(71 * scale) };
+    function mapPinSeverityRank(severity) {
+      if (severity === 'Severe') return 0;
+      if (severity === 'Moderate') return 1;
+      return 2;
     }
 
-    function mapPinIcon(metrics, content, stackSize = 0, color = '') {
-      const layers = Math.max(1, Math.min(stackSize, MAP_PIN_STACK_LIMIT));
-      const silhouettes = MAP_PIN_BODY.repeat(layers);
-      const stackClass = stackSize ? ' map-pin-stack' : '';
+    function mapPinMetrics(zoom) {
+      const scale = zoom < MAP_PIN_PHOTO_ZOOM ? 0.86
+        : 1 + 0.08 * Math.min(4, zoom - MAP_PIN_PHOTO_ZOOM);
+      return { scale, width: Math.max(46, 2 * Math.ceil(26 * scale)), height: Math.ceil(71 * scale) };
+    }
+
+    function mapPinIcon(metrics, content, stackColors = [], color = '', stackSize = 0) {
+      let backLayers = '';
+      if (stackSize > 1) {
+        if (stackSize >= 3) backLayers += MAP_PIN_BODY_DEEP;
+        backLayers += MAP_PIN_BODY_BACK;
+      }
+      const stackClass = stackSize > 1 ? ' map-pin-stack' : '';
       const countClass = stackSize >= 100 ? ' map-pin-count-long' : '';
+      const countBadge = stackSize > 1 ? '<span class="map-pin-stack-badge" aria-hidden="true">' + stackSize + '</span>' : '';
+      const vars = [
+        '--pin-scale:' + metrics.scale,
+        color ? '--pin-status:' + color : '',
+        stackColors[0] ? '--pin-back-1:' + stackColors[0] : '',
+        stackColors[1] ? '--pin-back-2:' + stackColors[1] : '',
+      ].filter(Boolean).join(';');
       return L.divIcon({
         className: 'custom-farm-pin',
         iconSize: [metrics.width, metrics.height],
         iconAnchor: [metrics.width / 2, metrics.height],
         html: '<div aria-hidden="true" class="map-pin' + stackClass + countClass +
-          '" style="--pin-scale:' + metrics.scale + (color ? ';--pin-status:' + color : '') +
-          '">' + silhouettes + content + '</div>',
+          '" style="' + vars + '">' + backLayers + MAP_PIN_BODY_FRONT + content + countBadge + '</div>',
       });
     }
 
@@ -2050,27 +2069,44 @@
 
       const countKeys = new Set();
       for (const group of groups) {
-        const first = group[0].marker;
+        group.sort((a, b) =>
+          (a.marker.options.severityRank - b.marker.options.severityRank) ||
+          ((b.marker.options.recordTs || 0) - (a.marker.options.recordTs || 0))
+        );
+        const front = group[0].marker;
         if (group.length === 1) {
-          if (first.options.pinScale !== metrics.scale) {
-            first.setIcon(mapPinIcon(metrics, first.options.pinContent, 0, first.options.pinColor));
-            first.options.pinScale = metrics.scale;
+          if (front.options.pinScale !== metrics.scale) {
+            front.setIcon(mapPinIcon(metrics, front.options.pinContent, [], front.options.pinColor, 0));
+            front.options.pinScale = metrics.scale;
           }
-          displayedMarkers.add(first);
+          front.setZIndexOffset(front.options.pinZIndex || 0);
+          displayedMarkers.add(front);
           continue;
         }
-        const key = first.options.recordId;
+        const backColors = group.slice(1, 3).map(pin => pin.marker.options.pinColor);
+        const key = group.map(pin => pin.marker.options.recordId).sort().join('|');
         countKeys.add(key);
         const label = group.length + ' Tanaman Berdekatan';
-        const content = '<span class="map-pin-circle map-pin-count">' + group.length + '</span>';
+        const sig = [
+          metrics.scale, front.options.pinColor, front.options.thumbnailPath || '',
+          front.options.pinContent, backColors.join(','), group.length
+        ].join('|');
         let countMarker = mapPinCountMarkers.get(key);
         if (!countMarker || countMarker.options.title !== label) {
-          countMarker = mapPinMarker(first.getLatLng(), { title: label },
-            event => openNearbyMapPlants(event.target.options.plants));
+          countMarker = mapPinMarker(front.getLatLng(), {
+            title: label,
+            thumbnailPath: front.options.thumbnailPath,
+            recordId: front.options.recordId,
+          }, event => openNearbyMapPlants(event.target.options.plants));
           mapPinCountMarkers.set(key, countMarker);
         }
-        if (countMarker.options.pinScale !== metrics.scale) {
-          countMarker.setIcon(mapPinIcon(metrics, content, group.length));
+        countMarker.setLatLng(front.getLatLng());
+        countMarker.options.thumbnailPath = front.options.thumbnailPath;
+        countMarker.options.recordId = front.options.recordId;
+        countMarker.setZIndexOffset((front.options.pinZIndex || 0) + 50);
+        if (countMarker.options.iconSig !== sig) {
+          countMarker.setIcon(mapPinIcon(metrics, front.options.pinContent, backColors, front.options.pinColor, group.length));
+          countMarker.options.iconSig = sig;
           countMarker.options.pinScale = metrics.scale;
         }
         countMarker.options.plants = group.map(pin => pin.marker.options);
@@ -2091,7 +2127,7 @@
           next.set(photo, path);
           if (next.size >= MAP_PIN_VISIBLE_LIMIT) break;
         }
-        if (mapInstance?.getZoom() >= MAP_PIN_PHOTO_ZOOM && next.size < MAP_PIN_VISIBLE_LIMIT) {
+        if (mapInstance && next.size < MAP_PIN_VISIBLE_LIMIT) {
           const bounds = mapInstance.getBounds();
           for (const marker of mapMarkersLayer.getLayers()) {
             const path = marker.options.thumbnailPath;
@@ -2138,16 +2174,28 @@
     }
 
     async function fetchMapPinThumbnail(path, signal) {
-      if (window.JagaNative?.isNative()) {
+      if (path.startsWith('local:')) {
+        try {
+          const dataUrl = await JagaMedia?.dataUrl?.(path.slice(6));
+          if (!dataUrl || !/^data:image\//i.test(dataUrl)) return null;
+          const res = await fetch(dataUrl, { signal });
+          return res.ok ? await res.blob() : null;
+        } catch (_) { return null; }
+      }
+      if (/^data:image\//i.test(path)) {
+        const res = await fetch(path, { signal });
+        return res.ok ? await res.blob() : null;
+      }
+      if (window.JagaNative?.isNative() && path.startsWith('/api/')) {
         const result = await window.JagaNative.request({ path, method: 'GET' });
         if (result.status !== 200 || result.encoding !== 'base64' || typeof result.body !== 'string'
-          || !/^image\/jpeg(?:;|$)/i.test(result.headers?.['content-type'] || '')
+          || !/^image\/(?:jpeg|png|webp)(?:;|$)/i.test(result.headers?.['content-type'] || '')
           || result.body.length > 4 * Math.ceil(MAP_PIN_MAX_BYTES / 3)) return null;
         const bytes = Uint8Array.from(atob(result.body), character => character.charCodeAt(0));
         return new Blob([bytes], { type: 'image/jpeg' });
       }
       const response = await fetch(path, { signal, credentials: 'same-origin', cache: 'no-store' });
-      if (!response.ok || !/^image\/jpeg(?:;|$)/i.test(response.headers.get('content-type') || '')) return null;
+      if (!response.ok || !/^image\/(?:jpeg|png|webp)(?:;|$)/i.test(response.headers.get('content-type') || '')) return null;
       return response.blob();
     }
 
@@ -2223,6 +2271,10 @@
       mapPlantMarkers = [];
       const cropsSheet = document.getElementById('farm-crops-sheet');
       if (cropsSheet?.dataset.mode === 'nearby') closeFarmCrops();
+      placed.sort((a, b) =>
+        (mapPinSeverityRank(recSeverity(a.group.latest)) - mapPinSeverityRank(recSeverity(b.group.latest))) ||
+        ((recordMs(b.group.latest) || 0) - (recordMs(a.group.latest) || 0))
+      );
       placed.forEach(({ group, pos }) => {
         const sev = recSeverity(group.latest);
         if (mapSeverityFilter !== 'all' && sev !== mapSeverityFilter) return;
@@ -2230,13 +2282,23 @@
         const letter = escapeText(String(group.cropName || group.latest.crop || '?').charAt(0).toUpperCase());
         const color = sev === 'Moderate' ? '#f3bf31' : meta.pin;
         const content = '<span class="map-pin-circle" style="color:' + meta.pinInk + '">' + letter + '</span>';
-        const photo = group.records.find(record => /^\/api\/photos\/[A-Za-z0-9_-]{1,128}$/.test(record.imageUrl || ''));
+        const photo = group.records.find(record => {
+          const url = record.imageUrl || '';
+          return /^\/api\/photos\/[A-Za-z0-9_-]{1,128}$/.test(url) || /^(?:\/img\/|img\/|crops\/|data:image\/)/.test(url);
+        });
+        const thumbnailPath = photo
+          ? (/^\/api\/photos\//.test(photo.imageUrl) ? photo.imageUrl + '/thumbnail' : photo.imageUrl)
+          : (group.latest?.id ? 'local:' + group.latest.id : null);
+        const severityRank = mapPinSeverityRank(sev);
+        const pinZIndex = sev === 'Severe' ? 300 : (sev === 'Moderate' ? 150 : 0);
         const label = (group.cropName || group.latest.crop || '?') + ' — ' + meta.label;
         const marker = mapPinMarker([pos.lat, pos.lng], {
           title: label, alt: label, recordId: group.latest.id,
           pinContent: content, pinColor: color,
-          thumbnailPath: photo ? photo.imageUrl + '/thumbnail' : null,
+          severityRank, recordTs: recordMs(group.latest) || 0, pinZIndex,
+          thumbnailPath,
         }, () => openBottomSheet(group.latest.id));
+        marker.setZIndexOffset(pinZIndex);
         mapPlantMarkers.push(marker);
       });
       layoutMapPins();
@@ -3576,8 +3638,9 @@
     function openNearbyMapPlants(plants) {
       const sheet = document.getElementById('farm-crops-sheet');
       const list = document.getElementById('farm-crops-list');
+      const byId = new Map(farmRecords.map(record => [record.id, record]));
       const paths = new Map(plants.map(plant => [plant.recordId, plant.thumbnailPath]));
-      const records = farmRecords.filter(record => paths.has(record.id));
+      const records = plants.map(plant => byId.get(plant.recordId)).filter(Boolean);
       if (!records.length) return;
       closeBottomSheet();
       closeFarmPanel();

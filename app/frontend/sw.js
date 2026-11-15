@@ -1,10 +1,10 @@
 /* Public static shell only. API responses, owned photos and map tiles are never cached.
    The shell cache name lives HERE and nowhere else: page code asks this worker to purge via postMessage. */
-const SHELL_CACHE = 'jk-v74';
+const SHELL_CACHE = 'jk-v75';
 const SHELL_ASSETS = [
   '/', '/index.html', '/manifest.webmanifest?v=3',
   '/privacy.html', '/terms.html', '/legal.css?v=1', '/landing.css?v=11', '/landing.js?v=3',
-  '/polyfills.js?v=1', '/feature-loader.js?v=1', '/error-report.js?v=1', '/actions.js?v=1', '/app.js?v=53', '/styles.css?v=47', '/ui-kit.css?v=5', '/design-tokens.css?v=2', '/native-adapter.js?v=20',
+  '/polyfills.js?v=1', '/feature-loader.js?v=1', '/error-report.js?v=1', '/actions.js?v=1', '/app.js?v=54', '/styles.css?v=48', '/ui-kit.css?v=5', '/design-tokens.css?v=2', '/native-adapter.js?v=20',
   '/vendor/gsap.min.js?v=1', '/vendor/ScrollTrigger.min.js?v=1', '/vendor/three.min.js?v=1',
   '/offline-store.js?v=15', '/offline-sync.js?v=19', '/session.js?v=2', '/google-signin.js?v=1', '/scan-flow.js?v=10', '/shell.js?v=4',
   '/workflow-state.js?v=1', '/daily-log.js?v=7', '/workflow-ui.js?v=16', '/local-media.js?v=5',
@@ -39,6 +39,12 @@ STATIC_PATHS.add('/img/mobile-history.png');
 STATIC_PATHS.add('/img/jagakebond-explainer-poster.png');
 STATIC_PATHS.add('/img/jagakebond-explainer-opt-a.webm');
 STATIC_PATHS.add('/img/jagakebond-explainer-opt-a.mp4');
+STATIC_PATHS.add('/tutorial-3d.html');
+STATIC_PATHS.add('/img/camera-target.webp');
+STATIC_PATHS.add('/img/crops/crop-cabai.webp');
+STATIC_PATHS.add('/img/crops/crop-kopi.webp');
+STATIC_PATHS.add('/img/crops/crop-jagung.webp');
+STATIC_PATHS.add('/img/crops/crop-teh.webp');
 const NEVER_CACHE = ['/api/', '/uploads/'];
 const isNeverCachePath = pathname => NEVER_CACHE.some(prefix => pathname.startsWith(prefix));
 

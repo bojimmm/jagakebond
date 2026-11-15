@@ -37,7 +37,7 @@
   <!-- Map and photo metadata libraries load when their feature is first opened. -->
 
   <!-- App styles -->
-  <link rel="stylesheet" href="styles.css?v=47">
+  <link rel="stylesheet" href="styles.css?v=48">
   <link rel="stylesheet" href="landing.css?v=11">
   <link rel="stylesheet" href="assessment.css?v=13">
   <link rel="stylesheet" href="tour.css?v=3">
@@ -123,7 +123,7 @@
             <div class="landing-art-backdrop" aria-hidden="true"></div>
             <figure class="landing-app-shot landing-app-map">
               <picture>
-                <source media="(min-width: 641px)" srcset="img/landing-app-map.png?v=2">
+                <source media="(min-width: 641px)" srcset="img/landing-app-map.png?v=3">
                 <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Peta Bedeng Cabai dengan empat tanaman, satu Kritis, satu Waspada, dan dua Sehat." width="416" height="264" decoding="async">
               </picture>
               <figcaption>Contoh Peta Bedeng Cabai dengan empat tanaman.</figcaption>
@@ -133,11 +133,11 @@
               <img src="img/login-hero.svg" alt="" width="480" height="480" decoding="async">
             </picture>
             <figure class="landing-app-shot landing-app-home">
-              <picture><source media="(min-width: 641px)" srcset="img/landing-app-home.png?v=3"><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Beranda JagaKebond dengan ringkasan kebun." width="780" height="552" decoding="async"></picture>
+              <picture><source media="(min-width: 641px)" srcset="img/landing-app-home.png?v=4"><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Beranda JagaKebond dengan ringkasan kebun." width="780" height="552" decoding="async"></picture>
               <figcaption>Contoh Beranda JagaKebond dengan ringkasan kebun.</figcaption>
             </figure>
             <figure class="landing-app-shot landing-app-history">
-              <picture><source media="(min-width: 641px)" srcset="img/landing-app-history.png?v=6"><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Riwayat Cabai dengan daun rusak, status Kritis, dan tiga foto." width="716" height="212" decoding="async"></picture>
+              <picture><source media="(min-width: 641px)" srcset="img/landing-app-history.png?v=7"><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Contoh Riwayat Cabai dengan daun rusak, status Kritis, dan tiga foto." width="716" height="212" decoding="async"></picture>
               <figcaption>Contoh Riwayat Cabai dengan status Kritis dan tiga foto.</figcaption>
             </figure>
           </div>
@@ -190,9 +190,9 @@
             <p class="body-3">Tonton panduan singkat pengambilan foto gejala tanaman, pembacaan diagnosis awal AI, pemetaan petak kebun, hingga sinkronisasi antrean offline.</p>
           </div>
           <div class="video-shell reveal">
-            <video id="explainer-video" width="1280" height="720" controls preload="metadata" playsinline poster="img/jagakebond-explainer-poster.png">
-              <source id="explainer-src-webm" src="img/jagakebond-explainer-opt-a.webm" type="video/webm">
-              <source id="explainer-src-mp4" src="img/jagakebond-explainer-opt-a.mp4" type="video/mp4">
+            <video id="explainer-video" width="1920" height="1080" controls preload="metadata" playsinline poster="img/jagakebond-explainer-poster.png?v=2">
+              <source id="explainer-src-webm" src="img/jagakebond-explainer-opt-a.webm?v=2" type="video/webm">
+              <source id="explainer-src-mp4" src="img/jagakebond-explainer-opt-a.mp4?v=2" type="video/mp4">
             </video>
           </div>
           <div class="video-chapters" role="group" aria-label="Pilih bab video">
@@ -317,6 +317,7 @@
                     <button type="button" id="tour-prev" class="btn btn-secondary btn-sm button-sm" disabled>Kembali</button>
                     <button type="button" id="tour-next" class="btn btn-primary btn-sm button-sm">Lanjut ke Foto</button>
                   </div>
+                  <a href="tutorial-3d.html" class="btn btn-secondary btn-sm button-sm" style="margin-top:8px;width:100%;justify-content:center;" target="_blank" rel="noopener">Buka Diorama 3D Interaktif</a>
                 </div>
               </div>
             </div>
@@ -497,106 +498,110 @@
       <!-- MENU 1: HOME / DASHBOARD                       -->
       <!-- ============================================== -->
       <div id="view-home" aria-label="Beranda" class="menu-view flex-1 overflow-y-auto p-4 flex flex-col gap-4 pb-28 custom-scrollbar">
-        <div class="home-single-stack">
-          <!-- Lokasi dan cuaca -->
-          <section id="home-place-card" class="card climate-card home-place" aria-label="Lokasi dan cuaca">
-            <div class="climate-top">
-              <div class="home-place-body min-w-0">
-                <p id="home-location-text" class="home-place-name">Lokasi belum terbaca</p>
-                <p class="home-place-sub">
-                  <span id="home-zone-label">Zona Kebun</span>
-                  <span aria-hidden="true"> · </span>
-                  <span id="home-coord-status">Menunggu GPS</span>
-                  <span id="home-accuracy-tag" class="accuracy-dot gps-sat-badge is-inline" data-accuracy="unknown" role="img" aria-label="GPS belum tersedia" title="GPS belum tersedia"></span>
-                </p>
+        <div class="home-two-col-grid">
+          <div class="home-col-main">
+            <!-- Lokasi dan cuaca -->
+            <section id="home-place-card" class="card climate-card home-place" aria-label="Lokasi dan cuaca">
+              <div class="climate-top">
+                <div class="home-place-body min-w-0">
+                  <p id="home-location-text" class="home-place-name">Lokasi belum terbaca</p>
+                  <p class="home-place-sub">
+                    <span id="home-zone-label">Zona Kebun</span>
+                    <span aria-hidden="true"> · </span>
+                    <span id="home-coord-status">Menunggu GPS</span>
+                    <span id="home-accuracy-tag" class="accuracy-dot gps-sat-badge is-inline" data-accuracy="unknown" role="img" aria-label="GPS belum tersedia" title="GPS belum tersedia"></span>
+                  </p>
+                </div>
+                <button type="button" data-act="requestLiveLocation" data-args="[true]" class="btn btn-secondary btn-icon" title="Perbarui lokasi" aria-label="Perbarui lokasi">
+                  <i data-lucide="refresh-cw" id="btn-refresh-icon"></i>
+                </button>
               </div>
-              <button type="button" data-act="requestLiveLocation" data-args="[true]" class="btn btn-secondary btn-icon" title="Perbarui lokasi" aria-label="Perbarui lokasi">
-                <i data-lucide="refresh-cw" id="btn-refresh-icon"></i>
+              <div class="metrics-strip tnum">
+                <div class="metric-box">
+                  <span class="metric-label">Suhu Udara</span>
+                  <span id="home-temp-val" class="metric-val home-temp">—</span>
+                </div>
+                <div class="metric-box">
+                  <span class="metric-label">Kelembapan (RH)</span>
+                  <span id="home-rh-val" class="metric-val">—</span>
+                </div>
+                <div class="metric-box">
+                  <span class="metric-label">Ketinggian</span>
+                  <span class="metric-val"><span id="home-elev-val">—</span> <small>m dpl</small></span>
+                </div>
+              </div>
+              <div id="home-weather-alert" class="fungal-alert">
+                <i data-lucide="triangle-alert" aria-hidden="true"></i>
+                <span id="home-weather-note" class="home-weather-note">Menunggu data cuaca lokal untuk peringatan kelembapan &amp; jamur.</span>
+              </div>
+              <p id="home-weather-line" class="sr-only is-empty"></p>
+              <p id="home-telemetry-status" class="sr-only" aria-live="polite">Menunggu data lokasi dan cuaca</p>
+            </section>
+
+            <!-- Pertama kali pakai: friendly guidance instead of empty tiles. -->
+            <section id="home-empty" class="card home-empty hidden" aria-label="Mulai">
+              <span class="home-empty-icon" aria-hidden="true"><i data-lucide="leaf"></i></span>
+              <h2 class="t-title">Mulai dengan memotret satu tanaman</h2>
+              <p class="t-body t-muted">Foto satu daun atau buah. Hasil dan saran muncul di sini dan di Riwayat.</p>
+              <button type="button" data-act="openCamera" class="btn btn-primary btn-lg btn-block">
+                <i data-lucide="camera"></i><span>Ambil foto pertama</span>
               </button>
-            </div>
-            <div class="metrics-strip tnum">
-              <div class="metric-box">
-                <span class="metric-label">Suhu Udara</span>
-                <span id="home-temp-val" class="metric-val home-temp">—</span>
-              </div>
-              <div class="metric-box">
-                <span class="metric-label">Kelembapan (RH)</span>
-                <span id="home-rh-val" class="metric-val">—</span>
-              </div>
-              <div class="metric-box">
-                <span class="metric-label">Ketinggian</span>
-                <span class="metric-val"><span id="home-elev-val">—</span> <small>m dpl</small></span>
-              </div>
-            </div>
-            <div id="home-weather-alert" class="fungal-alert">
-              <i data-lucide="triangle-alert" aria-hidden="true"></i>
-              <span id="home-weather-note" class="home-weather-note">Menunggu data cuaca lokal untuk peringatan kelembapan &amp; jamur.</span>
-            </div>
-            <p id="home-weather-line" class="sr-only is-empty"></p>
-            <p id="home-telemetry-status" class="sr-only" aria-live="polite">Menunggu data lokasi dan cuaca</p>
-          </section>
+            </section>
 
-          <!-- Pertama kali pakai: friendly guidance instead of empty tiles. -->
-          <section id="home-empty" class="card home-empty hidden" aria-label="Mulai">
-            <span class="home-empty-icon" aria-hidden="true"><i data-lucide="leaf"></i></span>
-            <h2 class="t-title">Mulai dengan memotret satu tanaman</h2>
-            <p class="t-body t-muted">Foto satu daun atau buah. Hasil dan saran muncul di sini dan di Riwayat.</p>
-            <button type="button" data-act="openCamera" class="btn btn-primary btn-lg btn-block">
-              <i data-lucide="camera"></i><span>Ambil foto pertama</span>
-            </button>
-          </section>
-
-          <!-- Ringkasan: each tile opens Riwayat with that filter. -->
-          <section id="home-tiles" class="home-tiles tnum" aria-label="Ringkasan tanaman">
-            <button type="button" class="stat-tile" data-act="openLogWithFilter" data-args="[&quot;all&quot;]" data-filter="all">
-              <span id="stat-total-scans" class="stat-num">—</span><span class="stat-label">Tanaman Total</span>
-            </button>
-            <button type="button" class="stat-tile stat-severe" data-act="openLogWithFilter" data-args="[&quot;Severe&quot;]" data-filter="Severe">
-              <span id="stat-critical-count" class="stat-num">—</span><span class="stat-label">Kritis</span>
-            </button>
-            <button type="button" class="stat-tile stat-moderate" data-act="openLogWithFilter" data-args="[&quot;Moderate&quot;]" data-filter="Moderate">
-              <span id="stat-moderate-count" class="stat-num">—</span><span class="stat-label">Waspada</span>
-            </button>
-            <button type="button" class="stat-tile stat-healthy" data-act="openLogWithFilter" data-args="[&quot;Healthy&quot;]" data-filter="Healthy">
-              <span id="stat-healthy-count" class="stat-num">—</span><span class="stat-label">Sehat</span>
-            </button>
-          </section>
-
-          <!-- Perlu perhatian: trees whose latest status is Kritis/Waspada or needs a check. -->
-          <section id="home-attention" class="card home-section-card" aria-labelledby="home-attention-title">
-            <div class="home-section-head">
-              <h2 id="home-attention-title" class="section-title">Perlu Perhatian Segera</h2>
-              <button type="button" id="home-attention-more" data-act="openLogWithFilter" data-args="[&quot;all&quot;]" class="btn btn-soft btn-sm hidden">Lihat semua</button>
-            </div>
-            <div id="home-attention-list" class="flex flex-col gap-3">
-              <div class="skeleton" style="height:76px"></div>
-              <div class="skeleton" style="height:76px"></div>
-            </div>
-          </section>
-
-          <!-- Foto terbaru -->
-          <section id="home-recent" class="card home-section-card" aria-labelledby="home-recent-title">
-            <div class="home-section-head">
-              <h2 id="home-recent-title" class="section-title">Foto Terbaru Kebun</h2>
-              <button type="button" data-act="navigateToMenu" data-args="[&quot;log&quot;]" class="btn btn-soft btn-sm">Lihat semua</button>
-            </div>
-            <div id="home-history-carousel" class="recent-grid">
-              <!-- Injected via JavaScript -->
-            </div>
-          </section>
-
-          <!-- Catatan harian -->
-          <section id="home-daily" class="card home-section-card" aria-labelledby="home-daily-title">
-            <div class="home-section-head">
-              <h2 id="home-daily-title" class="section-title">Catatan Harian</h2>
-              <button type="button" data-act="openDailyModal" class="btn btn-soft btn-sm">
-                <i data-lucide="plus"></i><span>+ Tulis Catatan</span>
+            <!-- Ringkasan: each tile opens Riwayat with that filter. -->
+            <section id="home-tiles" class="home-tiles tnum" aria-label="Ringkasan tanaman">
+              <button type="button" class="stat-tile" data-act="openLogWithFilter" data-args="[&quot;all&quot;]" data-filter="all">
+                <span id="stat-total-scans" class="stat-num">—</span><span class="stat-label">Tanaman Total</span>
               </button>
-            </div>
-            <div id="home-daily-card">
-              <!-- Injected via JavaScript -->
-            </div>
-          </section>
+              <button type="button" class="stat-tile stat-severe" data-act="openLogWithFilter" data-args="[&quot;Severe&quot;]" data-filter="Severe">
+                <span id="stat-critical-count" class="stat-num">—</span><span class="stat-label">Kritis</span>
+              </button>
+              <button type="button" class="stat-tile stat-moderate" data-act="openLogWithFilter" data-args="[&quot;Moderate&quot;]" data-filter="Moderate">
+                <span id="stat-moderate-count" class="stat-num">—</span><span class="stat-label">Waspada</span>
+              </button>
+              <button type="button" class="stat-tile stat-healthy" data-act="openLogWithFilter" data-args="[&quot;Healthy&quot;]" data-filter="Healthy">
+                <span id="stat-healthy-count" class="stat-num">—</span><span class="stat-label">Sehat</span>
+              </button>
+            </section>
+
+            <!-- Perlu perhatian: trees whose latest status is Kritis/Waspada or needs a check. -->
+            <section id="home-attention" class="card home-section-card" aria-labelledby="home-attention-title">
+              <div class="home-section-head">
+                <h2 id="home-attention-title" class="section-title">Perlu Perhatian Segera</h2>
+                <button type="button" id="home-attention-more" data-act="openLogWithFilter" data-args="[&quot;all&quot;]" class="btn btn-soft btn-sm hidden">Lihat semua</button>
+              </div>
+              <div id="home-attention-list" class="flex flex-col gap-3">
+                <div class="skeleton" style="height:76px"></div>
+                <div class="skeleton" style="height:76px"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="home-col-side">
+            <!-- Foto terbaru -->
+            <section id="home-recent" class="card home-section-card" aria-labelledby="home-recent-title">
+              <div class="home-section-head">
+                <h2 id="home-recent-title" class="section-title">Foto Terbaru Kebun</h2>
+                <button type="button" data-act="navigateToMenu" data-args="[&quot;log&quot;]" class="btn btn-soft btn-sm">Lihat semua</button>
+              </div>
+              <div id="home-history-carousel" class="recent-grid">
+                <!-- Injected via JavaScript -->
+              </div>
+            </section>
+
+            <!-- Catatan harian -->
+            <section id="home-daily" class="card home-section-card" aria-labelledby="home-daily-title">
+              <div class="home-section-head">
+                <h2 id="home-daily-title" class="section-title">Catatan Harian</h2>
+                <button type="button" data-act="openDailyModal" class="btn btn-soft btn-sm">
+                  <i data-lucide="plus"></i><span>+ Tulis Catatan</span>
+                </button>
+              </div>
+              <div id="home-daily-card">
+                <!-- Injected via JavaScript -->
+              </div>
+            </section>
+          </div>
         </div>
       </div>
 
@@ -1497,7 +1502,7 @@
   <script defer src="vendor/gsap.min.js?v=1"></script>
   <script defer src="vendor/ScrollTrigger.min.js?v=1"></script>
   <script defer src="vendor/three.min.js?v=1"></script>
-  <script defer src="app.js?v=53"></script>
+  <script defer src="app.js?v=54"></script>
   <!-- WEB 0.2.2.0: session/API client, scan flow and app-shell extras. Since 0.2.4.16 workflow-ui.js extends app.js through JagaHooks (actions.js) instead of re-assigning its functions. -->
   <script defer src="session.js?v=2"></script>
   <script defer src="google-signin.js?v=1"></script>

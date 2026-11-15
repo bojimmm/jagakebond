@@ -1011,9 +1011,11 @@ button.card-tap.att-item { display: flex; align-items: center; gap: 12px; paddin
   line-height: 1;
 }
 
-.map-pin-body {
+.map-pin-body,
+.leaflet-map-pane svg.map-pin-body {
   position: absolute;
   inset: 0;
+  z-index: 2;
   width: 100%;
   height: 100%;
   fill: var(--pin-status);
@@ -1023,19 +1025,44 @@ button.card-tap.att-item { display: flex; align-items: center; gap: 12px; paddin
   transform-origin: top center;
 }
 
-.map-pin-stack .map-pin-body:not(:nth-last-child(2)) {
-  --pin-status: #3c755f;
+.map-pin-stack .map-pin-body.map-pin-back,
+.leaflet-map-pane svg.map-pin-body.map-pin-back {
+  z-index: 1;
+  fill: var(--pin-back-1, #16a34a);
   transform: translateY(-6px) scale(.93);
 }
-.map-pin-stack .map-pin-body:first-child:nth-last-child(4) {
-  --pin-status: #62917c;
+.map-pin-stack .map-pin-body.map-pin-back.is-deep,
+.leaflet-map-pane svg.map-pin-body.map-pin-back.is-deep {
+  z-index: 0;
+  fill: var(--pin-back-2, #4d7c66);
   transform: translateY(-12px) scale(.86);
+}
+.map-pin-stack-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  z-index: 4;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #0d1f12;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(13, 31, 18, 0.35);
 }
 
 .map-pin-circle {
   position: absolute;
   top: 7px;
   left: 7px;
+  z-index: 3;
   display: grid;
   place-items: center;
   width: 34px;
@@ -2042,6 +2069,9 @@ body.has-status-chip #app-shell > header.app-topbar .header-brand h1.top-page-ti
     flex: 1 1 auto;
   }
   .header-mobile-logo { display: none; }
+  #app-shell:has(#auth-gate.hidden) > header.app-topbar .account-btn {
+    display: none !important;
+  }
   #app-shell:has(#auth-gate.hidden) > main {
     grid-area: main;
     min-height: 0;
@@ -2054,16 +2084,35 @@ body.has-status-chip #app-shell > header.app-topbar .header-brand h1.top-page-ti
   }
 }
 
-/* Single-Scroll Beranda Content Stack */
-.home-single-stack {
+/* Single-Scroll Beranda Two-Column Layout (Stacked on mobile, 2 cols on >= 1024px) */
+.home-two-col-grid {
   display: flex;
   flex-direction: column;
   flex: none;
   gap: 16px;
   width: 100%;
-  max-width: 1040px;
+  max-width: 1140px;
   margin: 0 auto;
   min-width: 0;
+}
+.home-col-main,
+.home-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .home-two-col-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.32fr) minmax(320px, 0.92fr);
+    gap: 18px;
+    align-items: start;
+  }
+  .home-two-col-grid:has(#home-empty:not(.hidden)) {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 920px;
+  }
 }
 
 .climate-card,
@@ -2324,8 +2373,8 @@ button.card-tap.att-item > .thumb {
   padding: 0;
 }
 @media (min-width: 1024px) {
-  #home-history-carousel.recent-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .home-two-col-grid #home-history-carousel.recent-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 .recent-card {
