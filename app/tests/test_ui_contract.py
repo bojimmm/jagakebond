@@ -135,29 +135,37 @@ class UiContractTests(unittest.TestCase):
         self.assertIsNotNone(video_match)
         self.assertIn("autoplay", video_match.group(0))
         self.assertIn("muted", video_match.group(0))
+        self.assertIn("loop", video_match.group(0))
         self.assertIn("playsinline", video_match.group(0))
         self.assertNotIn("controls", video_match.group(0))
+        self.assertNotIn("video-chapters", HTML)
         self.assertRegex(landing_css, r"#auth-gate \.video-shell\s*\{[^}]*border:\s*0;[^}]*padding:\s*0;")
 
-        # Bilingual switch & i18n module across landing, account modal, legal pages, and 3D tour.
+        # Bilingual switch & i18n module across landing, account modal, and legal pages.
         self.assertRegex(HTML, r'src="i18n\.js\?v=\d+"')
         self.assertIn('/i18n.js?v=', SW)
         self.assertIn("STORAGE_KEY = 'jk_lang'", i18n_js)
-        for page_name in ("index.html", "privacy.html", "terms.html", "tutorial-3d.html"):
+        for page_name in ("index.html", "privacy.html", "terms.html"):
             page = (ROOT / "frontend" / page_name).read_text()
             self.assertIn('data-lang-choice="id"', page, page_name)
             self.assertIn('data-lang-choice="en"', page, page_name)
         self.assertIn('class="info-row info-row-lang"', HTML)
 
-        # APK downloads, Tutorial top nav rename, botanical ornaments, #fitur thumbnails, and ` | ` <title>.
+        # APK downloads, Tutorial top nav rename, SVG ornaments, borderless 3D tour controls, #fitur thumbnails, and ` | ` <title>.
         self.assertIn('href="#cara">Tutorial</a>', HTML)
         self.assertNotIn('href="#cara">Tutorial 3D</a>', HTML)
-        self.assertEqual(HTML.count('href="/downloads/jagakebond-latest.apk"'), 3)
+        self.assertEqual(HTML.count('href="/downloads/jagakebond-latest.apk"'), 2)
         self.assertIn("'/downloads/'", SW)
+        self.assertNotIn("tutorial-3d.html", HTML)
+        self.assertNotIn("island-progress-label", HTML)
+        self.assertNotIn("Putar kanvas", HTML)
+        self.assertNotIn("gulir di layar desktop", HTML.lower())
+        for el_id in ("tour-fullscreen", "tour-prev", "tour-next"):
+            self.assertIn(f'id="{el_id}"', HTML)
         for img_name in (
-            "ornament-botanical-canopy.webp",
-            "ornament-contour-ridge.webp",
-            "ornament-botanical-corner.webp",
+            "ornament-botanical-sprig.svg",
+            "ornament-leaf-cascade.svg",
+            "ornament-contour-hills.svg",
             "feature-diagnosis.webp",
             "feature-history.webp",
             "feature-map.webp",
@@ -166,7 +174,7 @@ class UiContractTests(unittest.TestCase):
             self.assertIn(img_name, HTML)
             self.assertIn(f"/img/{img_name}", SW)
             self.assertTrue((ROOT / "frontend" / "img" / img_name).exists(), img_name)
-        for page_name in ("index.html", "admin.html", "privacy.html", "terms.html", "tutorial-3d.html"):
+        for page_name in ("index.html", "admin.html", "privacy.html", "terms.html"):
             page = (ROOT / "frontend" / page_name).read_text()
             title_match = re.search(r"<title>([^<]+)</title>", page)
             self.assertIsNotNone(title_match, page_name)

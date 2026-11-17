@@ -113,49 +113,17 @@
     syncTopbar();
 
     const videoEl = document.getElementById('explainer-video');
-    const chapterBtns = Array.from(document.querySelectorAll('#video-panduan .chapter-btn'));
-    const setActiveChapter = (idx) => {
-      chapterBtns.forEach((btn, i) => {
-        const on = i === idx;
-        btn.classList.toggle('is-active', on);
-        btn.setAttribute('aria-pressed', String(on));
-      });
-    };
-    chapterBtns.forEach((btn, i) => {
-      btn.addEventListener('click', () => {
-        const seekSec = Number(btn.getAttribute('data-seek')) || 0;
-        setActiveChapter(i);
-        if (videoEl) {
-          try {
-            videoEl.currentTime = seekSec;
-            const p = videoEl.play();
-            if (p && typeof p.catch === 'function') p.catch(() => {});
-          } catch (_) {}
-        }
-      });
-    });
     if (videoEl) {
+      videoEl.loop = true;
       videoEl.addEventListener('click', () => {
         try {
-          const dur = Number(videoEl.duration);
-          if (videoEl.ended || (Number.isFinite(dur) && dur > 0 && videoEl.currentTime >= dur - 0.15)) {
-            videoEl.currentTime = 0;
-            const p = videoEl.play();
-            if (p && typeof p.catch === 'function') p.catch(() => {});
-          } else if (videoEl.paused) {
+          if (videoEl.paused) {
             const p = videoEl.play();
             if (p && typeof p.catch === 'function') p.catch(() => {});
           } else {
             videoEl.pause();
           }
         } catch (_) {}
-      });
-      videoEl.addEventListener('timeupdate', () => {
-        const idx = Math.min(4, Math.floor((videoEl.currentTime || 0) / 4));
-        setActiveChapter(idx);
-      });
-      videoEl.addEventListener('ended', () => {
-        setActiveChapter(4);
       });
     }
 
@@ -186,6 +154,30 @@
 
         const taglineEl = document.getElementById('tagline');
         const revealEls = Array.from(authGate.querySelectorAll('.reveal'));
+        const revealedSet = new WeakSet();
+        const flushReveal = () => {
+          const gateRect = authGate.getBoundingClientRect();
+          const above = [], inView = [];
+          revealEls.forEach(el => {
+            if (revealedSet.has(el)) return;
+            const r = el.getBoundingClientRect();
+            if (r.bottom <= gateRect.top + 10) {
+              revealedSet.add(el);
+              above.push(el);
+            } else if (r.top <= gateRect.bottom + 30) {
+              revealedSet.add(el);
+              inView.push(el);
+            }
+          });
+          if (above.length) window.gsap.set(above, { y: 0, opacity: 1, overwrite: 'auto' });
+          if (inView.length) {
+            window.gsap.to(inView, {
+              y: 0, opacity: 1, duration: 0.5,
+              stagger: Math.min(0.05, 0.20 / inView.length),
+              ease: 'expo.out', overwrite: 'auto'
+            });
+          }
+        };
         if ('IntersectionObserver' in window) {
           if (taglineEl) {
             const tagObs = new IntersectionObserver((entries, obs) => {
@@ -198,27 +190,13 @@
           }
           window.gsap.set(revealEls, { y: 24, opacity: 0 });
           const revObs = new IntersectionObserver((entries, obs) => {
-            const above = [], inView = [];
-            const gateRect = authGate.getBoundingClientRect();
-            entries.forEach(entry => {
-              if (entry.boundingClientRect.bottom <= gateRect.top + 10) {
-                above.push(entry.target);
-                obs.unobserve(entry.target);
-              } else if (entry.isIntersecting || entry.boundingClientRect.top < gateRect.bottom) {
-                inView.push(entry.target);
-                obs.unobserve(entry.target);
-              }
-            });
-            if (above.length) window.gsap.set(above, { y: 0, opacity: 1, overwrite: 'auto' });
-            if (inView.length) {
-              window.gsap.to(inView, {
-                y: 0, opacity: 1, duration: 0.55,
-                stagger: Math.min(0.05, 0.20 / inView.length),
-                ease: 'expo.out', overwrite: 'auto'
-              });
-            }
+            flushReveal();
+            revealEls.forEach(el => { if (revealedSet.has(el)) obs.unobserve(el); });
           }, { root: authGate, rootMargin: '0px 0px 40px 0px', threshold: 0.01 });
           revealEls.forEach(el => revObs.observe(el));
+          authGate.addEventListener('scroll', flushReveal, { passive: true });
+          window.addEventListener('resize', flushReveal, { passive: true });
+          flushReveal();
         } else {
           authGate.querySelectorAll('.reveal, #tagline .w').forEach(el => {
             el.style.opacity = '1';
@@ -239,19 +217,22 @@
     if (!authGate || !canvas) return;
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const STEP_META = [
-      { label: 'Langkah 1 dari 5', badge: 'Beranda: Ringkasan kebun dan cuaca', icon: 'compass', next: 'Lanjut ke Foto', shot: 'img/landing-app-mobile.png' },
-      { label: 'Langkah 2 dari 5', badge: 'Foto Tanaman: Pindai gejala dan GPS', icon: 'camera', next: 'Lanjut ke Riwayat', shot: 'img/mobile-hud.png' },
-      { label: 'Langkah 3 dari 5', badge: 'Riwayat: Status dan koreksi per tanaman', icon: 'clipboard-list', next: 'Lanjut ke Peta', shot: 'img/mobile-scan.png' },
-      { label: 'Langkah 4 dari 5', badge: 'Peta: Batas petak dan pin status', icon: 'map-pin', next: 'Lanjut ke Offline', shot: 'img/mobile-map.png' },
-      { label: 'Langkah 5 dari 5', badge: 'Siap Mencatat: Antrean offline tersinkron', icon: 'cloud', next: 'Kembali ke Beranda', shot: 'img/mobile-history.png' }
+      { badge: 'Beranda: Cuaca petak, risiko kebun & GPS', icon: 'compass', shot: 'img/landing-app-mobile.png' },
+      { badge: 'Kamera: Bidik tanaman jarak 15–25 cm', icon: 'camera', shot: 'img/mobile-hud.png' },
+      { badge: 'Diagnosis AI: Deteksi penyakit & panduan penanganan', icon: 'clipboard-list', shot: 'img/mobile-scan.png' },
+      { badge: 'Peta Petak: Tindakan sesuai kondisi tiap petak', icon: 'map-pin', shot: 'img/mobile-map.png' },
+      { badge: 'Offline & Cloud: Foto terunggah otomatis ke Cloud', icon: 'cloud', shot: 'img/mobile-history.png' }
     ];
-    const progressLabel = document.getElementById('island-progress-label');
+    const stageSection = document.getElementById('cara');
+    const stageEl = document.getElementById('island-stage');
+    const fsBtn = document.getElementById('tour-fullscreen');
     const badgeText = document.getElementById('island-badge-text');
     const badgeIconWrap = document.getElementById('island-badge-icon');
-    const pillBtns = Array.from(document.querySelectorAll('#cara .island-pill'));
     const stepCards = Array.from(document.querySelectorAll('#cara .tour-step-card'));
     const prevBtn = document.getElementById('tour-prev');
     const nextBtn = document.getElementById('tour-next');
+    const tr = (text) => (window.JagaI18n && typeof window.JagaI18n.t === 'function') ? window.JagaI18n.t(text) : text;
+    let setStageResolution = null;
     const tourState = {
       currentStep: 0, targetFloat: 0, smoothFloat: 0,
       yawOffset: 0, pitchOffset: 0, dragging: false,
@@ -287,40 +268,103 @@
       }
     };
 
+    const syncFullscreenLabels = (isOn) => {
+      if (!fsBtn) return;
+      const label = tr(isOn ? 'Keluar dari layar penuh' : 'Tampilkan diorama layar penuh');
+      fsBtn.setAttribute('aria-pressed', String(isOn));
+      fsBtn.setAttribute('aria-label', label);
+      fsBtn.setAttribute('title', label);
+    };
+
+    const setFullscreenUI = (isOn) => {
+      if (!stageEl || !fsBtn) return;
+      const prevOn = stageEl.classList.contains('is-fullscreen');
+      stageEl.classList.toggle('is-fullscreen', isOn);
+      if (stageSection) stageSection.classList.toggle('is-fullscreen-host', isOn);
+      syncFullscreenLabels(isOn);
+      if (prevOn !== isOn) {
+        fsBtn.innerHTML = '<i data-lucide="' + (isOn ? 'minimize-2' : 'maximize-2') + '" aria-hidden="true"></i>';
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          try { window.lucide.createIcons(); } catch (_) {}
+        }
+      }
+      if (typeof setStageResolution === 'function') setStageResolution(isOn);
+    };
+
+    if (fsBtn && stageEl) {
+      fsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nativeActive = document.fullscreenElement === stageEl;
+        if (nativeActive) {
+          if (document.exitFullscreen) document.exitFullscreen().catch(() => setFullscreenUI(false));
+          else setFullscreenUI(false);
+          return;
+        }
+        if (stageEl.classList.contains('is-fullscreen')) {
+          setFullscreenUI(false);
+          return;
+        }
+        if (typeof stageEl.requestFullscreen === 'function') {
+          try {
+            const p = stageEl.requestFullscreen();
+            if (p && typeof p.then === 'function') {
+              p.then(() => setFullscreenUI(true)).catch(() => setFullscreenUI(true));
+            } else {
+              setFullscreenUI(true);
+            }
+            return;
+          } catch (_) {}
+        }
+        setFullscreenUI(true);
+      });
+      document.addEventListener('fullscreenchange', () => {
+        const active = document.fullscreenElement === stageEl;
+        setFullscreenUI(active);
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && stageEl.classList.contains('is-fullscreen') && document.fullscreenElement !== stageEl) {
+          setFullscreenUI(false);
+        }
+      });
+    }
+
     const applyStepUI = (idx) => {
       const clamped = Math.max(0, Math.min(4, idx));
       const changed = clamped !== tourState.currentStep;
       tourState.currentStep = clamped;
       tourState.targetFloat = clamped;
       const meta = STEP_META[clamped];
-      const tr = (text) => (window.JagaI18n && typeof window.JagaI18n.t === 'function') ? window.JagaI18n.t(text) : text;
-      if (progressLabel) progressLabel.textContent = tr(meta.label);
       if (badgeText) badgeText.textContent = tr(meta.badge);
       if (changed) updateBadgeIcon(meta.icon);
-      pillBtns.forEach((btn, i) => {
-        const on = i === clamped;
-        btn.classList.toggle('is-active', on);
-        btn.setAttribute('aria-selected', String(on));
-      });
       stepCards.forEach((card, i) => card.classList.toggle('is-active', i === clamped));
-      if (prevBtn) prevBtn.disabled = clamped === 0;
-      if (nextBtn) nextBtn.textContent = tr(meta.next);
     };
-    window.addEventListener('jk:langchange', () => applyStepUI(tourState.currentStep));
+    window.addEventListener('jk:langchange', () => {
+      applyStepUI(tourState.currentStep);
+      syncFullscreenLabels(Boolean(stageEl && stageEl.classList.contains('is-fullscreen')));
+    });
 
     const selectStepExplicit = (idx, scrollCard) => {
       const clamped = Math.max(0, Math.min(4, idx));
       tourState.manualLockUntil = Date.now() + 950;
       applyStepUI(clamped);
-      if (scrollCard && !isMobileTour() && stepCards[clamped]) {
+      if (scrollCard && !isMobileTour() && !(stageEl && stageEl.classList.contains('is-fullscreen')) && stepCards[clamped]) {
         stepCards[clamped].scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
       }
     };
 
-    pillBtns.forEach(btn => btn.addEventListener('click', () => selectStepExplicit(Number(btn.dataset.step) || 0, true)));
     stepCards.forEach(card => card.addEventListener('click', () => selectStepExplicit(Number(card.dataset.tourStep) || 0, false)));
-    if (prevBtn) prevBtn.addEventListener('click', () => selectStepExplicit(Math.max(0, tourState.currentStep - 1), true));
-    if (nextBtn) nextBtn.addEventListener('click', () => selectStepExplicit(tourState.currentStep >= 4 ? 0 : tourState.currentStep + 1, true));
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectStepExplicit((tourState.currentStep + 4) % 5, true);
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectStepExplicit((tourState.currentStep + 1) % 5, true);
+      });
+    }
 
     const tourStepsWrap = document.getElementById('tour-steps-list');
     if (tourStepsWrap) {
@@ -335,27 +379,23 @@
         const dx = e.changedTouches[0].clientX - swipeX;
         const dy = e.changedTouches[0].clientY - swipeY;
         if (Math.abs(dx) > 42 && Math.abs(dx) > Math.abs(dy) * 1.4) {
-          if (dx < 0 && tourState.currentStep < 4) selectStepExplicit(tourState.currentStep + 1, false);
-          else if (dx > 0 && tourState.currentStep > 0) selectStepExplicit(tourState.currentStep - 1, false);
+          if (dx < 0) selectStepExplicit((tourState.currentStep + 1) % 5, false);
+          else if (dx > 0) selectStepExplicit((tourState.currentStep + 4) % 5, false);
         }
       }, { passive: true });
     }
 
     const onScrollSync = () => {
-      if (isMobileTour() || tourState.dragging || Date.now() <= tourState.manualLockUntil || authGate.classList.contains('hidden')) return;
+      if (isMobileTour() || (stageEl && stageEl.classList.contains('is-fullscreen')) || tourState.dragging || Date.now() <= tourState.manualLockUntil || authGate.classList.contains('hidden')) return;
       const prog = cardCenterProgress();
       tourState.targetFloat = prog;
       const nearest = Math.max(0, Math.min(4, Math.round(prog)));
       if (nearest !== tourState.currentStep) {
         tourState.currentStep = nearest;
         const meta = STEP_META[nearest];
-        if (progressLabel) progressLabel.textContent = meta.label;
-        if (badgeText) badgeText.textContent = meta.badge;
+        if (badgeText) badgeText.textContent = tr(meta.badge);
         updateBadgeIcon(meta.icon);
-        pillBtns.forEach((b, i) => { b.classList.toggle('is-active', i === nearest); b.setAttribute('aria-selected', String(i === nearest)); });
         stepCards.forEach((c, i) => c.classList.toggle('is-active', i === nearest));
-        if (prevBtn) prevBtn.disabled = nearest === 0;
-        if (nextBtn) nextBtn.textContent = meta.next;
       }
     };
     authGate.addEventListener('scroll', onScrollSync, { passive: true });
@@ -391,11 +431,17 @@
     if (THREE) {
       try {
         webglRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        webglRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
-        webglRenderer.setSize(720, 540, false);
+        const isFsNow = Boolean(stageEl && stageEl.classList.contains('is-fullscreen'));
+        webglRenderer.setPixelRatio(isFsNow ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+        webglRenderer.setSize(isFsNow ? 1280 : 720, isFsNow ? 960 : 540, false);
         webglRenderer.setClearColor(0x000000, 0);
         webglRenderer.shadowMap.enabled = true;
         webglRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        setStageResolution = (full) => {
+          if (!webglRenderer) return;
+          webglRenderer.setPixelRatio(full ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+          webglRenderer.setSize(full ? 1280 : 720, full ? 960 : 540, false);
+        };
       } catch (_) {
         webglRenderer = null;
       }
@@ -403,7 +449,6 @@
 
     if (webglRenderer && THREE) {
       const ASPECT = 720 / 540;
-      const FH_ASPECT_SCALE = 1.28;
       const scene = new THREE.Scene();
       const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 
@@ -822,26 +867,53 @@
         return { g, base: p.top.clone(), k };
       });
 
-      /* Step 4: Sync Cloud + Data Packets */
+      /* Step 4: Sync Cloud (thin silhouette outline) + upload arc + photo tiles & packets */
       const cloud = new THREE.Group(); cloud.visible = false; scene.add(cloud);
-      const cloudMat = std(0xe7f0ea, { roughness: 0.55, emissive: 0x6f8578, emissiveIntensity: 0.30 });
-      const cloudShade = std(0xcbe0d2, { roughness: 0.65, emissive: 0x556b5e, emissiveIntensity: 0.38 });
+      const cloudMat = std(0xffffff, { roughness: 0.6, emissive: 0x9aa39d, emissiveIntensity: 0.35 });
+      const cloudShade = std(0xf1f5f2, { roughness: 0.7, emissive: 0x9aa39d, emissiveIntensity: 0.55 });
+      const cloudOutlineMat = new THREE.MeshBasicMaterial({ color: 0xa4b8ac, side: THREE.BackSide });
       [
         [0, 0, 0, 0.55, cloudMat], [-0.55, -0.12, 0.05, 0.4, cloudMat], [0.58, -0.1, 0, 0.42, cloudMat],
         [0.2, 0.28, -0.1, 0.38, cloudMat], [-0.15, -0.28, 0.15, 0.36, cloudShade], [0.35, -0.3, 0.1, 0.32, cloudShade]
       ].forEach(c => {
         addMesh(cloud, new THREE.Mesh(new THREE.DodecahedronGeometry(c[3], 0), c[4]), c[0], c[1], c[2], true, false);
+        addMesh(cloud, new THREE.Mesh(new THREE.DodecahedronGeometry(c[3] + 0.015, 0), cloudOutlineMat), c[0], c[1], c[2], false, false);
       });
-      const packetMat = std(0x22c55e, { emissive: 0x16a34a, emissiveIntensity: 0.6, roughness: 0.4 });
+      const cloudPulseMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+      const cloudPulse = new THREE.Mesh(new THREE.RingGeometry(0.88, 0.98, 36), cloudPulseMat);
+      cloud.add(cloudPulse);
+
+      const dotGeo = new THREE.SphereGeometry(0.042, 8, 6);
+      const uploadDots = Array.from({ length: 12 }, () => {
+        const mat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0, depthWrite: false });
+        const m = new THREE.Mesh(dotGeo, mat); m.visible = false; scene.add(m);
+        return m;
+      });
+      const packetMat = std(0x22c55e, { emissive: 0x16a34a, emissiveIntensity: 0.72, roughness: 0.35 });
       const packets = [0, 1, 2, 3, 4].map(() => {
         const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.145, 0), packetMat);
         m.castShadow = true; m.visible = false; scene.add(m);
         return m;
       });
+      const tileFrameMat = std(0xffffff, { emissive: 0xdcfce7, emissiveIntensity: 0.25, roughness: 0.45 });
+      const tileThumbMat = std(0x16a34a, { emissive: 0x15803d, emissiveIntensity: 0.45, roughness: 0.5 });
+      const tileDotMat = std(0xdc2626, { emissive: 0xef4444, emissiveIntensity: 0.4, roughness: 0.5 });
+      const photoTiles = [0, 1, 2].map(() => {
+        const g = new THREE.Group();
+        const card = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.25, 0.035), tileFrameMat);
+        card.castShadow = true; g.add(card);
+        const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.15, 0.01), tileThumbMat);
+        thumb.position.set(0, 0.02, 0.02); g.add(thumb);
+        const badge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.035, 0.012), tileDotMat);
+        badge.position.set(-0.08, -0.08, 0.02); g.add(badge);
+        g.visible = false; scene.add(g);
+        return g;
+      });
 
-      /* Rounded 3D Smartphone & Real App Screen Texture */
-      const PH = { w: 2.0, h: 4.33, d: 0.17, r: 0.3 };
+      /* Rounded 3D Smartphone & Balanced Uniform Perimeter Bezel */
       const SCR = { w: 1.86, h: 1.86 * (1688 / 780), r: 0.22 };
+      const BEZEL = 0.085;
+      const PH = { w: SCR.w + BEZEL * 2, h: SCR.h + BEZEL * 2, d: 0.16, r: SCR.r + BEZEL };
       const roundedRect2D = (w, h, r) => {
         const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
         s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
@@ -853,14 +925,14 @@
 
       const phoneRig = new THREE.Group(); scene.add(phoneRig);
       const phone = new THREE.Group(); phoneRig.add(phone);
-      const bodyGeo = new THREE.ExtrudeGeometry(roundedRect2D(PH.w - 0.06, PH.h - 0.06, PH.r), {
-        depth: PH.d - 0.06, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3, curveSegments: 10
+      const bodyGeo = new THREE.ExtrudeGeometry(roundedRect2D(PH.w - 0.05, PH.h - 0.05, PH.r - 0.025), {
+        depth: PH.d - 0.05, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: 3, curveSegments: 10
       });
-      bodyGeo.translate(0, 0, -(PH.d - 0.06) / 2);
+      bodyGeo.translate(0, 0, -(PH.d - 0.05) / 2);
       const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: 0x232a27, roughness: 0.42, metalness: 0.35 }));
       body.castShadow = true; phone.add(body);
 
-      const glass = new THREE.Mesh(new THREE.ShapeGeometry(roundedRect2D(PH.w - 0.08, PH.h - 0.08, PH.r - 0.03), 10), new THREE.MeshBasicMaterial({ color: 0x0b0f0d }));
+      const glass = new THREE.Mesh(new THREE.ShapeGeometry(roundedRect2D(PH.w - 0.05, PH.h - 0.05, PH.r - 0.025), 10), new THREE.MeshBasicMaterial({ color: 0x0b0f0d }));
       glass.position.z = PH.d / 2 + 0.002; phone.add(glass);
 
       const scrGeo = new THREE.ShapeGeometry(roundedRect2D(SCR.w, SCR.h, SCR.r), 12);
@@ -936,13 +1008,13 @@
         return true;
       };
 
-      /* Five Action Stations aligned with Explainer Video (Option A) */
+      /* Five Action Stations aligned with Revised Explainer Video (Option A 4:3) */
       const STATIONS = [
-        { anchor: [-3.15, 1.5, -2.35], az: 0.66, el: 0.5, fh: 10.4 * FH_ASPECT_SCALE, dr: 2.75, df: 1.3, py: 3.05, yaw: -0.24, shift: [0.28, 0.14] },
-        { anchor: [cabai1.g.position.x, 0.9, cabai1.g.position.z], az: 0.98, el: 0.42, fh: 9.2 * FH_ASPECT_SCALE, dr: 2.45, df: 0.9, py: 2.8, yaw: -0.5, shift: [0.22, 0.08] },
-        { anchor: [SLAB.x, 0.6, SLAB.z - 0.45], az: 0.58, el: 0.56, fh: 10.0 * FH_ASPECT_SCALE, dr: 2.95, df: 0.7, py: 2.95, yaw: -0.26, shift: [0.24, 0.08] },
-        { anchor: [BED_X, 0.4, (BEDS[0].z + BEDS[1].z) / 2], az: 0.74, el: 0.92, fh: 10.8 * FH_ASPECT_SCALE, dr: 4.15, df: 1.4, py: 3.0, yaw: -0.2, shift: [0.34, 0.02] },
-        { anchor: [0.2, 1.2, -2.8], az: 0.7, el: 0.5, fh: 10.4 * FH_ASPECT_SCALE, dr: 2.6, df: 1.5, py: 2.95, yaw: -0.24, shift: [0.26, 0.12] }
+        { anchor: [-3.15, 1.5, -2.35], az: 0.66, el: 0.50, fh: 11.8, dr: 2.75, df: 1.3, py: 3.05, aimCrop: false, focus: [0.15, 0.90, -0.35], shift: [0.02, 0.05] },
+        { anchor: [cabai1.g.position.x, 0.9, cabai1.g.position.z], az: 0.88, el: 0.42, fh: 11.4, dr: 1.98, df: 2.48, py: 3.05, aimCrop: true, focus: [0.45, 0.90, 0.25], shift: [0.02, 0.04] },
+        { anchor: [SLAB.x, 0.6, SLAB.z - 0.45], az: 0.58, el: 0.54, fh: 11.8, dr: 2.55, df: 0.7, py: 2.95, aimCrop: false, focus: [0.45, 0.90, -0.25], shift: [0.02, 0.04] },
+        { anchor: [BED_X, 0.4, (BEDS[0].z + BEDS[1].z) / 2], az: 0.74, el: 0.86, fh: 12.0, dr: 3.85, df: 1.25, py: 3.0, aimCrop: false, focus: [0.15, 0.85, 0.15], shift: [0.0, 0.04] },
+        { anchor: [0.2, 1.2, -2.8], az: 0.70, el: 0.48, fh: 12.4, dr: 0.25, df: 2.15, py: 2.15, aimCrop: false, focus: [0.35, 1.30, -0.45], shift: [0.02, 0.02] }
       ];
       const UP = new THREE.Vector3(0, 1, 0);
       STATIONS.forEach(s => {
@@ -951,13 +1023,21 @@
         const a = new THREE.Vector3(s.anchor[0], s.anchor[1], s.anchor[2]);
         s.phone = a.clone().addScaledVector(right, s.dr).addScaledVector(fwd, s.df);
         s.phone.y = s.py;
-        const mid = a.clone().lerp(s.phone, 0.5); mid.y = 1.1;
-        const baseFh = s.fh / FH_ASPECT_SCALE;
-        s.target = mid.addScaledVector(right, -s.shift[0] * baseFh * 0.16).addScaledVector(UP, -s.shift[1] * baseFh * 0.16);
+        const mid = new THREE.Vector3(s.focus[0], s.focus[1], s.focus[2]);
+        s.target = mid.addScaledVector(right, -s.shift[0] * s.fh * 0.16).addScaledVector(UP, -s.shift[1] * s.fh * 0.16);
       });
-      const CLOUD_POS = STATIONS[4].phone.clone().add(new THREE.Vector3(-2.15, 1.05, 1.65));
+      const b4Right = new THREE.Vector3(Math.cos(STATIONS[4].az), 0, -Math.sin(STATIONS[4].az));
+      const b4Fwd = new THREE.Vector3(Math.sin(STATIONS[4].az), 0, Math.cos(STATIONS[4].az));
+      const CLOUD_POS = STATIONS[4].phone.clone().addScaledVector(b4Right, 1.85).addScaledVector(UP, 3.35).addScaledVector(b4Fwd, -1.15);
 
-      const tmpQ = new THREE.Quaternion(), tmpE = new THREE.Euler(), targetTmp = new THREE.Vector3();
+      const tmpQ = new THREE.Quaternion(), tmpQ1 = new THREE.Quaternion(), tmpE = new THREE.Euler(), targetTmp = new THREE.Vector3(), tmpAimV = new THREE.Vector3(), aimHelper = new THREE.Object3D();
+      const stationQuat = (station, cam, cropTgt) => {
+        if (!station.aimCrop) return cam.quaternion.clone();
+        aimHelper.position.copy(station.phone);
+        aimHelper.up.set(0, 1, 0);
+        aimHelper.lookAt(tmpAimV.copy(station.phone).multiplyScalar(2).sub(cropTgt));
+        return aimHelper.quaternion.clone();
+      };
       const stepAges = [99, 0, 0, 0, 0];
       let lastTs = 0, lastScreenPaintTs = -1, lastScreenSf = -1;
       const scratchCanvas = document.createElement('canvas');
@@ -1039,7 +1119,8 @@
         lanternMat.emissiveIntensity = 0.12 + w4 * (1.85 + (reduce ? 0 : Math.sin(t * 8) * 0.08));
         lanternLight.intensity = w4 * 1.6;
 
-        /* Phone flight between stations */
+        /* Phone flight between stations: square toward user on 0,2,3,4; aimed at crop on Step 1 */
+        const tgt = cabai1.g.position.clone().add(new THREE.Vector3(0, 0.62, 0));
         const p0 = s0.phone, p1 = s1.phone;
         const arc = Math.sin(Math.PI * f) * 0.65;
         phoneRig.position.set(
@@ -1047,11 +1128,14 @@
           lerp(p0.y, p1.y, f) + arc + (reduce ? 0 : Math.sin(t * 1.6) * 0.045),
           lerp(p0.z, p1.z, f)
         );
-        const pyaw = lerp(s0.yaw, s1.yaw, f);
+        tmpQ.copy(stationQuat(s0, camera, tgt));
+        tmpQ1.copy(stationQuat(s1, camera, tgt));
+        phoneRig.quaternion.copy(tmpQ).slerp(tmpQ1, f);
         const pbank = Math.sin(Math.PI * f) * 0.10 * Math.sign(p1.x - p0.x || 1);
-        phoneRig.quaternion.copy(camera.quaternion);
-        tmpQ.setFromEuler(tmpE.set(-0.06 + (reduce ? 0 : Math.sin(t * 1.2) * 0.012), pyaw + (reduce ? 0 : Math.sin(t * 0.9) * 0.02), pbank));
-        phoneRig.quaternion.multiply(tmpQ);
+        if (Math.abs(pbank) > 0.0005) {
+          tmpQ1.setFromEuler(tmpE.set(0, 0, pbank));
+          phoneRig.quaternion.multiply(tmpQ1);
+        }
         phoneRig.updateMatrixWorld(true);
 
         /* Phone screen compositing */
@@ -1079,7 +1163,6 @@
         /* Step 1: Scan beam + GPS rings + reticle */
         const b1 = w1 * (reduce ? 1 : settle(stepAges[1] * 2.5, 6));
         const lens = lensLocal.clone().applyMatrix4(phone.matrixWorld);
-        const tgt = cabai1.g.position.clone().add(new THREE.Vector3(0, 0.62, 0));
         const bdist = lens.distanceTo(tgt);
         [beam, beamCore].forEach((m, idx) => {
           m.visible = b1 > 0.02;
@@ -1152,26 +1235,61 @@
           p.g.rotation.y = (reduce ? 0 : t * 0.8) + idx;
         });
 
-        /* Step 4: Sync cloud + streaming packets */
+        /* Step 4: Sync cloud + dotted upload arc + photo tiles + packets + cloud pulse */
         const age4 = stepAges[4];
         const cl = w4 * popEase(win(age4, 0.02, 0.35) * 1.6);
         cloud.visible = cl > 0.02;
+        const syncLoop = reduce ? 0.55 : (t * 0.48) % 1;
+        const pulseAmp = (w4 > 0.25 && cl > 0.2) ? (Math.exp(-Math.pow((syncLoop - 0.88) / 0.14, 2)) + 0.25) * w4 : 0;
         if (cloud.visible) {
-          cloud.scale.setScalar(Math.max(0.01, cl));
+          cloud.scale.setScalar(Math.max(0.01, cl * (1 + pulseAmp * 0.045)));
           cloud.position.copy(CLOUD_POS).add(new THREE.Vector3(reduce ? 0 : Math.sin(t * 0.8) * 0.12, reduce ? 0 : Math.sin(t * 1.3) * 0.06, 0));
+          cloudMat.emissive.setHex(0x9aa39d).lerp(new THREE.Color(0x22c55e), Math.min(1, pulseAmp) * 0.45);
+          cloudMat.emissiveIntensity = 0.35 + Math.min(1, pulseAmp) * 0.25;
         }
-        const phoneTop = new THREE.Vector3(0, PH.h / 2 + 0.06, 0).applyMatrix4(phone.matrixWorld);
+        cloudPulse.visible = cloud.visible && pulseAmp > 0.12;
+        if (cloudPulse.visible) {
+          cloudPulse.quaternion.copy(camera.quaternion);
+          cloudPulse.position.set(0, 0, -1.1).applyQuaternion(camera.quaternion);
+          cloudPulse.scale.setScalar(0.95 + Math.min(1, pulseAmp) * 0.16);
+          cloudPulseMat.opacity = Math.min(1, pulseAmp) * 0.25;
+        }
+
+        const phoneTop = new THREE.Vector3(0, PH.h / 2 + 0.14, 0).applyMatrix4(phone.matrixWorld);
+        const cloudEntry = cloud.position.clone().add(new THREE.Vector3(-0.22, -0.45, 0.15));
+        const ctrl = phoneTop.clone().lerp(cloudEntry, 0.48).add(new THREE.Vector3(-0.25, 0.65, 0.15));
+        const bezierAt = (u) => {
+          const pA = phoneTop.clone().lerp(ctrl, u);
+          const pB = ctrl.clone().lerp(cloudEntry, u);
+          return pA.lerp(pB, u);
+        };
+        const streamActive = w4 > 0.25 && cl > 0.2;
+        uploadDots.forEach((d, idx) => {
+          d.visible = streamActive;
+          if (!d.visible) return;
+          const u = 0.06 + (idx / Math.max(1, uploadDots.length - 1)) * 0.86;
+          const sweep = reduce ? 0.4 : (((t * 1.5 - u) % 1 + 1) % 1);
+          const wave = 0.42 + 0.58 * Math.pow(Math.max(0, 1 - sweep * 1.6), 2);
+          d.position.copy(bezierAt(u));
+          d.scale.setScalar(0.75 + 0.55 * wave);
+          d.material.opacity = w4 * 0.72 * wave;
+        });
         packets.forEach((m, idx) => {
-          m.visible = w4 > 0.25 && cl > 0.2;
+          m.visible = streamActive;
           if (!m.visible) return;
-          const ph = reduce ? (idx * 0.18) : ((t * 0.55 + idx * 0.2) % 1);
-          const e = smoothstep(0, 1, ph);
-          const ctrl = phoneTop.clone().lerp(cloud.position, 0.5).add(new THREE.Vector3(0.15, 0.55, 0.1));
-          const pA = phoneTop.clone().lerp(ctrl, e);
-          const pB = ctrl.clone().lerp(cloud.position, e);
-          m.position.copy(pA.lerp(pB, e));
+          const ph = reduce ? (0.14 + idx * 0.18) : ((t * 0.55 + idx * 0.2) % 1);
+          m.position.copy(bezierAt(smoothstep(0, 1, ph)));
           m.rotation.set((reduce ? 0 : t * 3) + idx, reduce ? 0 : t * 4, 0);
-          m.scale.setScalar((Math.sin(Math.PI * ph) * 0.55 + 0.45) * w4);
+          m.scale.setScalar((Math.sin(Math.PI * ph) * 0.65 + 0.35) * (ph > 0.86 ? 1 - win(ph, 0.86, 1) : 1) * w4);
+        });
+        photoTiles.forEach((tile, idx) => {
+          tile.visible = streamActive;
+          if (!tile.visible) return;
+          const ph = reduce ? (0.24 + idx * 0.28) : ((t * 0.46 + idx * 0.33) % 1);
+          tile.position.copy(bezierAt(smoothstep(0, 1, ph)));
+          tile.quaternion.copy(camera.quaternion);
+          tile.rotateZ(Math.sin(ph * Math.PI) * 0.14 * (idx % 2 ? 1 : -1));
+          tile.scale.setScalar((Math.sin(Math.PI * ph) * 0.55 + 0.45) * (ph > 0.85 ? 1 - win(ph, 0.85, 1) : 1) * w4);
         });
 
         webglRenderer.render(scene, camera);

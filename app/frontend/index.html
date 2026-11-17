@@ -24,7 +24,7 @@
   <script defer src="feature-loader.js?v=1"></script>
   <script defer src="error-report.js?v=1"></script>
   <script defer src="actions.js?v=1"></script>
-  <script defer src="i18n.js?v=5"></script>
+  <script defer src="i18n.js?v=7"></script>
   <link rel="stylesheet" href="design-tokens.css?v=2">
   <link rel="stylesheet" href="vendor/tailwind.generated.css?v=28">
   <link rel="stylesheet" href="ui-kit.css?v=5">
@@ -38,8 +38,8 @@
   <!-- Map and photo metadata libraries load when their feature is first opened. -->
 
   <!-- App styles -->
-  <link rel="stylesheet" href="styles.css?v=51">
-  <link rel="stylesheet" href="landing.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=52">
+  <link rel="stylesheet" href="landing.css?v=16">
   <link rel="stylesheet" href="assessment.css?v=13">
   <link rel="stylesheet" href="tour.css?v=3">
 </head>
@@ -102,23 +102,26 @@
       </header>
 
       <div class="mobile-drawer" id="mobile-drawer" aria-label="Menu navigasi ponsel" hidden>
-        <a class="title-2" href="#auth-form">Masuk ke kebun Anda<i data-lucide="log-in" aria-hidden="true"></i></a>
+        <a class="title-2 mobile-drawer-cta" href="#auth-form">Masuk ke kebun Anda<i data-lucide="log-in" aria-hidden="true"></i></a>
         <a class="title-2" href="#video-panduan">Video panduan<i data-lucide="video" aria-hidden="true"></i></a>
         <a class="title-2" href="#masalah">Masalah dan solusi<i data-lucide="git-compare" aria-hidden="true"></i></a>
-        <a class="title-2" href="#cara">Tutorial 3D interaktif<i data-lucide="box" aria-hidden="true"></i></a>
+        <a class="title-2" href="#cara">Tutorial interaktif<i data-lucide="box" aria-hidden="true"></i></a>
         <a class="title-2" href="#fitur">Fitur utama<i data-lucide="scan" aria-hidden="true"></i></a>
         <a class="title-2" href="#faq">Pertanyaan umum<i data-lucide="circle-help" aria-hidden="true"></i></a>
       </div>
 
       <div class="auth-layout">
         <section class="auth-brand-panel" aria-labelledby="landing-title">
-          <img class="auth-panel-ornament" src="img/ornament-botanical-canopy.webp?v=2" alt="" aria-hidden="true">
+          <img class="auth-panel-ornament" src="img/ornament-botanical-sprig.svg?v=1" alt="" aria-hidden="true">
           <a class="landing-brand" href="#auth-gate" aria-label="JagaKebond: Beranda">
             <img src="/icons/logo-256.png?v=3" alt="" width="44" height="44">
             <span>JagaKebond<span class="landing-brand-dot">.</span></span>
           </a>
           <div class="landing-copy">
-            <h2 id="landing-title" class="heading-1">Kenali tanaman.<br><span>Rawat dengan tepat.</span></h2>
+            <div class="landing-title-row">
+              <img class="landing-title-logo" src="/icons/logo-256.png?v=3" alt="JagaKebond" width="44" height="44">
+              <h2 id="landing-title" class="heading-1">Kenali tanaman.<br><span>Rawat dengan tepat.</span></h2>
+            </div>
             <p class="landing-description body-3">Mulai dari satu foto. Kenali gejalanya, simpan catatannya, dan pantau perubahan tanaman Anda.</p>
             <div class="hero-actions">
               <a class="hero-apk-link" href="/downloads/jagakebond-latest.apk" download="JagaKebond-0.2.4.28.apk" data-apk-link>
@@ -192,30 +195,24 @@
 
       <!-- ================= EXPLAINER VIDEO SHOWCASE (#video-panduan) ================= -->
       <section class="block block-soft" id="video-panduan" aria-labelledby="video-heading">
+        <img class="section-ornament section-ornament-tl section-ornament-flip" src="img/ornament-leaf-cascade.svg?v=1" alt="" aria-hidden="true" loading="lazy">
         <div class="wrap">
           <div class="block-head reveal">
             <h2 id="video-heading" class="heading-2">Lihat cara kerja JagaKebond dari kebun hingga peta.</h2>
             <p class="body-3">Tonton panduan singkat pengambilan foto gejala tanaman, pembacaan diagnosis awal AI, pemetaan petak kebun, hingga sinkronisasi antrean offline.</p>
           </div>
           <div class="video-shell reveal">
-            <video id="explainer-video" width="1920" height="1080" autoplay muted preload="auto" playsinline poster="img/jagakebond-explainer-poster.png?v=2">
-              <source id="explainer-src-webm" src="img/jagakebond-explainer-opt-a.webm?v=2" type="video/webm">
-              <source id="explainer-src-mp4" src="img/jagakebond-explainer-opt-a.mp4?v=2" type="video/mp4">
+            <video id="explainer-video" width="1920" height="1440" autoplay muted loop preload="auto" playsinline poster="img/jagakebond-explainer-poster.png?v=3">
+              <source id="explainer-src-webm" src="img/jagakebond-explainer-opt-a.webm?v=3" type="video/webm">
+              <source id="explainer-src-mp4" src="img/jagakebond-explainer-opt-a.mp4?v=3" type="video/mp4">
             </video>
-          </div>
-          <div class="video-chapters" role="group" aria-label="Pilih bab video">
-            <button type="button" class="chapter-btn button-sm is-active" data-seek="0" aria-pressed="true"><span class="time caption-4">00:00</span><span>Beranda</span></button>
-            <button type="button" class="chapter-btn button-sm" data-seek="4" aria-pressed="false"><span class="time caption-4">00:04</span><span>Foto Tanaman</span></button>
-            <button type="button" class="chapter-btn button-sm" data-seek="8" aria-pressed="false"><span class="time caption-4">00:08</span><span>Diagnosis AI</span></button>
-            <button type="button" class="chapter-btn button-sm" data-seek="12" aria-pressed="false"><span class="time caption-4">00:12</span><span>Peta Petak</span></button>
-            <button type="button" class="chapter-btn button-sm" data-seek="16" aria-pressed="false"><span class="time caption-4">00:16</span><span>Sinkron Offline</span></button>
           </div>
         </div>
       </section>
 
       <!-- ================= PROBLEM TO SOLUTION (#masalah) ================= -->
       <section class="block" id="masalah" aria-labelledby="masalah-heading">
-        <img class="section-ornament section-ornament-tr" src="img/ornament-botanical-corner.webp?v=2" alt="" aria-hidden="true" loading="lazy">
+        <img class="section-ornament section-ornament-tr" src="img/ornament-leaf-cascade.svg?v=1" alt="" aria-hidden="true" loading="lazy">
         <div class="wrap">
           <div class="block-head reveal">
             <h2 id="masalah-heading" class="heading-3">Catatan kebun sering tercecer di galeri.</h2>
@@ -246,7 +243,7 @@
 
       <!-- ================= B11 TAGLINE REVEAL (#tagline) ================= -->
       <section class="tagline" aria-label="Inti JagaKebond">
-        <img class="section-ornament section-ornament-ridge" src="img/ornament-contour-ridge.webp?v=2" alt="" aria-hidden="true" loading="lazy">
+        <img class="section-ornament section-ornament-ridge" src="img/ornament-contour-hills.svg?v=1" alt="" aria-hidden="true" loading="lazy">
         <div class="wrap">
           <p class="heading-2" id="tagline">
             <span class="w">Satu</span> <span class="w">foto</span> <span class="w">hari</span> <span class="w">ini.</span><br>
@@ -257,7 +254,7 @@
 
       <!-- ================= BENEFITS (#fitur) ================= -->
       <section class="block" id="fitur" aria-labelledby="fitur-heading">
-        <img class="section-ornament section-ornament-bl section-ornament-flip" src="img/ornament-botanical-corner.webp?v=2" alt="" aria-hidden="true" loading="lazy">
+        <img class="section-ornament section-ornament-bl section-ornament-flip" src="img/ornament-botanical-sprig.svg?v=1" alt="" aria-hidden="true" loading="lazy">
         <div class="wrap">
           <div class="block-head reveal">
             <h2 id="fitur-heading" class="heading-2">Yang Anda dapat dari setiap foto.</h2>
@@ -266,7 +263,7 @@
           <div class="benefits">
             <article class="benefit reveal">
               <figure class="benefit-shot">
-                <img src="img/feature-diagnosis.webp?v=2" alt="Pratinjau diagnosis gejala antraknosa daun cabai di aplikasi JagaKebond" width="720" height="450" loading="lazy">
+                <img src="img/feature-diagnosis.webp?v=3" alt="Pratinjau diagnosis gejala antraknosa daun cabai di aplikasi JagaKebond" width="800" height="500" loading="lazy">
               </figure>
               <div class="benefit-head">
                 <div class="ico" aria-hidden="true"><i data-lucide="scan-line"></i></div>
@@ -277,7 +274,7 @@
 
             <article class="benefit reveal">
               <figure class="benefit-shot">
-                <img src="img/feature-history.webp?v=2" alt="Pratinjau riwayat kesehatan tanaman Cabai 1 dan Cabai 4" width="720" height="450" loading="lazy">
+                <img src="img/feature-history.webp?v=3" alt="Pratinjau riwayat kesehatan tanaman Cabai 1 dan Kopi Arabika 2" width="800" height="500" loading="lazy">
               </figure>
               <div class="benefit-head">
                 <div class="ico" aria-hidden="true"><i data-lucide="tree-deciduous"></i></div>
@@ -288,7 +285,7 @@
 
             <article class="benefit reveal">
               <figure class="benefit-shot">
-                <img src="img/feature-map.webp?v=2" alt="Pratinjau peta kebun interaktif dengan pin tanaman Cabai 1 dan Kopi 2" width="720" height="450" loading="lazy">
+                <img src="img/feature-map.webp?v=3" alt="Pratinjau peta kebun interaktif dengan pin tanaman Cabai 1 dan Kopi 2" width="800" height="500" loading="lazy">
               </figure>
               <div class="benefit-head">
                 <div class="ico" aria-hidden="true"><i data-lucide="map"></i></div>
@@ -299,7 +296,7 @@
 
             <article class="benefit reveal">
               <figure class="benefit-shot">
-                <img src="img/feature-offline.webp?v=2" alt="Pratinjau antrean draf offline Teh 7 yang siap disinkronkan" width="720" height="450" loading="lazy">
+                <img src="img/feature-offline.webp?v=3" alt="Pratinjau antrean draf offline Teh 7 yang siap disinkronkan" width="800" height="500" loading="lazy">
               </figure>
               <div class="benefit-head">
                 <div class="ico" aria-hidden="true"><i data-lucide="cloud-off"></i></div>
@@ -313,39 +310,31 @@
 
       <!-- ================= 5-STEP 3D LOW-POLY ISLAND TUTORIAL (#cara) ================= -->
       <section id="cara" class="block block-soft landing-tour-section" aria-labelledby="cara-heading">
+        <img class="section-ornament section-ornament-tr" src="img/ornament-leaf-cascade.svg?v=1" alt="" aria-hidden="true" loading="lazy">
         <div class="wrap landing-tour-wrap">
           <div class="block-head reveal landing-tour-head">
             <h2 id="cara-heading" class="heading-2">Langkah penggunaan JagaKebond secara visual.</h2>
-            <p class="body-3">Pilih langkah 1 sampai 5 di bawah (atau gulir di layar desktop) untuk melihat bagaimana pulau kebun 3D dan tampilan ponsel bergerak dari pengambilan foto hingga pemetaan petak.</p>
+            <p class="body-3">Gunakan tombol panah di samping animasi atau scroll di layar desktop untuk melihat bagaimana pulau kebun 3D dan tampilan ponsel bergerak dari pengambilan foto hingga pemetaan petak.</p>
           </div>
           <div class="tour-layout">
-            <div class="island-stage">
+            <div class="island-stage" id="island-stage">
               <div class="island-stage-card">
-                <div class="island-head">
-                  <span class="island-progress caption-3" id="island-progress-label">Langkah 1 dari 5</span>
-                  <span class="island-drag-hint caption-4"><i data-lucide="rotate-3d" aria-hidden="true"></i>Putar kanvas</span>
-                </div>
-                <div class="island-canvas-wrap">
+                <div class="island-canvas-wrap" id="island-canvas-wrap">
                   <canvas id="island-canvas" width="720" height="540" aria-label="Animasi panduan 3D interaktif yang menjelaskan alur kerja JagaKebond"></canvas>
                   <canvas id="island-stage-2d" width="720" height="540" hidden></canvas>
+                  <button type="button" id="tour-fullscreen" class="island-fullscreen-btn" aria-label="Tampilkan diorama layar penuh" aria-pressed="false" title="Layar penuh">
+                    <i data-lucide="maximize-2" aria-hidden="true"></i>
+                  </button>
+                  <button type="button" id="tour-prev" class="island-arrow island-arrow-prev" aria-label="Langkah sebelumnya" title="Langkah sebelumnya">
+                    <i data-lucide="chevron-left" aria-hidden="true"></i>
+                  </button>
+                  <button type="button" id="tour-next" class="island-arrow island-arrow-next" aria-label="Langkah berikutnya" title="Langkah berikutnya">
+                    <i data-lucide="chevron-right" aria-hidden="true"></i>
+                  </button>
                   <div class="island-badge caption-3" id="island-badge">
                     <span id="island-badge-icon" aria-hidden="true"><i data-lucide="compass"></i></span>
-                    <span id="island-badge-text">Beranda: Ringkasan kebun dan cuaca</span>
+                    <span id="island-badge-text">Beranda: Cuaca petak, risiko kebun &amp; GPS</span>
                   </div>
-                </div>
-                <div class="island-controls">
-                  <div class="island-pills" role="tablist" aria-label="Pilih langkah panduan 3D">
-                    <button type="button" class="island-pill caption-3 is-active" data-step="0" role="tab" aria-selected="true">1. Beranda</button>
-                    <button type="button" class="island-pill caption-3" data-step="1" role="tab" aria-selected="false">2. Foto</button>
-                    <button type="button" class="island-pill caption-3" data-step="2" role="tab" aria-selected="false">3. Riwayat</button>
-                    <button type="button" class="island-pill caption-3" data-step="3" role="tab" aria-selected="false">4. Peta</button>
-                    <button type="button" class="island-pill caption-3" data-step="4" role="tab" aria-selected="false">5. Offline</button>
-                  </div>
-                  <div class="island-nav-row">
-                    <button type="button" id="tour-prev" class="btn btn-secondary btn-sm button-sm" disabled>Kembali</button>
-                    <button type="button" id="tour-next" class="btn btn-primary btn-sm button-sm">Lanjut ke Foto</button>
-                  </div>
-                  <a href="tutorial-3d.html" class="btn btn-secondary btn-sm button-sm" style="margin-top:8px;width:100%;justify-content:center;" target="_blank" rel="noopener">Buka Diorama 3D Interaktif</a>
                 </div>
               </div>
             </div>
@@ -354,18 +343,16 @@
                 <div class="tour-dots" aria-hidden="true">
                   <span class="is-current"></span><span></span><span></span><span></span><span></span>
                 </div>
-                <p class="tour-step-label caption-3">Langkah 1 dari 5</p>
-                <h3 class="heading-5">Selamat Datang di JagaKebond</h3>
-                <p class="step-body body-3">Beranda merangkum lokasi kebun, suhu serta kelembapan lapangan, jumlah tanaman tercatat, dan status perhatian Kritis atau Waspada di satu layar.</p>
+                <h3 class="heading-5">Pantau Kondisi Cuaca dan Risiko Kebun</h3>
+                <p class="step-body body-3">Beranda merangkum perekaman lokasi otomatis via GPS, suhu dan kelembapan petak Bedeng Cabai (24°C, RH 82%, 724 m dpl), jumlah tanaman tercatat, serta status perhatian Kritis atau Waspada di satu layar.</p>
                 <p class="tour-tip caption-1">Di aplikasi, panduan ini dapat dibuka kembali kapan saja lewat Akun lalu Panduan Penggunaan.</p>
               </article>
               <article class="tour-step-card" data-tour-step="1" tabindex="0">
                 <div class="tour-dots" aria-hidden="true">
                   <span class="is-done"></span><span class="is-current"></span><span></span><span></span><span></span>
                 </div>
-                <p class="tour-step-label caption-3">Langkah 2 dari 5</p>
-                <h3 class="heading-5">Foto Tanaman dan Lokasi</h3>
-                <p class="step-body body-3">Ambil foto daun atau buah yang bermasalah dari kamera atau galeri, pastikan koordinat GPS dan tanggalnya tepat, lalu ketuk Analisis.</p>
+                <h3 class="heading-5">Ambil Foto Tanaman</h3>
+                <p class="step-body body-3">Bidik bagian daun atau buah yang bermasalah dari jarak 15 hingga 25 cm memakai kamera atau galeri, lalu ketuk Analisis untuk memeriksa gejala awal.</p>
                 <div class="tour-action caption-3">Pindai visual aktif di atas bedeng cabai</div>
                 <p class="tour-tip caption-1">Gunakan foto jarak dekat yang terang dan fokus. Hasil analisis adalah dugaan awal yang perlu diperiksa ulang di kebun.</p>
               </article>
@@ -373,30 +360,27 @@
                 <div class="tour-dots" aria-hidden="true">
                   <span class="is-done"></span><span class="is-done"></span><span class="is-current"></span><span></span><span></span>
                 </div>
-                <p class="tour-step-label caption-3">Langkah 3 dari 5</p>
-                <h3 class="heading-5">Riwayat Per Tanaman</h3>
-                <p class="step-body body-3">Buka kartu tanaman untuk membaca dugaan awal, daftar pemeriksaan, saran pencegahan, foto lanjutan, dan catatan koreksi milik Anda sendiri.</p>
-                <div class="tour-action caption-3">Kartu riwayat bertingkat per tanaman</div>
-                <p class="tour-tip caption-1">Riwayat mengelompokkan kondisi per tanaman sehingga perkembangan dari Kritis menuju Sehat terlihat jelas.</p>
+                <h3 class="heading-5">Diagnosis Awal Tanaman dengan AI</h3>
+                <p class="step-body body-3">AI membaca gejala tanaman untuk menyajikan deteksi penyakit awal, panduan suara, serta 3 langkah penanganan dan daftar periksa yang bisa dicentang langsung per tanaman.</p>
+                <div class="tour-action caption-3">Panduan 3 langkah penanganan per tanaman</div>
+                <p class="tour-tip caption-1">Daftar tindakan dan catatan koreksi tersimpan rapi per tanaman sehingga perkembangan dari Kritis menuju Sehat terlihat jelas.</p>
               </article>
               <article class="tour-step-card" data-tour-step="3" tabindex="0">
                 <div class="tour-dots" aria-hidden="true">
                   <span class="is-done"></span><span class="is-done"></span><span class="is-done"></span><span class="is-current"></span><span></span>
                 </div>
-                <p class="tour-step-label caption-3">Langkah 4 dari 5</p>
-                <h3 class="heading-5">Peta Batas Petak</h3>
-                <p class="step-body body-3">Gambar batas poligon petak untuk mengelompokkan tanaman, lalu ketuk titik Sehat hijau, Waspada kuning, atau Kritis merah untuk melihat ringkasan bedeng.</p>
-                <div class="tour-action caption-3">Poligon bedeng dan pin status tampil</div>
+                <h3 class="heading-5">Kelola Kebun per Petak Tanaman</h3>
+                <p class="step-body body-3">Lihat batas poligon bedeng cabai serta titik status Sehat hijau, Waspada kuning, dan Kritis merah untuk membaca panduan tindakan sesuai kondisi tiap petak.</p>
+                <div class="tour-action caption-3">Poligon bedeng cabai dan pin status petak tampil</div>
                 <p class="tour-tip caption-1">Ringkasan peta memakai catatan pemeriksaan yang sudah tercatat dan tidak menebak petak yang belum dipotret.</p>
               </article>
               <article class="tour-step-card" data-tour-step="4" tabindex="0">
                 <div class="tour-dots" aria-hidden="true">
                   <span class="is-done"></span><span class="is-done"></span><span class="is-done"></span><span class="is-done"></span><span class="is-current"></span>
                 </div>
-                <p class="tour-step-label caption-3">Langkah 5 dari 5</p>
-                <h3 class="heading-5">Tetap Jalan Saat Sinyal Hilang</h3>
-                <p class="step-body body-3">Saat sinyal kebun hilang, foto dan catatan harian tetap tersimpan sebagai draf di perangkat Anda lalu terkirim otomatis ketika koneksi kembali.</p>
-                <div class="tour-action caption-3">Sinkronisasi antrean draf ke awan</div>
+                <h3 class="heading-5">Tetap Aktif Offline, Sinkron Otomatis ke Cloud</h3>
+                <p class="step-body body-3">Aplikasi tetap berjalan offline saat sinyal kebun terputus; foto dan catatan tersimpan di perangkat lalu terunggah otomatis ke Cloud saat perangkat kembali terhubung.</p>
+                <div class="tour-action caption-3">Sinkronisasi foto &amp; catatan otomatis ke Cloud</div>
                 <p class="tour-tip caption-1">Ikon status di bilah atas selalu menunjukkan apakah koneksi sedang offline atau semua draf sudah tersinkron.</p>
               </article>
             </div>
@@ -406,6 +390,7 @@
 
       <!-- ================= TRUST & PLATFORM PROOF (#bukti) ================= -->
       <section class="block" id="bukti" aria-labelledby="bukti-heading">
+        <img class="section-ornament section-ornament-br" src="img/ornament-botanical-sprig.svg?v=1" alt="" aria-hidden="true" loading="lazy">
         <div class="wrap">
           <div class="block-head reveal">
             <h2 id="bukti-heading" class="heading-3">Alat bantu catatan, bukan penentu tunggal.</h2>
@@ -419,23 +404,6 @@
             <span class="chip title-5"><i data-lucide="cloud" aria-hidden="true"></i>Data Tersimpan di Cloud</span>
             <span class="chip title-5"><i data-lucide="history" aria-hidden="true"></i>Aplikasi Bekerja Offline*</span>
           </div>
-          <div class="proof-download-bar reveal">
-            <div class="proof-download-copy">
-              <div class="proof-download-ico" aria-hidden="true"><i data-lucide="smartphone"></i></div>
-              <div>
-                <p class="proof-download-title title-4">Pasang Aplikasi Android JagaKebond</p>
-                <p class="proof-download-sub body-3">Mendukung kamera lapangan, GPS &amp; antrean sinkronisasi offline.</p>
-              </div>
-            </div>
-            <div class="proof-download-cta">
-              <span class="proof-download-meta" data-apk-meta>v0.2.4.28 · 6,9 MB</span>
-              <a class="btn btn-primary button-md" href="/downloads/jagakebond-latest.apk" download="JagaKebond-0.2.4.28.apk" data-apk-link>
-                <i data-lucide="download" aria-hidden="true"></i>
-                <span>Unduh APK</span>
-              </a>
-            </div>
-          </div>
-          <p class="proof-footnote caption-2">*fitur ini bekerja di aplikasi native Android</p>
 
           <article class="quote-card reveal">
             <i data-lucide="quote" class="q" aria-hidden="true"></i>
@@ -444,12 +412,13 @@
               <p class="body-3">Setiap pemotretan, pembaruan cuaca harian, gambar batas petak, dan koreksi catatan lapangan tersimpan rapi pada akun kebun Anda dan terenkripsi selama sinkronisasi.</p>
             </div>
           </article>
+          <p class="proof-footnote caption-2 reveal">*fitur ini bekerja di aplikasi native Android</p>
         </div>
       </section>
 
       <!-- ================= FAQ (#faq) ================= -->
       <section class="block block-soft" id="faq" aria-labelledby="faq-heading">
-        <img class="section-ornament section-ornament-br" src="img/ornament-botanical-canopy.webp?v=2" alt="" aria-hidden="true" loading="lazy">
+        <img class="section-ornament section-ornament-br" src="img/ornament-botanical-sprig.svg?v=1" alt="" aria-hidden="true" loading="lazy">
         <div class="wrap">
           <div class="block-head reveal">
             <h2 id="faq-heading" class="heading-2">Pertanyaan yang sering muncul.</h2>
@@ -491,13 +460,29 @@
 
       <!-- ================= FINAL CTA (#mulai) ================= -->
       <section class="block final" id="mulai" aria-labelledby="mulai-heading">
-        <img class="section-ornament section-ornament-on-dark" src="img/ornament-contour-ridge.webp?v=2" alt="" aria-hidden="true" loading="lazy">
+        <img class="section-ornament section-ornament-on-dark" src="img/ornament-contour-hills.svg?v=1" alt="" aria-hidden="true" loading="lazy">
+        <img class="section-ornament section-ornament-on-dark-left section-ornament-flip" src="img/ornament-contour-hills.svg?v=1" alt="" aria-hidden="true" loading="lazy">
         <div class="wrap">
           <h2 id="mulai-heading" class="heading-3">Mulai rapikan catatan kebun Anda hari ini.</h2>
           <p class="body-3">Gunakan akun kebun yang sudah diberikan admin Anda, atau ajukan pendaftaran lewat form masuk di atas.</p>
           <div class="final-actions">
             <a class="btn btn-primary btn-lg button-md" href="#auth-form">Masuk ke kebun Anda<i data-lucide="arrow-right" aria-hidden="true"></i></a>
-            <a class="btn btn-lg button-md btn-final-apk" href="/downloads/jagakebond-latest.apk" download="JagaKebond-0.2.4.28.apk" data-apk-link><i data-lucide="smartphone" aria-hidden="true"></i>Unduh APK Android</a>
+          </div>
+          <div class="final-download-bar reveal">
+            <div class="final-download-copy">
+              <div class="final-download-ico" aria-hidden="true"><i data-lucide="smartphone"></i></div>
+              <div>
+                <p class="final-download-title title-4">Pasang Aplikasi Android JagaKebond</p>
+                <p class="final-download-sub body-6">Mendukung kamera lapangan, GPS &amp; antrean sinkronisasi offline.</p>
+              </div>
+            </div>
+            <div class="final-download-cta">
+              <span class="final-download-meta" data-apk-meta>v0.2.4.28 · 6,9 MB</span>
+              <a class="btn btn-lg button-md btn-final-apk" href="/downloads/jagakebond-latest.apk" download="JagaKebond-0.2.4.28.apk" data-apk-link>
+                <i data-lucide="download" aria-hidden="true"></i>
+                <span>Unduh APK Android</span>
+              </a>
+            </div>
           </div>
           <p class="fine caption-2">Ketentuan lengkap tersedia di <a href="terms.html">Ketentuan Layanan</a>.</p>
         </div>
@@ -1576,7 +1561,7 @@
   <script defer src="problem-registry.js?v=1"></script>
   <script defer src="assessment-ui.js?v=17"></script>
   <script defer src="plot-summary.js?v=6"></script>
-  <script defer src="landing.js?v=5"></script>
+  <script defer src="landing.js?v=7"></script>
   <script defer src="tour.js?v=8"></script>
 </body>
 </html>

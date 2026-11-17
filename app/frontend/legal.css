@@ -1,7 +1,11 @@
 @font-face { font-family:'Google Sans'; font-style:normal; font-weight:100 900; font-display:swap; src:url('vendor/fonts/google-sans/GoogleSans-latin.woff') format('woff'); }
 :root { color-scheme:light; font-family:'Google Sans',system-ui,-apple-system,sans-serif; color:var(--jk-text); background:var(--jk-surface-soft); }
 * { box-sizing:border-box; }
-body { margin:0; font-size:16px; line-height:1.8; }
+body { position:relative; overflow-x:clip; margin:0; font-size:16px; line-height:1.8; }
+body::before, body::after { content:""; position:fixed; pointer-events:none; z-index:0; background-repeat:no-repeat; background-size:contain; }
+body::before { right:0; bottom:0; width:clamp(200px, 26vw, 340px); height:clamp(160px, 21vw, 275px); background-image:url("img/ornament-botanical-sprig.svg?v=1"); background-position:bottom right; opacity:0.14; }
+body::after { top:84px; left:0; width:clamp(180px, 22vw, 280px); height:clamp(144px, 18vw, 224px); background-image:url("img/ornament-leaf-cascade.svg?v=1"); background-position:top right; transform:scaleX(-1); opacity:0.11; }
+.legal-header, .legal-wrap, .legal-footer { position:relative; z-index:1; }
 a { color:var(--jk-green-800); text-underline-offset:3px; }
 a:hover { color:var(--jk-green-900); }
 a:focus-visible { outline:3px solid var(--jk-green-700); outline-offset:4px; border-radius:4px; }

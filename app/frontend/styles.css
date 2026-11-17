@@ -472,12 +472,51 @@ body {
 /* main is its own stacking context: map controls (z-index up to 1000 inside Leaflet and the
    map sheets) can never paint above the modals, toast or header that live outside it. */
 #app-shell > main {
+  position: relative;
   min-height: 0;
   flex: 1 1 auto;
   isolation: isolate;
 }
 
+#app-shell > main::before,
+#app-shell > main::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+#app-shell > main::before {
+  right: 0;
+  bottom: 0;
+  width: clamp(200px, 28vw, 340px);
+  height: clamp(160px, 22vw, 275px);
+  background-image: url("img/ornament-botanical-sprig.svg?v=1");
+  background-position: bottom right;
+  opacity: 0.14;
+}
+
+#app-shell > main::after {
+  top: 16px;
+  left: 0;
+  width: clamp(180px, 24vw, 300px);
+  height: clamp(144px, 19vw, 240px);
+  background-image: url("img/ornament-leaf-cascade.svg?v=1");
+  background-position: top right;
+  transform: scaleX(-1);
+  opacity: 0.11;
+}
+
+#app-shell > main:has(> #view-map:not(.hidden))::before,
+#app-shell > main:has(> #view-map:not(.hidden))::after {
+  display: none;
+}
+
 #app-shell > main > .menu-view {
+  position: relative;
+  z-index: 1;
   padding-bottom: 6rem;
 }
 

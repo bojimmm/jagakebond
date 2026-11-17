@@ -1,0 +1,7 @@
+{
+  "method": "fontTools subset; Latin U+0000-024F, punctuation U+2000-206F, currencies U+20A0-20CF, arrows U+2190-21FF, U+2212, U+FFFD; WOFF compression",
+  "source": "SOURCE.json",
+  "output": "GoogleSans-latin.woff",
+  "bytes": 138696,
+  "sha256": "1f1669f6a81e4b72a66872712e469d07aa5d0b4e69ce230b4dbd1b77cb0086d7"
+}
