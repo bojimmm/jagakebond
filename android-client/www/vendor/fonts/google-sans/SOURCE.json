@@ -1,0 +1,21 @@
+{
+  "repository": "https://github.com/google/fonts",
+  "commit": "a0e3dbcdc3a3ecfafff3f071159ae0221628922d",
+  "files": {
+    "GoogleSans-variable.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/a0e3dbcdc3a3ecfafff3f071159ae0221628922d/ofl/googlesans/GoogleSans%5BGRAD%2Copsz%2Cwght%5D.ttf",
+      "bytes": 4974940,
+      "sha256": "d0a87d835a944b8b40d0e82a5651bb59ab97b936a2aeed5946eb57e7b2a3a90a"
+    },
+    "OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/a0e3dbcdc3a3ecfafff3f071159ae0221628922d/ofl/googlesans/OFL.txt",
+      "bytes": 4488,
+      "sha256": "2b75ef20f13d83a7514aee452c4782c20cdc9ff2dee17600f44d37a06d4fb958"
+    },
+    "TRADEMARKS.md": {
+      "url": "https://raw.githubusercontent.com/google/fonts/a0e3dbcdc3a3ecfafff3f071159ae0221628922d/ofl/googlesans/TRADEMARKS.md",
+      "bytes": 1470,
+      "sha256": "215bc8c1ce46d1b81531f33ebb5af201e7a5da76b8f3ae4c705336fd70fc89e1"
+    }
+  }
+}

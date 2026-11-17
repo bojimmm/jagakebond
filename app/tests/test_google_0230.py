@@ -164,9 +164,9 @@ app_module.MAINTENANCE_FIRST_RUN_SECONDS = 3600
 
 try:
     # =======================================================================
-    section("schema 11")
+    section("schema 12")
     tables = {row["name"] for row in db.query("SELECT name FROM sqlite_master WHERE type='table'")}
-    case("migrate() reaches schema 11", db.migrate() == 11 == db.SCHEMA_VERSION)
+    case("migrate() reaches schema 12", db.migrate() == 12 == db.SCHEMA_VERSION)
     case("the three new tables exist", {"google_identities", "registration_requests", "auth_nonces"} <= tables,
          sorted(tables))
     columns = {row["name"] for row in db.query("PRAGMA table_info(registration_requests)")}
@@ -726,6 +726,35 @@ try:
          stale_reply.status_code == 202, stale_reply.text)
 
     # =======================================================================
+    section("google profile avatar & visibility toggle")
+    av_acct = make_account("avatar.farmer@example.test")
+    with db.transaction() as tx:
+        tx.execute("INSERT INTO google_identities (sub, account_id) VALUES (?, ?)", ("sub-avatar-1", av_acct))
+    av_client = new_client("203.0.113.60")
+    av_login = google(av_client, sub="sub-avatar-1", email="avatar.farmer@example.test",
+                      picture="https://lh3.googleusercontent.com/a/avatar1=s96-c")
+    case("google sign-in stores and exposes https picture URL",
+         av_login.status_code == 200
+         and av_login.json()["account"].get("avatarUrl") == "https://lh3.googleusercontent.com/a/avatar1=s96-c"
+         and av_login.json()["account"].get("canRestoreGoogleAvatar") is False, av_login.text)
+    av_hide = av_client.delete("/api/auth/avatar", headers=csrf(av_client))
+    case("DELETE /api/auth/avatar hides the profile picture while preserving restore capability",
+         av_hide.status_code == 200
+         and av_hide.json()["account"].get("avatarUrl") is None
+         and av_hide.json()["account"].get("canRestoreGoogleAvatar") is True, av_hide.text)
+    av_relogin = google(new_client("203.0.113.61"), sub="sub-avatar-1", email="avatar.farmer@example.test",
+                        picture="https://lh3.googleusercontent.com/a/avatar2=s96-c")
+    case("subsequent Google sign-in preserves opted-out avatar preference while refreshing underlying URL",
+         av_relogin.status_code == 200
+         and av_relogin.json()["account"].get("avatarUrl") is None
+         and av_relogin.json()["account"].get("canRestoreGoogleAvatar") is True, av_relogin.text)
+    av_restore = av_client.put("/api/auth/avatar", headers=csrf(av_client))
+    case("PUT /api/auth/avatar restores the updated Google profile picture",
+         av_restore.status_code == 200
+         and av_restore.json()["account"].get("avatarUrl") == "https://lh3.googleusercontent.com/a/avatar2=s96-c"
+         and av_restore.json()["account"].get("canRestoreGoogleAvatar") is False, av_restore.text)
+
+    # =======================================================================
     section("schema 9 -> 10 upgrade and reset_for_tests")
     db.close_all()
     main_db = db.DB_PATH
@@ -735,7 +764,7 @@ try:
     with db.transaction() as tx:
         tx.execute("INSERT INTO accounts(id,email,name,role,password_hash,is_active,daily_quota,created_ms,updated_ms) "
                    "VALUES ('acct_old','old@example.test','old','user','x',1,0,1,1)")
-    case("migrate() upgrades it to 11", db.migrate() == 11)
+    case("migrate() upgrades it to 12", db.migrate() == 12)
     upgraded = {row["name"] for row in db.query("SELECT name FROM sqlite_master WHERE type='table'")}
     case("the upgrade adds the new tables and keeps the data",
          {"google_identities", "registration_requests", "auth_nonces"} <= upgraded and auth.find_by_id("acct_old"))

@@ -13,6 +13,18 @@ const workflowPreviews = new Map();
 const workflowTerminal = new Set(["done", "failed", "rejected", "cancelled"]);
 const workflowGuard = (owner, generation) =>
   String(currentAccount?.id) === owner && accountGeneration === generation;
+const trWorkflow = (text, vars) =>
+  window.JagaI18n && typeof window.JagaI18n.t === "function"
+    ? window.JagaI18n.t(text, vars)
+    : vars
+      ? String(text).replace(/\{(\w+)\}/g, (_, k) =>
+          k in vars ? String(vars[k]) : "{" + k + "}",
+        )
+      : text;
+const trWorkflowCrop = (name) =>
+  window.JagaI18n && typeof window.JagaI18n.crop === "function"
+    ? window.JagaI18n.crop(name)
+    : name;
 
 function locationMetadata(value) {
   const number = (v) =>
@@ -39,7 +51,9 @@ async function archiveReceiptPhoto(receipt, job) {
   if (!workflowGuard(owner, generation)) return;
   if (!found.draft?.imageBase64)
     throw Error(
-      "Foto asli draf belum tersedia; hasil belum dihapus dari antrean.",
+      trWorkflow(
+        "Foto asli draf belum tersedia; hasil belum dihapus dari antrean.",
+      ),
     );
   const original =
     (await JagaMedia.dataUrl(receipt.clientRequestId)) ||
@@ -175,7 +189,9 @@ async function refreshWorkflow() {
           } catch (error) {
             if (workflowGuard(owner, generation))
               showToast(
-                "Hasil tetap tersimpan di server: " + userMessage(error),
+                trWorkflow("Hasil tetap tersimpan di server:") +
+                  " " +
+                  userMessage(error),
               );
           }
         } else if (["failed", "rejected", "cancelled"].includes(job.status)) {
@@ -250,8 +266,10 @@ async function refreshWorkflow() {
         await refreshAllData();
         if (workflowGuard(owner, generation))
           showToast(
-            reapplied +
-              " hasil analisis ulang sudah diterapkan ke catatan aslinya.",
+            trWorkflow(
+              "{n} hasil analisis ulang sudah diterapkan ke catatan aslinya.",
+              { n: reapplied },
+            ),
           );
       }
       if (workflowGuard(owner, generation)) {
@@ -263,7 +281,7 @@ async function refreshWorkflow() {
         syncNotice =
           error && error.offline
             ? ""
-            : "Status belum diperbarui: " + userMessage(error);
+            : trWorkflow("Status belum diperbarui:") + " " + userMessage(error);
         await updateOfflineDraftCount();
       }
     }
@@ -308,9 +326,9 @@ function draftPlace(fields) {
   const p = locationMetadata(fields || {});
   return JagaWorkflow.validPoint(p.lat, p.lng)
     ? fields?.locationSource === "plot"
-      ? "Lokasi petak"
-      : "Lokasi tersimpan"
-    : "Lokasi belum terbaca";
+      ? trWorkflow("Lokasi petak")
+      : trWorkflow("Lokasi tersimpan")
+    : trWorkflow("Lokasi belum terbaca");
 }
 function isPermanentUpload(draft) {
   return (
@@ -323,27 +341,28 @@ function isPermanentUpload(draft) {
 function draftRowModel(draft, job) {
   const jobStatus = job?.status,
     status = draft?.status;
-  const reason =
+  const rawReason =
     job?.error ||
     (draft && draft.error && !/^[a-z_]+(:.*)?$/.test(draft.error)
       ? draft.error
       : "");
+  const reason = rawReason ? trWorkflow(rawReason) : "";
   const analysisFailed =
     ["failed", "rejected", "cancelled"].includes(jobStatus) ||
     (!!draft?.jobId && ["failed", "rejected", "cancelled"].includes(status));
   if (analysisFailed) {
     const providerDown =
       job?.triage?.code === "provider_unavailable" ||
-      /server analisis sedang bermasalah/i.test(reason);
+      /server analisis sedang bermasalah/i.test(rawReason);
     const refused = (jobStatus || status) === "rejected" && !providerDown;
     if (!draft)
       return {
         kind: "failed",
-        chip: refused ? "Foto ditolak" : "Gagal",
+        chip: trWorkflow(refused ? "Foto ditolak" : "Gagal"),
         tone: "bad",
         reason,
         primary: {
-          label: "Hapus",
+          label: trWorkflow("Hapus"),
           attr: "data-discard-draft",
           style: "btn-danger",
           run: () => discardWorkflow(null, job),
@@ -351,18 +370,18 @@ function draftRowModel(draft, job) {
       };
     return {
       kind: "failed",
-      chip: refused ? "Foto ditolak — foto ulang" : "Gagal — coba lagi",
+      chip: trWorkflow(refused ? "Foto ditolak — foto ulang" : "Gagal — coba lagi"),
       tone: "bad",
       reason,
       primary: refused
         ? {
-            label: "Hapus",
+            label: trWorkflow("Hapus"),
             attr: "data-discard-draft",
             style: "btn-danger",
             run: () => discardWorkflow(draft, job),
           }
         : {
-            label: "Kirim ulang",
+            label: trWorkflow("Kirim ulang"),
             attr: "data-resend-draft",
             style: "btn-primary",
             run: () => resendDraft(draft, job),
@@ -371,13 +390,15 @@ function draftRowModel(draft, job) {
   }
   if (status === "submitted" || (!draft && ACTIVE_JOB.has(jobStatus))) {
     const position = typeof job?.position === "number" ? job.position : null;
-    const label =
-      job?.stageLabel ||
-      (jobStatus === "claimed" || position === 0
-        ? "Sedang dianalisis"
-        : jobStatus === "queued"
-          ? "Menunggu giliran"
-          : "Sedang dianalisis");
+    const label = job?.stageLabel
+      ? trWorkflow(job.stageLabel)
+      : trWorkflow(
+          jobStatus === "claimed" || position === 0
+            ? "Sedang dianalisis"
+            : jobStatus === "queued"
+              ? "Menunggu giliran"
+              : "Sedang dianalisis",
+        );
     return {
       kind: "processing",
       chip: label,
@@ -389,7 +410,7 @@ function draftRowModel(draft, job) {
   if (status === "uploading")
     return {
       kind: "unsent",
-      chip: "Sedang dikirim",
+      chip: trWorkflow("Sedang dikirim"),
       tone: "busy",
       reason: "",
       primary: null,
@@ -397,11 +418,11 @@ function draftRowModel(draft, job) {
   if (status === "editing")
     return {
       kind: "unsent",
-      chip: "Siap dikirim",
+      chip: trWorkflow("Siap dikirim"),
       tone: "wait",
       reason: "",
       primary: {
-        label: "Kirim",
+        label: trWorkflow("Kirim"),
         attr: "data-resume-draft",
         style: "btn-primary",
         run: () => resumeDraft(draft),
@@ -413,11 +434,11 @@ function draftRowModel(draft, job) {
     if (isPermanentUpload(draft))
       return {
         kind: "failed",
-        chip: draftSyncLabel(draft),
+        chip: trWorkflow(draftSyncLabel(draft)),
         tone: "bad",
         reason,
         primary: {
-          label: "Hapus",
+          label: trWorkflow("Hapus"),
           attr: "data-discard-draft",
           style: "btn-danger",
           run: () => discardWorkflow(draft, job),
@@ -425,11 +446,11 @@ function draftRowModel(draft, job) {
       };
     return {
       kind: "failed",
-      chip: draftSyncLabel(draft),
+      chip: trWorkflow(draftSyncLabel(draft)),
       tone: "bad",
       reason,
       primary: {
-        label: "Coba lagi",
+        label: trWorkflow("Coba lagi"),
         attr: "data-retry-draft",
         style: "btn-primary",
         run: () => retryDraft(draft),
@@ -438,11 +459,11 @@ function draftRowModel(draft, job) {
   }
   return {
     kind: "unsent",
-    chip: draftSyncLabel(draft),
+    chip: trWorkflow(draftSyncLabel(draft)),
     tone: "wait",
     reason: "",
     primary: {
-      label: "Kirim",
+      label: trWorkflow("Kirim"),
       attr: "data-send-draft",
       style: "btn-primary",
       run: () => sendDraftNow(draft),
@@ -526,8 +547,11 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
   copy.className = "draft-row-copy";
   const title = document.createElement("strong");
   title.className = "draft-row-title";
-  title.textContent =
-    fields.cropName || fields.cropHint || "Belum dipilih tanamannya";
+  title.textContent = fields.cropName
+    ? trWorkflowCrop(fields.cropName)
+    : fields.cropHint
+      ? trWorkflowCrop(fields.cropHint)
+      : trWorkflow("Belum dipilih tanamannya");
   const meta = document.createElement("span");
   meta.className = "draft-row-meta";
   meta.textContent = [draftTime(draft, job), draftPlace(fields)]
@@ -542,12 +566,19 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
   reason.textContent = model.reason || "";
   copy.append(title, meta, chip, reason);
   if (watchable) {
-    const crop = fields.cropName || fields.cropHint || "Foto tanaman";
+    const crop = fields.cropName
+      ? trWorkflowCrop(fields.cropName)
+      : fields.cropHint
+        ? trWorkflowCrop(fields.cropHint)
+        : trWorkflow("Foto tanaman");
     copy.type = "button";
     copy.classList.add("draft-row-open");
-    copy.setAttribute("aria-label", "Lihat kemajuan analisis: " + crop);
+    copy.setAttribute(
+      "aria-label",
+      trWorkflow("Lihat kemajuan analisis: ") + crop,
+    );
     if (!model.reason) {
-      reason.textContent = "Ketuk untuk melihat kemajuan";
+      reason.textContent = trWorkflow("Ketuk untuk melihat kemajuan");
       reason.classList.add("is-hint");
     }
     copy.addEventListener("click", () =>
@@ -581,8 +612,8 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
   more.className = "draft-more";
   const summary = document.createElement("summary");
   summary.className = "btn btn-quiet btn-icon";
-  summary.setAttribute("aria-label", "Pilihan lain");
-  summary.title = "Pilihan lain";
+  summary.setAttribute("aria-label", trWorkflow("Pilihan lain"));
+  summary.title = trWorkflow("Pilihan lain");
   const dots = document.createElement("i");
   dots.setAttribute("data-lucide", "more-horizontal");
   summary.append(dots);
@@ -591,7 +622,7 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
   if (draft)
     menu.append(
       draftButton(
-        "Lihat foto",
+        trWorkflow("Lihat foto"),
         "image",
         "btn-quiet btn-sm",
         "data-view-draft",
@@ -604,12 +635,12 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
           if (image.draft?.imageBase64)
             openPhotoViewer(
               "data:image/jpeg;base64," + image.draft.imageBase64,
-              "Foto belum terkirim",
+              trWorkflow("Foto belum terkirim"),
               model.chip,
               "",
               null,
             );
-          else showToast("Foto tidak ditemukan di HP ini.");
+          else showToast(trWorkflow("Foto tidak ditemukan di HP ini."));
         },
       ),
     );
@@ -626,7 +657,7 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
   )
     menu.append(
       draftButton(
-        "Ubah lokasi",
+        trWorkflow("Ubah lokasi"),
         "map-pin",
         "btn-quiet btn-sm",
         "data-edit-draft",
@@ -637,7 +668,7 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
   if (draft)
     menu.append(
       draftButton(
-        "Simpan ke galeri",
+        trWorkflow("Simpan ke galeri"),
         "download",
         "btn-quiet btn-sm",
         "data-export-draft",
@@ -655,7 +686,8 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
                 clientRequestId: draft.clientRequestId,
               })
             ).draft;
-            if (!source) throw Error("Foto tidak ditemukan di HP ini.");
+            if (!source)
+              throw Error(trWorkflow("Foto tidak ditemukan di HP ini."));
             await JagaMedia.put({
               accountId: owner,
               photoId: draft.clientRequestId,
@@ -672,7 +704,7 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
   if (!primaryDiscards && draft?.status !== "uploading" && (draft || job))
     menu.append(
       draftButton(
-        model.kind === "processing" ? "Batalkan" : "Hapus",
+        trWorkflow(model.kind === "processing" ? "Batalkan" : "Hapus"),
         "trash-2",
         "btn-quiet btn-sm",
         "data-discard-draft",
@@ -690,7 +722,9 @@ function renderWorkflowRow(list, draft, job, owner, generation) {
 /* "Kirim": this draft first, now, ignoring its backoff deadline. */
 async function sendDraftNow(draft) {
   if (navigator.onLine === false) {
-    showToast("Belum ada sinyal. Foto dikirim otomatis saat ada sinyal.");
+    showToast(
+      trWorkflow("Belum ada sinyal. Foto dikirim otomatis saat ada sinyal."),
+    );
     return;
   }
   if (JagaNative.isNative()) {
@@ -734,7 +768,9 @@ async function resendDraft(draft, job) {
   ).draft;
   if (!workflowGuard(owner, generation)) return;
   if (!prior || !prior.imageBase64)
-    throw Error("Foto tidak ditemukan di HP ini. Hapus lalu foto ulang.");
+    throw Error(
+      trWorkflow("Foto tidak ditemukan di HP ini. Hapus lalu foto ulang."),
+    );
   const newId = crypto.randomUUID();
   const original = await JagaMedia.get({
     accountId: owner,
@@ -767,9 +803,11 @@ async function resendDraft(draft, job) {
   await JagaMedia.draftResume({ accountId: owner, clientRequestId: newId });
   if (!workflowGuard(owner, generation)) return;
   showToast(
-    navigator.onLine === false
-      ? "Foto dikirim ulang saat ada sinyal."
-      : "Foto dikirim ulang.",
+    trWorkflow(
+      navigator.onLine === false
+        ? "Foto dikirim ulang saat ada sinyal."
+        : "Foto dikirim ulang.",
+    ),
   );
   if (!JagaNative.isNative() && navigator.onLine !== false)
     await JagaOfflineSync.run({ manual: true, first: newId });
@@ -810,11 +848,13 @@ function draftSummaryText(counts) {
   // Short enough for the strip head at 360 px; the rows say exactly what is wrong with each photo.
   // A photo the server analysed and refused was sent: count it as failed, never as "belum terkirim".
   const parts = [];
-  if (counts.failed) parts.push(counts.failed + " gagal");
-  if (counts.unsent) parts.push(counts.unsent + " belum terkirim");
+  if (counts.failed) parts.push(trWorkflow("{n} gagal", { n: counts.failed }));
+  if (counts.unsent)
+    parts.push(trWorkflow("{n} belum terkirim", { n: counts.unsent }));
   if (parts.length) return parts.join(" · ");
-  if (counts.processing) return counts.processing + " sedang dianalisis";
-  return "Semua foto sudah terkirim";
+  if (counts.processing)
+    return trWorkflow("{n} sedang dianalisis", { n: counts.processing });
+  return trWorkflow("Semua foto sudah terkirim");
 }
 function setDraftsExpanded(open) {
   draftsExpanded = !!open;
@@ -858,7 +898,7 @@ async function updateOfflineDraftCount() {
       syncNotice ||
       (issueRow
         ? issueRow.draft
-          ? draftSyncLabel(issueRow.draft) +
+          ? trWorkflow(draftSyncLabel(issueRow.draft)) +
             (issueRow.model.reason ? " · " + issueRow.model.reason : "")
           : issueRow.model.chip +
             (issueRow.model.reason ? " · " + issueRow.model.reason : "")
@@ -886,8 +926,8 @@ async function updateOfflineDraftCount() {
       if (outdated)
         JagaShell.setAttention(
           "server",
-          "Server perlu diperbarui. Foto tetap tersimpan di HP.",
-          { tone: "warn", label: "Coba lagi" },
+          trWorkflow("Server perlu diperbarui. Foto tetap tersimpan di HP."),
+          { tone: "warn", label: trWorkflow("Coba lagi") },
         );
       else JagaShell.clearAttention("server");
     }
@@ -911,7 +951,7 @@ async function updateOfflineDraftCount() {
     if (!rows.length) {
       const text = document.createElement("p");
       text.className = "drafts-empty";
-      text.textContent = "Semua foto sudah terkirim.";
+      text.textContent = trWorkflow("Semua foto sudah terkirim.");
       list.append(text);
     }
     if (typeof icons === "function" && section && !section.hidden) icons();
@@ -920,7 +960,9 @@ async function updateOfflineDraftCount() {
       const status = document.getElementById("sync-status");
       if (status)
         status.textContent =
-          "Daftar foto belum bisa dibuka: " + userMessage(error);
+          trWorkflow("Daftar foto belum bisa dibuka:") +
+          " " +
+          userMessage(error);
     }
   }
 }
@@ -929,9 +971,12 @@ function noteQuarantine(owner, listed) {
   const n = Number(listed && listed.quarantined) || 0;
   if (!n || quarantineNoticeShown) return;
   quarantineNoticeShown = true;
-  const text =
-    (listed.quarantinedApprox ? "Beberapa" : n) +
-    " foto lama tidak bisa dibuka lagi di HP ini dan disisihkan. Foto lain aman.";
+  const text = trWorkflow(
+    listed.quarantinedApprox
+      ? "Beberapa foto lama tidak bisa dibuka lagi di HP ini dan disisihkan. Foto lain aman."
+      : "{n} foto lama tidak bisa dibuka lagi di HP ini dan disisihkan. Foto lain aman.",
+    { n },
+  );
   if (window.JagaShell)
     JagaShell.setAttention("quarantine", text, { tone: "warn" });
   showToast(text);
@@ -952,11 +997,13 @@ async function discardWorkflow(draft, job) {
   const running = !!id && !!job && ACTIVE_JOB.has(job.status);
   if (
     !(await confirmAction({
-      title: running ? "Batalkan analisis?" : "Hapus foto ini?",
-      message: running
-        ? "Foto ini tidak akan dianalisis. Kuota yang sudah terpakai tidak kembali."
-        : "Foto yang belum terkirim akan dihapus dari HP ini.",
-      okLabel: running ? "Batalkan" : "Hapus",
+      title: trWorkflow(running ? "Batalkan analisis?" : "Hapus foto ini?"),
+      message: trWorkflow(
+        running
+          ? "Foto ini tidak akan dianalisis. Kuota yang sudah terpakai tidak kembali."
+          : "Foto yang belum terkirim akan dihapus dari HP ini.",
+      ),
+      okLabel: trWorkflow(running ? "Batalkan" : "Hapus"),
     }))
   )
     return;
@@ -972,7 +1019,9 @@ async function discardWorkflow(draft, job) {
     // A completion that wins the cancellation race must be recovered, not erased.
     if (current.status === "done") {
       await refreshWorkflow();
-      showToast("Analisis sudah selesai; hasilnya disimpan di Riwayat.");
+      showToast(
+        trWorkflow("Analisis sudah selesai; hasilnya disimpan di Riwayat."),
+      );
       return;
     }
     await api("/api/analyze/" + encodeURIComponent(id) + "/ack", {
@@ -1005,7 +1054,7 @@ async function openLocationEditor(kind, id) {
         ? farmRecords.find((r) => r.id === id)
         : workflowDrafts.find((d) => d.clientRequestId === id)?.fields;
   if (kind === "capture" && !selectedImageBase64) {
-    showToast("Ambil atau pilih foto terlebih dahulu.");
+    showToast(trWorkflow("Ambil atau pilih foto terlebih dahulu."));
     return;
   }
   if (!value) value = {};
@@ -1018,7 +1067,9 @@ async function openLocationEditor(kind, id) {
     ? meta.lng
     : "";
   const select = document.getElementById("location-plot");
-  select.replaceChildren(new Option("Tanpa petak (titik / koordinat)", ""));
+  select.replaceChildren(
+    new Option(trWorkflow("Tanpa petak (titik / koordinat)"), ""),
+  );
   for (const farm of farmList) select.add(new Option(farm.name, farm.id));
   select.value = value.farmId || "";
   document.getElementById("location-error").textContent = "";
@@ -1132,8 +1183,8 @@ function addLocationLocateControl(map) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "location-locate-btn";
-      button.title = "Ke lokasi saya";
-      button.setAttribute("aria-label", "Ke lokasi saya");
+      button.title = trWorkflow("Ke lokasi saya");
+      button.setAttribute("aria-label", trWorkflow("Ke lokasi saya"));
       button.innerHTML =
         '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" x2="5" y1="12" y2="12"></line><line x1="19" x2="22" y1="12" y2="12"></line><line x1="12" x2="12" y1="2" y2="5"></line><line x1="12" x2="12" y1="19" y2="22"></line><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="3"></circle></svg>';
       L.DomEvent.disableClickPropagation(wrap);
@@ -1161,7 +1212,7 @@ function centerLocationMapOnMe(button) {
     return;
   }
   if (!navigator.geolocation) {
-    showToast("HP ini tidak punya GPS.");
+    showToast(trWorkflow("HP ini tidak punya GPS."));
     return;
   }
   if (button) button.disabled = true;
@@ -1172,7 +1223,7 @@ function centerLocationMapOnMe(button) {
     },
     () => {
       if (button) button.disabled = false;
-      showToast("Lokasi belum terbaca. Coba lagi di tempat terbuka.");
+      showToast(trWorkflow("Lokasi belum terbaca. Coba lagi di tempat terbuka."));
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
   );
@@ -1208,35 +1259,78 @@ async function saveLocationEditor() {
     };
     let lat = parse("location-lat"),
       lng = parse("location-lng");
-    const farmId = document.getElementById("location-plot").value;
+    let farmId = document.getElementById("location-plot").value;
     if (farmId) {
       const farm = farmList.find((f) => f.id === farmId);
-      if (!farm) throw Error("Petak tidak tersedia.");
+      if (!farm) throw Error(trWorkflow("Petak tidak tersedia."));
       [lat, lng] = JagaWorkflow.plotPoint(farm.ring);
     }
     if (!JagaWorkflow.validPoint(lat, lng))
-      throw Error("Isi lintang −90…90 dan bujur −180…180, atau pilih petak.");
+      throw Error(
+        trWorkflow("Isi lintang −90…90 dan bujur −180…180, atau pilih petak."),
+      );
+    if (!farmId && typeof farmContainingPoint === "function") {
+      farmId = farmContainingPoint(lat, lng) || "";
+    }
     const farm = farmList.find((f) => f.id === farmId);
+    const saveBtn = document.getElementById("location-save");
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = trWorkflow("Memperbarui lokasi…");
+    }
+    let telem = null;
+    try {
+      if (navigator.onLine !== false) {
+        telem = await Promise.race([
+          api("/api/telemetry?lat=" + encodeURIComponent(lat) + "&lng=" + encodeURIComponent(lng)),
+          new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
+        ]);
+      }
+    } catch (_) {
+      telem = null;
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = trWorkflow("Simpan Lokasi");
+      }
+    }
+    if (!workflowGuard(target.owner, target.generation)) return;
+    const rawElev = Array.isArray(telem?.elevation) ? telem.elevation[0] : telem?.elevation;
+    const elev = Number.isFinite(Number(rawElev)) ? Math.round(Number(rawElev)) : null;
+    const placeName = typeof telem?.locationName === "string" && telem.locationName.trim() ? telem.locationName.trim() : null;
+    const weather = typeof telem?.weather === "string" && telem.weather.trim() ? telem.weather.trim() : null;
+    const locationLabel = farm && placeName
+      ? farm.name + " · " + placeName
+      : placeName ||
+        (farm
+          ? trWorkflow("Petak ") + farm.name
+          : lat.toFixed(5) + ", " + lng.toFixed(5));
     const patch = {
       lat,
       lng,
       farmId: farmId || null,
       accuracy: null,
-      elevation: null,
-      weather: null,
-      locationName: farm
-        ? "Petak " + farm.name
-        : lat.toFixed(5) + ", " + lng.toFixed(5),
+      elevation: elev,
+      weather,
+      locationName: locationLabel,
       locationSource: farmId ? "plot" : "manual",
     };
     if (target.kind === "capture") {
+      if (!Number.isFinite(selectedPhotoTimestampMs)) {
+        const now = new Date();
+        selectedPhotoTimestampMs = now.getTime();
+        selectedPhotoDateString = typeof formatPhotoDate === "function" ? formatPhotoDate(now, "waktu unggah perangkat") : null;
+      }
       selectedPhotoMetadata = Object.freeze({
         ...selectedPhotoMetadata,
         ...patch,
+        captureTimeMs: selectedPhotoTimestampMs,
+        photoDate: selectedPhotoDateString,
       });
       activeOfflineCapture = null;
       document.getElementById("capture-location-summary").textContent =
         patch.locationName;
+      if (typeof renderScanHead === "function") renderScanHead(scanState, {});
       if (typeof updateScanLocationChip === "function")
         updateScanLocationChip();
     } else if (target.kind === "draft") {
@@ -1247,7 +1341,7 @@ async function saveLocationEditor() {
         })
       ).draft;
       if (!workflowGuard(target.owner, target.generation)) return;
-      if (!prior) throw Error("Draf tidak ditemukan.");
+      if (!prior) throw Error(trWorkflow("Draf tidak ditemukan."));
       const fields = Object.fromEntries(
         Object.entries({
           ...prior.fields,
@@ -1308,7 +1402,8 @@ async function saveLocationEditor() {
           });
       } catch (error) {
         showToast(
-          "Lokasi server tersimpan; salinan lokal belum diperbarui: " +
+          trWorkflow("Lokasi server tersimpan; salinan lokal belum diperbarui:") +
+            " " +
             userMessage(error),
         );
       }
@@ -1318,8 +1413,11 @@ async function saveLocationEditor() {
       closeDialog("modal-location");
       workflowLocationTarget = null;
       showToast(
-        "Lokasi disimpan sebagai " +
-          (farmId ? "lokasi petak." : "lokasi manual."),
+        trWorkflow(
+          farmId
+            ? "Lokasi disimpan sebagai lokasi petak."
+            : "Lokasi disimpan sebagai lokasi manual.",
+        ),
       );
     }
   } catch (error) {
@@ -1437,12 +1535,14 @@ async function exportPrivatePhoto(photoId) {
       rendered = await renderRecordPhoto(record);
       if (!rendered?.stamped)
         throw Error(
-          "Sambungkan internet untuk memperbarui cap dari foto asli.",
+          trWorkflow(
+            "Sambungkan internet untuk memperbarui cap dari foto asli.",
+          ),
         );
     } else {
       const p = await JagaMedia.get({ accountId: owner, photoId });
       if (!workflowGuard(owner, generation)) return;
-      if (!p.imageBase64) throw Error("Foto asli tidak tersedia.");
+      if (!p.imageBase64) throw Error(trWorkflow("Foto asli tidak tersedia."));
       const metadata = { ...p.metadata, exportedAtMs: Date.now() };
       rendered = {
         dataUrl: await bakeStampIntoCanvas(
@@ -1460,7 +1560,7 @@ async function exportPrivatePhoto(photoId) {
       metadata: rendered.metadata,
     });
     if (workflowGuard(owner, generation))
-      showToast("Foto bercap JagaKebond disimpan ke galeri.");
+      showToast(trWorkflow("Foto bercap JagaKebond disimpan ke galeri."));
   } catch (error) {
     if (workflowGuard(owner, generation)) showToast(userMessage(error));
   }
@@ -1500,7 +1600,63 @@ JagaHooks.on("data-refreshed", () => hydrateLocalRecordPhotos());
 async function downloadStampedPhoto() {
   const photoId = activeJobId ? "record_" + activeJobId : viewerRecordId;
   if (photoId) await exportPrivatePhoto(photoId);
-  else showToast("Buka foto dari Riwayat untuk ekspor.");
+  else showToast(trWorkflow("Buka foto dari Riwayat untuk ekspor."));
+}
+
+function applyWorkflowStaticCopy() {
+  const modal = document.getElementById("modal-location");
+  if (modal) {
+    const h2 = modal.querySelector("header h2");
+    if (h2) h2.textContent = trWorkflow("Atur Lokasi");
+    const closeBtn = document.getElementById("location-close");
+    if (closeBtn)
+      closeBtn.setAttribute(
+        "aria-label",
+        trWorkflow("Tutup pengaturan lokasi"),
+      );
+    const intro = modal.querySelector("section > p:first-of-type");
+    if (intro)
+      intro.textContent = trWorkflow(
+        "Geser pin ke lokasi foto atau pilih petak tempat tanaman berada.",
+      );
+    const mapEl = document.getElementById("location-map");
+    if (mapEl)
+      mapEl.setAttribute("aria-label", trWorkflow("Peta pilih lokasi"));
+    const plotOpt = document.querySelector('#location-plot option[value=""]');
+    if (plotOpt)
+      plotOpt.textContent = trWorkflow("Tanpa petak (titik / koordinat)");
+    const plotLabel = modal.querySelector("section > label");
+    if (plotLabel && plotLabel.firstChild?.nodeType === 3)
+      plotLabel.firstChild.nodeValue = trWorkflow("Petak");
+    const manualSummary = modal.querySelector(".loc-manual summary");
+    if (manualSummary)
+      manualSummary.textContent = trWorkflow("Atur Koordinat Manual");
+    const coordLabels = modal.querySelectorAll(
+      ".workflow-coordinate-grid label",
+    );
+    if (coordLabels[0]?.firstChild?.nodeType === 3)
+      coordLabels[0].firstChild.nodeValue = trWorkflow("Lintang (derajat)");
+    if (coordLabels[1]?.firstChild?.nodeType === 3)
+      coordLabels[1].firstChild.nodeValue = trWorkflow("Bujur (derajat)");
+    const errEl = document.getElementById("location-error");
+    const hintP = errEl?.nextElementSibling;
+    if (hintP && hintP.tagName === "P")
+      hintP.textContent = trWorkflow(
+        "Memilih petak menaruh pin di tengah petak. Sesuaikan pin bila lokasi tanaman berbeda.",
+      );
+    const saveBtn = document.getElementById("location-save");
+    if (saveBtn && !saveBtn.disabled)
+      saveBtn.textContent = trWorkflow("Simpan Lokasi");
+    dialogNames["modal-location"] = trWorkflow("Lokasi Foto atau Tanaman");
+  }
+  document.querySelectorAll(".location-locate-btn").forEach((btn) => {
+    btn.title = trWorkflow("Ke lokasi saya");
+    btn.setAttribute("aria-label", trWorkflow("Ke lokasi saya"));
+  });
+  const editLoc = document.getElementById("viewer-edit-location");
+  if (editLoc) editLoc.textContent = trWorkflow("Ubah lokasi");
+  const saveGal = document.getElementById("viewer-save-gallery");
+  if (saveGal) saveGal.textContent = trWorkflow("Simpan ke galeri");
 }
 
 function installWorkflowUi() {
@@ -1519,9 +1675,9 @@ function installWorkflowUi() {
   modal.id = "modal-location";
   modal.className = "hidden workflow-modal";
   modal.innerHTML =
-    '<section class="workflow-dialog" role="document"><header><h2>Atur Lokasi</h2><button type="button" id="location-close" class="btn btn-secondary btn-sm" aria-label="Tutup pengaturan lokasi"><i data-lucide="x" aria-hidden="true"></i></button></header><p>Geser pin ke lokasi foto. Titik dari peta atau petak merupakan lokasi manual, bukan hasil pengukuran GPS.</p><div id="location-map" aria-label="Peta pilih lokasi"></div><label>Petak<select id="location-plot"></select></label><details class="fold loc-manual"><summary class="btn btn-secondary btn-block">Atur Koordinat Manual</summary><div class="workflow-coordinate-grid"><label>Lintang (derajat)<input id="location-lat" type="number" step="any" min="-90" max="90" inputmode="decimal"></label><label>Bujur (derajat)<input id="location-lng" type="number" step="any" min="-180" max="180" inputmode="decimal"></label></div></details><p id="location-error" role="alert"></p><p>Memilih petak menaruh pin di tengah petak. Sesuaikan pin bila lokasi tanaman berbeda.</p><button type="button" id="location-save" class="btn btn-primary btn-block">Simpan Lokasi</button></section>';
+    '<section class="workflow-dialog" role="document"><header><h2>Atur Lokasi</h2><button type="button" id="location-close" class="btn btn-secondary btn-sm" aria-label="Tutup pengaturan lokasi"><i data-lucide="x" aria-hidden="true"></i></button></header><p>Geser pin ke lokasi foto atau pilih petak tempat tanaman berada.</p><div id="location-map" aria-label="Peta pilih lokasi"></div><label>Petak<select id="location-plot"></select></label><details class="fold loc-manual"><summary class="btn btn-secondary btn-block">Atur Koordinat Manual</summary><div class="workflow-coordinate-grid"><label>Lintang (derajat)<input id="location-lat" type="number" step="any" min="-90" max="90" inputmode="decimal"></label><label>Bujur (derajat)<input id="location-lng" type="number" step="any" min="-180" max="180" inputmode="decimal"></label></div></details><p id="location-error" role="alert"></p><p>Memilih petak menaruh pin di tengah petak. Sesuaikan pin bila lokasi tanaman berbeda.</p><button type="button" id="location-save" class="btn btn-primary btn-block">Simpan Lokasi</button></section>';
   document.body.append(modal);
-  dialogNames["modal-location"] = "Lokasi foto atau tanaman";
+  dialogNames["modal-location"] = trWorkflow("Lokasi Foto atau Tanaman");
   document.getElementById("location-close").onclick = () =>
     closeDialog("modal-location");
   document.getElementById("location-save").onclick = saveLocationEditor;
@@ -1560,12 +1716,18 @@ function installWorkflowUi() {
   viewer.after(actions);
   document.getElementById("viewer-edit-location").onclick = () => {
     if (viewerRecordId) openLocationEditor("record", viewerRecordId);
-    else showToast("Ubah lokasi foto ini dari Riwayat.");
+    else showToast(trWorkflow("Ubah lokasi foto ini dari Riwayat."));
   };
   document.getElementById("viewer-save-gallery").onclick = () => {
     if (viewerRecordId) exportPrivatePhoto(viewerRecordId);
-    else showToast("Foto bisa disimpan setelah masuk Riwayat.");
+    else showToast(trWorkflow("Foto bisa disimpan setelah masuk Riwayat."));
   };
+  applyWorkflowStaticCopy();
+  window.addEventListener("jk:langchange", () => {
+    applyWorkflowStaticCopy();
+    if (typeof currentAccount !== "undefined" && currentAccount)
+      updateOfflineDraftCount();
+  });
 
   window.addEventListener("focus", () => {
     if (currentAccount) {

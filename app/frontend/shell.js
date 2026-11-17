@@ -14,8 +14,11 @@
   let unseen = new Set();
   let unseenKey = null;
 
+  const tr = (s, v) => (root.JagaI18n && typeof root.JagaI18n.t === 'function') ? root.JagaI18n.t(s, v) : s;
+  const isEn = () => !!(root.JagaI18n && typeof root.JagaI18n.isEn === 'function' && root.JagaI18n.isEn());
+  const trCrop = s => (root.JagaI18n && typeof root.JagaI18n.crop === 'function') ? root.JagaI18n.crop(s) : s;
   const el = id => doc.getElementById(id);
-  const plural = (n, one) => n + ' ' + one;
+  const plural = (n, one, many) => isEn() ? (n + ' ' + (Number(n) === 1 ? one : (many || one + 's'))) : (n + ' ' + one);
   function icon(name) { const i = doc.createElement('i'); i.setAttribute('data-lucide', name); i.setAttribute('aria-hidden', 'true'); return i; }
 
   /* ------------------------------------------------------------------ header chip */
@@ -40,12 +43,23 @@
     const failed = Number(c.failed) || 0;
     const processing = Number(c.processing) || 0;
     // Short visible text (the phone header is narrow); the full sentence is the accessible label.
-    if (isOffline()) return { tone: 'offline', icon: 'wifi-off', text: unsent ? 'Offline · ' + unsent : 'Offline',
-      hint: 'Offline' + (unsent ? ', ' + plural(unsent, 'foto menunggu') : '') + '. Foto tetap tersimpan di HP dan dikirim saat ada sinyal.' };
-    if (failed) return { tone: 'bad', icon: 'alert-triangle', text: failed + ' gagal', hint: plural(failed, 'foto gagal terkirim atau gagal dianalisis') + '. Ketuk untuk melihat.' };
-    if (draftState.uploading) return { tone: 'busy', icon: 'upload-cloud', text: 'Mengirim…', hint: 'Sedang mengirim ' + plural(draftState.uploading, 'foto') + '.' };
-    if (unsent) return { tone: 'warn', icon: 'upload-cloud', text: unsent + ' belum terkirim', hint: plural(unsent, 'foto belum terkirim') + '. Ketuk untuk melihat dan mengirim sekarang.' };
-    if (processing) return { tone: 'busy', icon: 'loader', text: processing + ' dianalisis', hint: plural(processing, 'foto sedang dianalisis') + '. Hasilnya masuk ke Riwayat.' };
+    if (isOffline()) return { tone: 'offline', icon: 'wifi-off',
+      text: unsent ? tr('Offline') + ' · ' + unsent : tr('Offline'),
+      hint: isEn()
+        ? 'Offline' + (unsent ? ', ' + plural(unsent, 'photo waiting', 'photos waiting') : '') + '. Photos stay saved on device and upload when signal returns.'
+        : 'Offline' + (unsent ? ', ' + plural(unsent, 'foto menunggu') : '') + '. Foto tetap tersimpan di HP dan dikirim saat ada sinyal.' };
+    if (failed) return { tone: 'bad', icon: 'alert-triangle',
+      text: isEn() ? `${failed} failed` : `${failed} gagal`,
+      hint: isEn() ? `${plural(failed, 'photo failed to upload or analyze', 'photos failed to upload or analyze')}. Tap to view.` : plural(failed, 'foto gagal terkirim atau gagal dianalisis') + '. Ketuk untuk melihat.' };
+    if (draftState.uploading) return { tone: 'busy', icon: 'upload-cloud',
+      text: tr('Mengirim…'),
+      hint: isEn() ? `Uploading ${plural(draftState.uploading, 'photo', 'photos')}.` : 'Sedang mengirim ' + plural(draftState.uploading, 'foto') + '.' };
+    if (unsent) return { tone: 'warn', icon: 'upload-cloud',
+      text: isEn() ? `${unsent} unsent` : `${unsent} belum terkirim`,
+      hint: isEn() ? `${plural(unsent, 'unsent photo', 'unsent photos')}. Tap to view and send now.` : plural(unsent, 'foto belum terkirim') + '. Ketuk untuk melihat dan mengirim sekarang.' };
+    if (processing) return { tone: 'busy', icon: 'loader',
+      text: isEn() ? `${processing} analyzing` : `${processing} dianalisis`,
+      hint: isEn() ? `${plural(processing, 'photo analyzing', 'photos analyzing')}. Results appear in History.` : plural(processing, 'foto sedang dianalisis') + '. Hasilnya masuk ke Riwayat.' };
     return null;
   }
   let chipKey = '';
@@ -54,11 +68,13 @@
     if (!target) return;
     const signedIn = typeof currentAccount !== 'undefined' && !!currentAccount;
     const model = signedIn ? chipModel() : null;
+    const c = draftState.counts || {};
+    const isProcessingOnly = !isOffline() && !(Number(c.failed) || 0) && !draftState.uploading && !(Number(c.unsent) || 0) && (Number(c.processing) || 0) > 0;
     const logView = el('view-log');
     const draftsStrip = el('offline-drafts');
     const mobileLog = (root.matchMedia && root.matchMedia('(max-width: 767px)').matches) ||
       (!root.matchMedia && Number(root.innerWidth) <= 767);
-    const processingAlreadyShown = !!model && model.text.endsWith(' dianalisis') && mobileLog &&
+    const processingAlreadyShown = !!model && isProcessingOnly && mobileLog &&
       logView && !logView.classList.contains('hidden') && draftsStrip && !draftsStrip.hidden;
     const visibleModel = processingAlreadyShown ? null : model;
     const key = visibleModel ? visibleModel.tone + '|' + visibleModel.text + '|' + visibleModel.hint : '';
@@ -79,7 +95,7 @@
   function onChipTap() {
     const c = draftState.counts || {};
     if ((Number(c.unsent) || 0) + (Number(c.failed) || 0) + (Number(c.processing) || 0) > 0) shell.openDrafts();
-    else if (typeof showToast === 'function') showToast(chipModel() ? chipModel().hint : 'Semua foto sudah terkirim.');
+    else if (typeof showToast === 'function') showToast(chipModel() ? chipModel().hint : tr('Semua foto sudah terkirim.'));
   }
 
   /* ------------------------------------------------------------------ attention strip (the old sync banner) */
@@ -91,10 +107,11 @@
     const status = el('sync-status');
     if (status) {
       // The draft label stays in the DOM (tests and screen readers read it); the strip only shows when something needs the farmer.
-      status.textContent = draftState.attention || !shown ? draftState.label || (shown ? shown.message : '') : shown.message;
+      const msg = shown ? tr(shown.message) : '';
+      status.textContent = draftState.attention || !shown ? (draftState.label ? tr(draftState.label) : msg) : msg;
     }
     const retry = el('sync-retry');
-    if (retry) retry.textContent = shown && shown.label && !draftState.attention ? shown.label : 'Kirim sekarang';
+    if (retry) retry.textContent = shown && shown.label && !draftState.attention ? tr(shown.label) : tr('Kirim sekarang');
     const count = el('sync-pending-count');
     if (count) count.textContent = String(Number(draftState.counts.unsent) || 0);
     banner.hidden = !(draftState.attention || shown);
@@ -117,7 +134,10 @@
       badge.textContent = count > 9 ? '9+' : String(count);
       badge.dataset.tone = failed ? 'bad' : (pending ? 'warn' : 'new');
       badge.setAttribute('role', 'img');
-      badge.setAttribute('aria-label', unseen.size ? unseen.size + ' hasil baru' + (pending ? ', ' + pending + ' foto menunggu' : '') : pending + ' foto menunggu');
+      const badgeLabel = isEn()
+        ? (unseen.size ? plural(unseen.size, 'new result', 'new results') + (pending ? ', ' + plural(pending, 'photo waiting', 'photos waiting') : '') : plural(pending, 'photo waiting', 'photos waiting'))
+        : (unseen.size ? unseen.size + ' hasil baru' + (pending ? ', ' + pending + ' foto menunggu' : '') : pending + ' foto menunggu');
+      badge.setAttribute('aria-label', badgeLabel);
       button.dataset.hasBadge = 'true';
     });
   }
@@ -142,22 +162,26 @@
       updateBar.className = 'update-banner';
       updateBar.setAttribute('role', 'status');
       const text = doc.createElement('span');
-      text.textContent = 'Versi baru tersedia';
+      text.id = 'update-banner-text';
+      text.textContent = tr('Versi baru tersedia');
       const button = doc.createElement('button');
       button.type = 'button';
       button.id = 'update-reload';
       button.className = 'btn btn-primary btn-sm';
-      button.textContent = 'Muat ulang';
+      button.textContent = tr('Muat ulang');
       updateBar.append(text, button);
       const header = doc.querySelector('#app-shell > header');
       if (header && header.parentNode) header.parentNode.insertBefore(updateBar, header.nextSibling); else doc.body.prepend(updateBar);
+    } else {
+      const ut = el('update-banner-text'); if (ut) ut.textContent = tr('Versi baru tersedia');
+      const ub = el('update-reload'); if (ub) ub.textContent = tr('Muat ulang');
     }
     updateBar.hidden = false;
     const button = updateBar.querySelector('button');
     button.onclick = async () => {
       // A photo that is still on screen has not been saved anywhere yet: do not throw it away silently.
       if (typeof selectedImageBase64 !== 'undefined' && selectedImageBase64 && typeof confirmAction === 'function') {
-        const ok = await confirmAction({ title: 'Muat ulang sekarang?', message: 'Foto yang belum dianalisis akan hilang. Kirim dulu atau ketuk Lanjut untuk memuat ulang.', okLabel: 'Lanjut' });
+        const ok = await confirmAction({ title: tr('Muat ulang sekarang?'), message: tr('Foto yang belum dianalisis akan hilang. Kirim dulu atau ketuk Lanjut untuk memuat ulang.'), okLabel: tr('Lanjut') });
         if (!ok) return;
       }
       button.disabled = true;
@@ -237,9 +261,10 @@
       saveUnseen();
       renderBadge();
       if (typeof showToast === 'function') {
-        const label = [record.cropName || record.crop, record.severity === 'Severe' ? 'Kritis' : record.severity === 'Moderate' ? 'Waspada' : record.severity === 'Healthy' ? 'Sehat' : '']
-          .filter(Boolean).join(' — ');
-        showToast('Hasil siap' + (label ? ': ' + label : '') + '. Lihat di Riwayat.');
+        const sevLabel = record.severity === 'Severe' ? tr('Kritis') : record.severity === 'Moderate' ? tr('Waspada') : record.severity === 'Healthy' ? tr('Sehat') : '';
+        const cropLabel = trCrop(record.cropName || record.crop);
+        const label = [cropLabel, sevLabel].filter(Boolean).join(' — ');
+        showToast(isEn() ? ('Result ready' + (label ? ': ' + label : '') + '. View in History.') : ('Hasil siap' + (label ? ': ' + label : '') + '. Lihat di Riwayat.'));
       }
     },
     markSeen() { if (unseen.size) { unseen.clear(); saveUnseen(); renderBadge(); } },
@@ -257,5 +282,11 @@
     handleBack,
   };
   root.JagaShell = shell;
+  root.addEventListener('jk:langchange', () => {
+    chipKey = '';
+    shell.refresh();
+    const ut = el('update-banner-text'); if (ut) ut.textContent = tr('Versi baru tersedia');
+    const ub = el('update-reload'); if (ub) ub.textContent = tr('Muat ulang');
+  });
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', () => shell.refresh()); else shell.refresh();
 })(window);

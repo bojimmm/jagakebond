@@ -20,12 +20,14 @@ with tempfile.TemporaryDirectory(prefix='jk-field-0233-', dir=os.environ.get('TM
         for account in (owner, other):
             tx.execute('INSERT INTO accounts(id,email,password_hash,role,created_ms,updated_ms) VALUES(?,?,?,?,?,?)',
                        (account['id'], account['id']+'@example.test', 'fixture', 'user', now, now))
-    expected = 'Ketapang (Tropical Almond)'
+    expected = 'Ketapang'
     for alias in ['Ketapang (Sea Almond)', 'Ketapang (Tropical Almond)', 'Sea Almond', 'Terminalia catappa', ' ketapang (INDIAN ALMOND) ']:
         assert canonical_crop_name(alias) == expected
         assert queue.sanitize_diagnosis({'crop': alias})['crop'] == expected
-    for label in ['Almond', 'Ketapang depan rumah', 'Ketapang Kencana', 'Ketapang (unknown)', 'Pisang (Banana)']:
+    for label in ['Almond', 'Ketapang depan rumah', 'Ketapang Kencana']:
         assert canonical_crop_name(label) == label
+    assert canonical_crop_name('Pisang (Banana)') == 'Pisang'
+    assert canonical_crop_name('Tomat (Tomato)') == 'Tomat'
     with patch.object(db, 'now_ms', return_value=now):
         for ident, alias in [('a','Ketapang (Sea Almond)'), ('b','Ketapang (Tropical Almond)')]:
             got=api_app.create_record({'id':ident,'cropId':'plant-'+ident,'crop':alias,'cropName':alias},account=owner)

@@ -31,6 +31,9 @@
     let stampedImageBlobUrl = null;
     let liveMediaStream = null;
     let cameraFacing = 'environment';
+    let cameraZoom = 1;
+    const autoDailyAttemptedKeys = new Set();
+    let dailyArchiveRunning = false;
     let photoMode = 'live'; // 'live' | 'gallery'
     let selectedPhotoDateString = null;
     let selectedPhotoTimestampMs = null;
@@ -39,6 +42,23 @@
     let activeLogTab = 'crops';
     let expandedCropId = null;
     let selectedCaptureTree = null;
+
+    function trApp(text, vars) {
+      return typeof window !== 'undefined' && window.JagaI18n ? window.JagaI18n.t(text, vars) : String(text == null ? '' : text);
+    }
+    function isEnApp() {
+      return typeof window !== 'undefined' && window.JagaI18n ? window.JagaI18n.isEn() : false;
+    }
+    function trAppCrop(name) {
+      return typeof window !== 'undefined' && window.JagaI18n ? window.JagaI18n.crop(name) : String(name || '');
+    }
+    function trAppCond(text) {
+      return typeof window !== 'undefined' && window.JagaI18n ? window.JagaI18n.condition(text) : String(text || '');
+    }
+    function trAppMultiline(text) {
+      if (!isEnApp() || text == null) return String(text == null ? '' : text);
+      return String(text).split('\n').map(line => trApp(line)).join('\n');
+    }
 
     function clearCaptureTree() {
       selectedCaptureTree = null;
@@ -50,11 +70,11 @@
       if (!currentAccount) return;
       const owner = String(currentAccount.id), generation = accountGeneration;
       const record = farmRecords.find(r => r.cropId === cropId || 'crop_legacy_' + r.id === cropId);
-      if (!record) { showToast('Tanaman tidak ditemukan. Muat ulang riwayat terlebih dahulu.'); return; }
+      if (!record) { showToast(trApp('Tanaman tidak ditemukan. Muat ulang riwayat terlebih dahulu.')); return; }
       // A sent or saved photo is finished, so the camera just opens. Only an unsent photo asks before it is dropped.
       if (hasUnsentPhoto()) {
-        const drop = await confirmAction({ title: 'Foto belum dikirim', okLabel: 'Buang dan foto baru',
-          message: 'Foto yang sedang terbuka belum dikirim. Buang foto itu dan memotret ' + (record.cropName || record.crop || 'tanaman ini') + '?' });
+        const drop = await confirmAction({ title: trApp('Foto belum dikirim'), okLabel: trApp('Buang dan foto baru'),
+          message: trApp('Foto yang sedang terbuka belum dikirim. Buang foto itu dan memotret {crop}?', { crop: trAppCrop(record.cropName || record.crop || trApp('tanaman ini')) }) });
         if (!drop || generation !== accountGeneration || String(currentAccount?.id) !== owner) return;
       }
       if (!record.cropId) {
@@ -62,12 +82,12 @@
           await api('/api/records/' + encodeURIComponent(record.id), {method:'PUT', body:{cropId}});
           if (generation !== accountGeneration || String(currentAccount?.id) !== owner) return;
           record.cropId = cropId;
-        } catch (error) { showToast('Riwayat belum dapat dihubungkan: ' + userMessage(error)); return; }
+        } catch (error) { showToast(trApp('Riwayat belum dapat dihubungkan: ') + userMessage(error)); return; }
       }
       resetToLiveCamera();
       selectedCaptureTree = {cropId, cropName:record.cropName || record.crop, cropHint:record.crop, owner, generation};
       const context = document.getElementById('capture-tree-context');
-      if (context) { context.hidden = false; context.textContent = 'Foto lanjutan: ' + selectedCaptureTree.cropName + '. Hasil akan masuk ke riwayat tanaman ini.'; }
+      if (context) { context.hidden = false; context.textContent = trApp('Foto lanjutan: {crop}. Hasil akan masuk ke riwayat tanaman ini.', { crop: trAppCrop(selectedCaptureTree.cropName) }); }
       const hint = document.getElementById('crop-hint-input'); if (hint) hint.value = record.crop || '';
       navigateToMenu('scan');
     }
@@ -134,7 +154,7 @@
         err.classList.toggle('hidden', !message);
       }
       const chip = document.getElementById('account-chip-label');
-      if (chip) chip.innerText = 'Masuk';
+      if (chip) chip.innerText = trApp('Masuk');
       icons();
       // "Masuk dengan Google" (google-signin.js) checks the server and draws its button only while this screen is open.
       if (window.JagaGoogle) window.JagaGoogle.onGate(true);
@@ -157,12 +177,12 @@
       const isRegister = authMode === 'register';
       const title = document.getElementById('auth-title');
       const description = document.getElementById('auth-description');
-      if (title) title.textContent = isRegister ? 'Mulai catatan kebun Anda' : 'Masuk ke kebun Anda';
-      if (description) description.textContent = isRegister
-        ? 'Buat akun sesuai izin admin kebun Anda.' : 'Catatan tanaman Anda siap dilanjutkan.';
+      if (title) title.textContent = trApp(isRegister ? 'Mulai catatan kebun Anda' : 'Masuk ke kebun Anda');
+      if (description) description.textContent = trApp(isRegister
+        ? 'Buat akun sesuai izin admin kebun Anda.' : 'Catatan tanaman Anda siap dilanjutkan.');
       const nameWrap = document.getElementById('auth-name-wrap');
       if (nameWrap) nameWrap.classList.toggle('hidden', !isRegister);
-      document.getElementById('auth-submit').innerText = isRegister ? 'Daftar' : 'Masuk';
+      document.getElementById('auth-submit').innerText = trApp(isRegister ? 'Daftar' : 'Masuk');
       [['auth-tab-login', !isRegister], ['auth-tab-register', isRegister]].forEach(([id, active]) => {
         const tab = document.getElementById(id);
         if (!tab) return;
@@ -171,24 +191,24 @@
       });
       const hint = document.getElementById('auth-hint');
       if (hint) {
-        hint.innerText = isRegister
+        hint.innerText = trApp(isRegister
           ? 'Pendaftaran hanya terbuka bila admin mengizinkan.'
           : (document.getElementById('auth-tab-register').hidden
             ? 'Belum punya akun? Hubungi admin kebun Anda.'
-            : 'Baru di JagaKebond? Buat akun untuk mulai mencatat.');
+            : 'Baru di JagaKebond? Buat akun untuk mulai mencatat.'));
       }
       const password = document.getElementById('auth-password');
       document.getElementById('auth-error').classList.add('hidden');
       if (password) password.setAttribute('autocomplete', isRegister ? 'new-password' : 'current-password');
       if (password) {
         password.type = 'password';
-        password.placeholder = isRegister ? 'Minimal 8 karakter' : 'Masukkan kata sandi';
+        password.placeholder = trApp(isRegister ? 'Minimal 8 karakter' : 'Masukkan kata sandi');
       }
       const reveal = document.getElementById('auth-toggle-password');
       if (reveal) {
-        reveal.textContent = 'Lihat';
+        reveal.textContent = trApp('Lihat');
         reveal.setAttribute('aria-pressed', 'false');
-        reveal.setAttribute('aria-label', 'Tampilkan kata sandi');
+        reveal.setAttribute('aria-label', trApp('Tampilkan kata sandi'));
       }
     }
 
@@ -201,7 +221,7 @@
         const errorBox = document.getElementById('auth-error');
         errorBox.classList.add('hidden');
         submit.disabled = true;
-        submit.innerText = authMode === 'register' ? 'Mendaftar…' : 'Masuk…';
+        submit.innerText = trApp(authMode === 'register' ? 'Mendaftar…' : 'Masuk…');
         try {
           const body = {
             email: document.getElementById('auth-email').value.trim(),
@@ -217,7 +237,7 @@
           errorBox.classList.remove('hidden');
         } finally {
           submit.disabled = false;
-          submit.innerText = authMode === 'register' ? 'Daftar' : 'Masuk';
+          submit.innerText = trApp(authMode === 'register' ? 'Daftar' : 'Masuk');
         }
       });
     }
@@ -232,6 +252,9 @@
       if (jobPollTimer) { clearTimeout(jobPollTimer); jobPollTimer = null; }
       if (submittedPollTimer) { clearInterval(submittedPollTimer); submittedPollTimer = null; }
       stopLiveCameraStream();
+      cameraZoom = 1;
+      autoDailyAttemptedKeys.clear();
+      dailyArchiveRunning = false;
       farmRecords = [];
       dailyRecommendations = [];
       farmList = [];
@@ -311,7 +334,7 @@
       } catch (error) {
         if (error.offline) {
           if (owner && browserDataCache()) farmRecords = (await browserDataCache().cacheGet({accountId:owner,name:'records'}) || []).map(normalizeRecord);
-          if (navigator.onLine !== false) showToast('Server belum bisa dihubungi. Menampilkan data terakhir.');
+          if (navigator.onLine !== false) showToast(trApp('Server belum bisa dihubungi. Menampilkan data terakhir.'));
           return;
         }
         throw error;
@@ -340,11 +363,16 @@
        "Belum dinilai" for an unknown severity. Server-owned fields are kept as they are otherwise. */
     function canonicalCropName(value) {
       if (typeof value !== 'string') return value;
+      const trimmed = value.trim().replace(/\s+/g, ' ');
+      if (!trimmed) return value;
       const aliases = new Set(['ketapang','sea almond','tropical almond','indian almond','terminalia catappa']);
-      const key = value.trim().replace(/\s+/g,' ').toLowerCase();
+      const key = trimmed.toLowerCase();
       const parts = /^([^()]+)\s*\(([^()]+)\)$/.exec(key);
-      return aliases.has(key) || (parts && aliases.has(parts[1].trim()) && aliases.has(parts[2].trim()))
-        ? 'Ketapang (Tropical Almond)' : value;
+      if (aliases.has(key) || (parts && aliases.has(parts[1].trim()) && aliases.has(parts[2].trim()))) {
+        return 'Ketapang';
+      }
+      const stripped = trimmed.replace(/\s*\([^()]+\)\s*$/, '').trim();
+      return stripped || trimmed;
     }
 
     function normalizeRecord(rec) {
@@ -380,6 +408,7 @@
         loadedOnce = true;
         lastDataRefreshMs = Date.now();
         refreshAllHistoryViews();
+        void syncAutoDailyArchive();
       } catch (error) {
         showToast(userMessage(error));
       }
@@ -413,11 +442,11 @@
       const remaining = known && Number.isFinite(account.fastRemaining) ? Math.max(0, account.fastRemaining) : null;
       const status = document.getElementById('fast-quota-status');
       if (!status) return;
-      if (unlimited) { status.textContent = 'Analisis cepat tanpa batas hari ini.'; return; }
+      if (unlimited) { status.textContent = trApp('Analisis cepat tanpa batas hari ini.'); return; }
       if (remaining === null) { status.textContent = ''; return; }
-      status.textContent = remaining > 0
+      status.textContent = trApp(remaining > 0
         ? 'Analisis cepat hari ini: sisa ' + remaining + ' dari ' + account.fastQuota + '. Setelah habis, foto masuk antrean biasa.'
-        : 'Kuota analisis cepat hari ini habis. Foto berikutnya dianalisis lewat antrean biasa.';
+        : 'Kuota analisis cepat hari ini habis. Foto berikutnya dianalisis lewat antrean biasa.');
     }
 
     async function refreshAccountQuota() {
@@ -432,32 +461,119 @@
       if (generation === accountGeneration) renderFastQuota();
     }
 
+    function accountInitials(account) {
+      const name = String(account?.name || account?.email || 'Petani').trim();
+      return name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'JK';
+    }
+
+    function renderAvatarCircle(el, url, initials) {
+      if (!el) return;
+      const cleanUrl = typeof url === 'string' && url.startsWith('https://') ? url : '';
+      if (!cleanUrl) {
+        el.replaceChildren(document.createTextNode(initials));
+        return;
+      }
+      const existing = el.querySelector('img');
+      if (existing && existing.getAttribute('src') === cleanUrl) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', () => {
+        if (img.parentElement === el) el.replaceChildren(document.createTextNode(initials));
+      });
+      img.src = cleanUrl;
+      el.replaceChildren(img);
+    }
+
+    function syncAccountModalAvatarUi() {
+      const account = currentAccount;
+      const initials = accountInitials(account);
+      renderAvatarCircle(document.getElementById('account-modal-avatar'), account?.avatarUrl, initials);
+      const controls = document.getElementById('account-avatar-controls');
+      const toggle = document.getElementById('account-avatar-toggle');
+      const note = document.getElementById('account-avatar-note');
+      const hasAvatar = Boolean(account?.avatarUrl);
+      const canRestore = Boolean(account?.canRestoreGoogleAvatar);
+      if (controls && toggle) {
+        if (hasAvatar) {
+          controls.classList.remove('hidden');
+          toggle.textContent = trApp('Sembunyikan Foto Google');
+        } else if (canRestore) {
+          controls.classList.remove('hidden');
+          toggle.textContent = trApp('Tampilkan Foto Google');
+        } else {
+          controls.classList.add('hidden');
+          toggle.textContent = '';
+        }
+      }
+      if (note) {
+        if (hasAvatar) {
+          note.classList.add('hidden');
+          note.textContent = '';
+        } else if (canRestore) {
+          note.classList.remove('hidden');
+          note.textContent = trApp('Foto profil Google sedang disembunyikan. Anda dapat menampilkannya lagi kapan saja.');
+        } else {
+          note.classList.remove('hidden');
+          note.textContent = trApp('Masuk dengan Google untuk menampilkan foto profil akun Anda.');
+        }
+      }
+    }
+
+    async function toggleAccountAvatar() {
+      if (!currentAccount) return;
+      const btn = document.getElementById('account-avatar-toggle');
+      if (btn && btn.disabled) return;
+      const generation = accountGeneration;
+      const owner = currentAccount.id;
+      const hide = Boolean(currentAccount.avatarUrl);
+      if (btn) btn.disabled = true;
+      try {
+        const result = await api('/api/auth/avatar', { method: hide ? 'DELETE' : 'PUT' });
+        if (generation !== accountGeneration || currentAccount?.id !== owner) return;
+        if (result?.account) {
+          currentAccount = result.account;
+          if (typeof rememberAccount === 'function') rememberAccount(currentAccount);
+        }
+        syncSidebarAccountUi();
+        syncAccountModalAvatarUi();
+        showToast(trApp(hide ? 'Foto profil disembunyikan.' : 'Foto profil ditampilkan.'));
+      } catch (error) {
+        showToast(userMessage(error));
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     async function openAccountModal() {
       if (!currentAccount) { showAuthGate(''); return; }
       const generation = accountGeneration;
       document.getElementById('account-name').innerText = currentAccount.name || '—';
       document.getElementById('account-email').innerText = currentAccount.email;
       document.getElementById('account-role').innerText =
-        currentAccount.role === 'admin' ? 'Admin' : currentAccount.role === 'priority' ? 'Prioritas' : 'Normal';
+        trApp(currentAccount.role === 'admin' ? 'Admin' : currentAccount.role === 'priority' ? 'Prioritas' : 'Normal');
       document.getElementById('account-quota').innerText = fastQuotaShort(currentAccount);
-      document.getElementById('account-records').innerText = farmRecords.length + ' foto';
+      document.getElementById('account-records').innerText = trApp(farmRecords.length + ' foto');
       document.getElementById('pw-current').value = '';
       document.getElementById('pw-new').value = '';
       document.getElementById('pw-error').classList.add('hidden');
+      syncAccountModalAvatarUi();
       setDialogOpen('modal-account');
       icons();
       await refreshAccountQuota();
       if (!currentAccount || generation !== accountGeneration) return;
       document.getElementById('account-role').innerText =
-        currentAccount.role === 'admin' ? 'Admin' : currentAccount.role === 'priority' ? 'Prioritas' : 'Normal';
+        trApp(currentAccount.role === 'admin' ? 'Admin' : currentAccount.role === 'priority' ? 'Prioritas' : 'Normal');
       document.getElementById('account-quota').innerText = fastQuotaShort(currentAccount);
+      syncSidebarAccountUi();
+      syncAccountModalAvatarUi();
     }
     // Short value for the account sheet: "2 dari 3 tersisa".
     function fastQuotaShort(account) {
-      if (!account || !Object.hasOwn(account, 'fastQuota')) return 'Belum tersedia';
-      if (account.role === 'admin' && account.fastQuota === null) return 'Tanpa batas';
-      if (!Number.isFinite(account.fastQuota) || !Number.isFinite(account.fastRemaining)) return 'Belum tersedia';
-      return Math.max(0, account.fastRemaining) + ' dari ' + account.fastQuota + ' tersisa';
+      if (!account || !Object.hasOwn(account, 'fastQuota')) return trApp('Belum tersedia');
+      if (account.role === 'admin' && account.fastQuota === null) return trApp('Tanpa batas');
+      if (!Number.isFinite(account.fastQuota) || !Number.isFinite(account.fastRemaining)) return trApp('Belum tersedia');
+      return trApp(Math.max(0, account.fastRemaining) + ' dari ' + account.fastQuota + ' tersisa');
     }
 
     function closeAccountModal() {
@@ -470,7 +586,7 @@
       const errorBox = document.getElementById('pw-error');
       errorBox.classList.add('hidden');
       if (!current || !next) {
-        errorBox.textContent = 'Isi kata sandi saat ini dan kata sandi baru.';
+        errorBox.textContent = trApp('Isi kata sandi saat ini dan kata sandi baru.');
         errorBox.classList.remove('hidden');
         return;
       }
@@ -478,8 +594,8 @@
         const result = await api('/api/auth/password', { method: 'POST', body: { current, new: next } });
         document.getElementById('pw-current').value = '';
         document.getElementById('pw-new').value = '';
-        showToast('Kata sandi diperbarui' + (result.revokedSessions
-          ? ' · ' + result.revokedSessions + ' perangkat lain dikeluarkan' : ''));
+        showToast(trApp('Kata sandi diperbarui') + (result.revokedSessions
+          ? ' · ' + trApp(result.revokedSessions + ' perangkat lain dikeluarkan') : ''));
       } catch (error) {
         errorBox.textContent = userMessage(error);
         errorBox.classList.remove('hidden');
@@ -540,16 +656,43 @@
 
 
     function syncSidebarAccountUi() {
+      const account = currentAccount;
       const labelEl = document.getElementById('sidebar-account-label');
       const subEl = document.getElementById('sidebar-account-sub');
       const avEl = document.getElementById('sidebar-account-avatar');
-      if (!labelEl && !subEl && !avEl) return;
-      const name = String(currentAccount?.name || currentAccount?.email || 'Petani').trim();
-      const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'JK';
-      const roleLabel = currentAccount?.role === 'admin' ? 'Admin' : currentAccount?.role === 'priority' ? 'Prioritas' : 'Petani';
+      const btnAv = document.getElementById('account-btn-avatar');
+      const btnIcon = document.getElementById('account-btn-icon');
+      const chipEl = document.getElementById('account-chip-label');
+      const initials = accountInitials(account);
+      const avatarUrl = typeof account?.avatarUrl === 'string' && account.avatarUrl.startsWith('https://') ? account.avatarUrl : '';
+      if (avEl) renderAvatarCircle(avEl, avatarUrl, initials);
+      if (btnAv) {
+        if (avatarUrl) {
+          let img = btnAv.querySelector('img');
+          if (!img) {
+            img = document.createElement('img');
+            img.alt = '';
+            btnAv.replaceChildren(img);
+          }
+          img.referrerPolicy = 'no-referrer';
+          img.onerror = () => {
+            btnAv.classList.add('hidden');
+            if (btnIcon) { btnIcon.classList.remove('hidden'); btnIcon.removeAttribute('hidden'); }
+          };
+          if (img.getAttribute('src') !== avatarUrl) img.src = avatarUrl;
+          btnAv.classList.remove('hidden');
+          if (btnIcon) { btnIcon.classList.add('hidden'); btnIcon.setAttribute('hidden', ''); }
+        } else {
+          btnAv.classList.add('hidden');
+          if (btnIcon) { btnIcon.classList.remove('hidden'); btnIcon.removeAttribute('hidden'); }
+        }
+      }
+      if (!labelEl && !subEl && !chipEl) return;
+      const name = String(account?.name || account?.email || trApp('Petani')).trim();
+      const roleLabel = trApp(account?.role === 'admin' ? 'Admin' : account?.role === 'priority' ? 'Prioritas' : 'Petani');
       if (labelEl) labelEl.textContent = name;
-      if (subEl) subEl.textContent = currentAccount?.email ? (roleLabel + ' · ' + currentAccount.email) : 'Kelola akun & data';
-      if (avEl) avEl.textContent = initials;
+      if (subEl) subEl.textContent = account?.email ? (roleLabel + ' · ' + account.email) : trApp('Kelola akun & data');
+      if (chipEl) chipEl.textContent = account ? (account.name || String(account.email || trApp('Akun')).split('@')[0]) : trApp('Masuk');
     }
 
     function syncSidebarSyncBox() {
@@ -563,23 +706,23 @@
       const activeSync = syncEl && !syncEl.classList.contains('hidden') && syncEl.dataset.tone;
       if (offline) {
         box.classList.remove('is-synced');
-        if (titleEl) titleEl.textContent = 'Mode Offline';
-        if (badgeEl) { badgeEl.className = 'badge badge-moderate'; badgeEl.textContent = 'Offline'; }
-        if (subEl) subEl.textContent = syncEl?.title || 'Foto disimpan lokal dan dikirim otomatis saat online.';
+        if (titleEl) titleEl.textContent = trApp('Mode Offline');
+        if (badgeEl) { badgeEl.className = 'badge badge-moderate'; badgeEl.textContent = trApp('Offline'); }
+        if (subEl) subEl.textContent = syncEl?.title || trApp('Foto disimpan lokal dan dikirim otomatis saat online.');
       } else if (activeSync) {
         const tone = syncEl.dataset.tone;
         box.classList.remove('is-synced');
-        if (titleEl) titleEl.textContent = syncEl.textContent.trim() || 'Menunggu Sinkron';
+        if (titleEl) titleEl.textContent = syncEl.textContent.trim() || trApp('Menunggu Sinkron');
         if (badgeEl) {
           badgeEl.className = 'badge ' + (tone === 'bad' ? 'badge-severe' : 'badge-moderate');
-          badgeEl.textContent = tone === 'bad' ? 'Perlu Cek' : 'Antre';
+          badgeEl.textContent = trApp(tone === 'bad' ? 'Perlu Cek' : 'Antre');
         }
-        if (subEl) subEl.textContent = syncEl.title || 'Foto draf sedang diproses ke server.';
+        if (subEl) subEl.textContent = syncEl.title || trApp('Foto draf sedang diproses ke server.');
       } else {
         box.classList.add('is-synced');
-        if (titleEl) titleEl.textContent = 'Semua Foto Terkirim';
-        if (badgeEl) { badgeEl.className = 'badge badge-healthy'; badgeEl.textContent = 'Sinkron'; }
-        if (subEl) subEl.textContent = 'Data kebun tersimpan aman di perangkat & server.';
+        if (titleEl) titleEl.textContent = trApp('Semua Foto Terkirim');
+        if (badgeEl) { badgeEl.className = 'badge badge-healthy'; badgeEl.textContent = trApp('Sinkron'); }
+        if (subEl) subEl.textContent = trApp('Data kebun tersimpan aman di perangkat & server.');
       }
     }
 
@@ -590,20 +733,20 @@
       if (target === 'home') {
         const snapshotMoved = telemetrySnapshot && !nearbyFix(telemetrySnapshot, currentCoords.lat, currentCoords.lng);
         const home = snapshotMoved ? currentCoords : (telemetrySnapshot || currentCoords);
-        const place = (!snapshotMoved && home.locationName) ? home.locationName : 'Lokasi Kebun';
+        const place = (!snapshotMoved && home.locationName) ? home.locationName : trApp('Lokasi Kebun');
         const parts = [place];
         if (typeof home.tempC === 'number') parts.push(Math.round(home.tempC) + '°C');
         if (typeof home.rh === 'number') parts.push('RH ' + Math.round(home.rh) + '%');
-        subEl.textContent = parts.length > 1 ? parts.join(' · ') : 'Menunggu lokasi & cuaca kebun…';
+        subEl.textContent = parts.length > 1 ? parts.join(' · ') : trApp('Menunggu lokasi & cuaca kebun…');
       } else if (target === 'scan') {
-        subEl.textContent = 'Kamera berstempel GPS & panduan tindakan';
+        subEl.textContent = trApp('Kamera berstempel GPS & panduan tindakan');
       } else if (target === 'map') {
         const treeTotal = groupRecordsByCrop(farmRecords).length;
         subEl.textContent = farmList.length
-          ? (farmList.length + ' Petak Aktif · ' + treeTotal + ' Tanaman Terpantau')
-          : 'Lihat posisi petak dan titik tanaman';
+          ? trApp(farmList.length + ' Petak Aktif · ' + treeTotal + ' Tanaman Terpantau')
+          : trApp('Lihat posisi petak dan titik tanaman');
       } else if (target === 'log') {
-        subEl.textContent = 'Progres pemulihan dan antrean offline';
+        subEl.textContent = trApp('Progres pemulihan dan antrean offline');
       }
     }
 
@@ -661,15 +804,15 @@
         else btn.removeAttribute('aria-current');
       });
       const title = document.getElementById('desktop-page-title');
-      if (title) title.textContent = ({ home: 'Beranda', map: 'Peta', scan: 'Foto Tanaman', log: 'Riwayat' })[targetMenu] || 'Beranda';
+      if (title) title.textContent = trApp(({ home: 'Beranda', map: 'Peta', scan: 'Foto Tanaman', log: 'Riwayat' })[targetMenu] || 'Beranda');
       const topTitle = document.getElementById('top-page-title');
       if (topTitle) {
-        topTitle.textContent = ({
-          home: 'Beranda Kebun',
+        topTitle.textContent = trApp(({
+          home: 'Beranda',
           scan: 'Foto & Analisis Tanaman',
           map: 'Peta Kebun Interaktif',
           log: 'Riwayat Tanaman & Petak'
-        })[targetMenu] || 'Beranda Kebun';
+        })[targetMenu] || 'Beranda');
       }
       updateTopPageSub(targetMenu);
       syncSidebarAccountUi();
@@ -762,7 +905,7 @@
             await window.JagaNative.remove({ accountId: String(receipt.accountId), clientRequestId: receipt.clientRequestId });
             receiptFailures.delete(receipt.clientRequestId);
           } else if (['failed', 'cancelled', 'rejected'].includes(job.status)) {
-            receiptFailures.set(receipt.clientRequestId, {jobId:job.id, error:job.error || 'Analisis tidak selesai. Ambil foto baru atau buang draf.'});
+            receiptFailures.set(receipt.clientRequestId, {jobId:job.id, error:job.error || trApp('Analisis tidak selesai. Ambil foto baru atau buang draf.')});
           }
         } catch (_) { /* preserve receipt until next connected visit */ }
       }
@@ -775,7 +918,7 @@
       syncNotice = '';
       // The scan screen already says "Foto terkirim" for the photo the farmer is looking at (UX G4: one message).
       const foreground = activeOfflineCapture && activeOfflineCapture.clientRequestId === draft.clientRequestId;
-      if (!foreground) showToast('Foto terkirim. Hasilnya masuk ke Riwayat.');
+      if (!foreground) showToast(trApp('Foto terkirim. Hasilnya masuk ke Riwayat.'));
       if (window.JagaShell) window.JagaShell.kick();
       await updateOfflineDraftCount();
     };
@@ -783,8 +926,8 @@
       if (!error) return;
       // Contract 5.2: another account owns this browser's session now. Stop, keep the drafts, reload the tab.
       if (error.accountMismatch) { if (typeof handleAccountMismatch === 'function') handleAccountMismatch(error.message); return; }
-      if (error.auth) { forceSignOut('Sesi berakhir. Masuk lagi untuk mengirim foto yang tersimpan.'); return; }
-      syncNotice = error.serverVersion ? 'Server perlu diperbarui. Foto tetap tersimpan di HP.' : '';
+      if (error.auth) { forceSignOut(trApp('Sesi berakhir. Masuk lagi untuk mengirim foto yang tersimpan.')); return; }
+      syncNotice = error.serverVersion ? trApp('Server perlu diperbarui. Foto tetap tersimpan di HP.') : '';
       updateOfflineDraftCount();
     };
     /* One short Bahasa status per draft (UX brief D1). */
@@ -827,7 +970,7 @@
         refreshAllHistoryViews();
         return saved;
       } catch (error) {
-        if (!error.stale) showToast('Hasil belum tersimpan: ' + userMessage(error));
+        if (!error.stale) showToast(trApp('Hasil belum tersimpan: ') + userMessage(error));
         return null;
       }
     }
@@ -835,7 +978,7 @@
     async function syncPendingDrafts() {
       const account = currentAccount;
       const generation = accountGeneration;
-      if (!account) { showToast('Masuk dulu untuk mengirim foto yang tersimpan.'); return; }
+      if (!account) { showToast(trApp('Masuk dulu untuk mengirim foto yang tersimpan.')); return; }
       syncNotice = '';
       try {
         if (window.JagaNative && window.JagaNative.isNative()) {
@@ -845,13 +988,13 @@
           await updateOfflineDraftCount();
           return;
         }
-        if (navigator.onLine === false) showToast('Belum ada sinyal. Foto dikirim otomatis saat ada sinyal.');
+        if (navigator.onLine === false) showToast(trApp('Belum ada sinyal. Foto dikirim otomatis saat ada sinyal.'));
         else if (window.JagaOfflineSync) await window.JagaOfflineSync.run({ manual: true });
         await resumeSubmittedDrafts();
         await updateOfflineDraftCount();
       } catch (error) {
         if (generation !== accountGeneration || String(currentAccount?.id) !== String(account.id)) return;
-        syncNotice = 'Belum bisa mengirim: ' + userMessage(error);
+        syncNotice = trApp('Belum bisa mengirim: ') + userMessage(error);
         await updateOfflineDraftCount();
       }
     }
@@ -885,7 +1028,7 @@
         if (['done','failed','cancelled','rejected'].includes(job.status)) acknowledgeJob(job.id);
       }
       if (recovered > 0) {
-        showToast(recovered + ' hasil analisis yang tertunda sudah masuk ke Riwayat.');
+        showToast(trApp('{n} hasil analisis yang tertunda sudah masuk ke Riwayat.', { n: recovered }));
       }
     }
 
@@ -913,13 +1056,14 @@
       const ms = value === null || value === undefined || value === "" ? NaN : Number(value);
       if (Number.isFinite(ms) && Number.isFinite(new Date(ms).getTime())) {
         const d = new Date(ms);
-        const day = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(d);
-        const time = new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).format(d);
-        return day + ' · ' + time + (/EXIF/.test(metadata.photoDate || '') ? ' · zona EXIF tidak diketahui' : /manual/.test(metadata.photoDate || '') ? ' · waktu manual' : '');
+        const loc = isEnApp() ? 'en-US' : 'id-ID';
+        const day = new Intl.DateTimeFormat(loc, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+        const time = new Intl.DateTimeFormat(loc, { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).format(d);
+        return day + ' · ' + time + (/EXIF/.test(metadata.photoDate || '') ? trApp(' · zona EXIF tidak diketahui') : /manual/.test(metadata.photoDate || '') ? trApp(' · waktu manual') : '');
       }
       // Older drafts only carry the long text form; keep its date part, not the provenance note in brackets.
       if (metadata.photoDate) return String(metadata.photoDate).split(' (')[0];
-      return 'Waktu foto tidak diketahui';
+      return trApp('Waktu foto tidak diketahui');
     }
     function drawGeotagStamp(ctx, w, h, metadata, diagnosis, logo = null) {
       if (diagnosis) diagnosis = {...diagnosis,crop:canonicalCropName(diagnosis.crop),severity:diagnosis.observedSeverity||diagnosis.severity};
@@ -964,7 +1108,7 @@
         ctx.font = font(800, base * 0.72);
         const pillPad = Math.round(base * 0.45), pillW = ctx.measureText(label).width + pillPad * 2, indent = pillW + Math.round(base * 0.45);
         ctx.font = font(700, base * 0.95);
-        const text = [diagnosis.crop, diagnosis.condition].filter(Boolean).join(' · ') || 'Hasil analisis';
+        const text = [trAppCrop(diagnosis.crop), trAppCond(diagnosis.condition)].filter(Boolean).join(' · ') || trApp('Hasil analisis');
         rows.push({ kind: 'diagnosis', size: base * 0.95, weight: 700, color: '#ffffff', label, bg, fg, pillPad, pillW, indent,
           lines: wrap(text, innerW - indent, innerW - indent, 2), lineH: Math.max(base * 1.4, base * 0.95 * 1.3) });
       }
@@ -972,14 +1116,15 @@
         ctx.font = font(weight, size);
         rows.push({ size, weight, color, lines: wrap(text, width, width, maxLines), lineH: size * 1.32 });
       };
-      plain(base * 0.95, 700, '#ffffff', metadata.locationName || 'Lokasi tidak diketahui', 2);
-      plain(base * 0.8, 500, '#e2e8f0', hasFix ? lat.toFixed(6) + '°, ' + lng.toFixed(6) + '°' + (Number.isFinite(acc) ? '  ±' + Math.round(acc) + ' m' : '') : 'GPS tidak tersedia', 1);
-      const extra = [Number.isFinite(elev) ? 'Elevasi ' + Math.round(elev) + ' m dpl' : '', metadata.weather || ''].filter(Boolean).join(' · ');
-      plain(base * 0.75, 500, '#e2e8f0', stampTimeText(metadata), 1, extra ? innerW : innerW - brandW - base);
-      if (stampTimeText(metadata) === 'Waktu foto tidak diketahui') {
+      plain(base * 0.95, 700, '#ffffff', metadata.locationName || trApp('Lokasi tidak diketahui'), 2);
+      plain(base * 0.8, 500, '#e2e8f0', hasFix ? lat.toFixed(6) + '°, ' + lng.toFixed(6) + '°' + (Number.isFinite(acc) ? '  ±' + Math.round(acc) + ' m' : '') : trApp('GPS tidak tersedia'), 1);
+      const extra = [Number.isFinite(elev) ? trApp('Elevasi ' + Math.round(elev) + ' m dpl') : '', metadata.weather || ''].filter(Boolean).join(' · ');
+      const stampedWhen = stampTimeText(metadata);
+      plain(base * 0.75, 500, '#e2e8f0', stampedWhen, 1, extra ? innerW : innerW - brandW - base);
+      if (stampedWhen === trApp('Waktu foto tidak diketahui')) {
         const added = metadata.addedTimeMs ?? metadata.importedAtMs;
         const when = added == null ? metadata.exportedAtMs : added;
-        if (Number.isFinite(Number(when)) && when != null) plain(base * 0.75,500,'#cbd5e1',(added == null ? 'Diekspor ' : 'Ditambahkan ') + stampTimeText({photoTimestampMs:when}),2,extra?innerW:innerW-brandW-base);
+        if (Number.isFinite(Number(when)) && when != null) plain(base * 0.75,500,'#cbd5e1',trApp(added == null ? 'Diekspor ' : 'Ditambahkan ') + stampTimeText({photoTimestampMs:when}),2,extra?innerW:innerW-brandW-base);
       }
       if (extra) plain(base * 0.75, 500, '#cbd5e1', extra, 1, innerW - brandW - base);
       rows.forEach(r => { r.height = r.lines.length * r.lineH; });
@@ -1086,7 +1231,7 @@
       const retry = document.getElementById('map-load-retry');
       mapEl?.setAttribute('aria-busy', 'true');
       status?.classList.remove('hidden');
-      if (message) message.textContent = 'Memuat alat peta…';
+      if (message) message.textContent = trApp('Memuat alat peta…');
       if (retry) retry.hidden = true;
       mapFeatureRequest = JagaFeatures.load('map').then(() => {
         if (currentMenuName !== 'map' || !currentAccount) return;
@@ -1098,7 +1243,7 @@
         }
         status?.classList.add('hidden');
       }).catch(() => {
-        if (message) message.textContent = 'Alat peta belum dapat dimuat. Sambungkan internet lalu coba lagi. Catatan tanaman tetap tersedia di Riwayat.';
+        if (message) message.textContent = trApp('Alat peta belum dapat dimuat. Sambungkan internet lalu coba lagi. Catatan tanaman tetap tersedia di Riwayat.');
         if (retry) retry.hidden = false;
       }).finally(() => {
         mapEl?.removeAttribute('aria-busy');
@@ -1168,7 +1313,7 @@
       const offline = navigator.onLine === false;
       const failing = mapTileErrors >= 3;
       note.textContent = offline || failing
-        ? (currentMapTileType === 'satellite' ? 'Citra satelit butuh sinyal.' : 'Peta butuh sinyal.') + ' Titik dan petak Anda tetap terlihat.'
+        ? trApp(currentMapTileType === 'satellite' ? 'Citra satelit butuh sinyal.' : 'Peta butuh sinyal.') + ' ' + trApp('Titik dan petak Anda tetap terlihat.')
         : '';
       note.classList.toggle('hidden', !(offline || failing));
     }
@@ -1204,28 +1349,35 @@
     /* ------------------- shared helpers for Beranda, Peta and Riwayat (0.2.2.0) ------------------- */
     const ID_DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const ID_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const EN_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     function pad2(n) { return String(n).padStart(2, '0'); }
     function startOfDay(ms) { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
     function formatClock(ms) { const d = new Date(ms); return pad2(d.getHours()) + '.' + pad2(d.getMinutes()); }
     function formatDateId(ms, withWeekday) {
       const d = new Date(ms);
-      return (withWeekday ? ID_DAYS[d.getDay()] + ', ' : '') + d.getDate() + ' ' + ID_MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+      const days = isEnApp() ? EN_DAYS : ID_DAYS;
+      const months = isEnApp() ? EN_MONTHS : ID_MONTHS;
+      return (withWeekday ? days[d.getDay()] + ', ' : '') + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     }
     // "Hari ini 14.05", "Kemarin 09.30", "Senin, 20 Okt", "5 Sep", "5 Sep 2025". Device local time, never a zone name.
     function formatWhenId(ms) {
-      if (!Number.isFinite(ms) || ms <= 0) return 'Waktu foto tidak diketahui';
+      if (!Number.isFinite(ms) || ms <= 0) return trApp('Waktu foto tidak diketahui');
       const days = Math.round((startOfDay(Date.now()) - startOfDay(ms)) / 86400000);
       const d = new Date(ms);
-      if (days === 0) return 'Hari ini ' + formatClock(ms);
-      if (days === 1) return 'Kemarin ' + formatClock(ms);
-      if (days > 1 && days < 7) return ID_DAYS[d.getDay()] + ', ' + d.getDate() + ' ' + ID_MONTHS[d.getMonth()];
-      return d.getDate() + ' ' + ID_MONTHS[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
+      const dayNames = isEnApp() ? EN_DAYS : ID_DAYS;
+      const monthNames = isEnApp() ? EN_MONTHS : ID_MONTHS;
+      if (days === 0) return (isEnApp() ? 'Today ' : 'Hari ini ') + formatClock(ms);
+      if (days === 1) return (isEnApp() ? 'Yesterday ' : 'Kemarin ') + formatClock(ms);
+      if (days > 1 && days < 7) return dayNames[d.getDay()] + ', ' + d.getDate() + ' ' + monthNames[d.getMonth()];
+      return d.getDate() + ' ' + monthNames[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
     }
     // Old saved notes carry "2026-10-20 (Asia/Jakarta)". Show them in plain Indonesian instead.
     function plainDateText(value) {
+      const months = isEnApp() ? EN_MONTHS : ID_MONTHS;
       return String(value === null || value === undefined ? '' : value)
         .replace(/\s*\((?:Africa|America|Asia|Atlantic|Australia|Europe|Indian|Pacific|UTC|GMT)[^)]*\)/g, '')
-        .replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (all, y, m, d) => (Number(m) >= 1 && Number(m) <= 12) ? Number(d) + ' ' + ID_MONTHS[Number(m) - 1] + ' ' + y : all);
+        .replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (all, y, m, d) => (Number(m) >= 1 && Number(m) <= 12) ? Number(d) + ' ' + months[Number(m) - 1] + ' ' + y : all);
     }
     function recordMs(rec) {
       const value = Number(rec && (rec.timestampMs ?? rec.createdMs));
@@ -1322,10 +1474,12 @@
 
     function formatArea(m2) {
       if (typeof m2 !== 'number' || !isFinite(m2) || m2 <= 0) return '—';
-      const meters = Math.round(m2).toLocaleString('id-ID') + ' m²';
+      const loc = isEnApp() ? 'en-US' : 'id-ID';
+      const meters = Math.round(m2).toLocaleString(loc) + ' m²';
       if (m2 < 1000) return meters;
       const ha = m2 / 10000;
-      return (ha >= 10 ? Math.round(ha).toLocaleString('id-ID') : ha.toFixed(1).replace('.', ',')) + ' ha (' + meters + ')';
+      const haText = ha >= 10 ? Math.round(ha).toLocaleString(loc) : (isEnApp() ? ha.toFixed(1) : ha.toFixed(1).replace('.', ','));
+      return haText + ' ha (' + meters + ')';
     }
 
     let editingFarmId = null;
@@ -1397,18 +1551,25 @@
     function farmMembershipLabel(record) {
       const farm = farmList.find(farm => farm.id === record.farmId);
       if (farm) return farm.name;
-      if (record.farmAssignment === 'ambiguous') return 'Di batas dua petak: pilih petaknya';
-      if (record.farmAssignment === 'missing-location') return 'Lokasi belum terbaca';
-      return 'Di luar petak';
+      if (record.farmAssignment === 'ambiguous') return trApp('Di batas dua petak: pilih petaknya');
+      if (record.farmAssignment === 'missing-location') return trApp('Lokasi belum terbaca');
+      return trApp('Di luar petak');
     }
 
 
+    function applyMapDrawLang() {
+      if (!mapInstance?.pm) return;
+      const tooltips = {
+        firstVertex: trApp('Ketuk peta untuk menaruh titik pertama'),
+        continueLine: trApp('Ketuk untuk menambah titik'),
+        finishPoly: trApp('Ketuk titik pertama untuk menutup petak'),
+      };
+      try { mapInstance.pm.setLang('id', { tooltips }, 'en'); } catch (error) { /* older builds have no 'id' */ }
+    }
     function wireFarmDrawing() {
       if (!mapInstance || !mapInstance.pm) return;
       // Plain Bahasa for the drawing tooltips (no "vertex", no "klik").
-      const tooltips = { firstVertex: 'Ketuk peta untuk menaruh titik pertama', continueLine: 'Ketuk untuk menambah titik',
-        finishPoly: 'Ketuk titik pertama untuk menutup petak' };
-      try { mapInstance.pm.setLang('id', { tooltips }, 'en'); } catch (error) { /* older builds have no 'id' */ }
+      applyMapDrawLang();
       mapInstance.on('pm:drawstart', (event) => {
         if (event.workingLayer && event.workingLayer.on) event.workingLayer.on('pm:vertexadded', updateDrawStats);
         updateDrawStats();
@@ -1420,7 +1581,7 @@
         setDrawBar(null);
         if (!ring) {
           if (mapInstance) mapInstance.removeLayer(event.layer);
-          showToast('Petak butuh minimal 3 titik.');
+          showToast(trApp('Petak butuh minimal 3 titik.'));
           return;
         }
         if (pendingFarmLayer && mapInstance && pendingFarmLayer !== event.layer) {
@@ -1428,7 +1589,7 @@
         }
         pendingFarmLayer = event.layer;
         pendingFarmSource = 'peta';
-        openFarmModal(ring, 'Simpan petak');
+        openFarmModal(ring, trApp('Simpan petak'));
       });
     }
 
@@ -1446,14 +1607,15 @@
       const stats = document.getElementById('draw-bar-stats');
       const finish = document.getElementById('draw-finish');
       if (!stats) return;
+      const loc = isEnApp() ? 'en-US' : 'id-ID';
       if (drawBarMode === 'gps') {
-        stats.textContent = gpsTracePoints.length + ' titik · ' + Math.round(gpsTraceMeters).toLocaleString('id-ID') + ' m · ' +
-          (Number.isFinite(gpsTraceAccuracy) ? 'GPS ±' + Math.round(gpsTraceAccuracy) + ' m' : 'menunggu GPS');
+        stats.textContent = trApp(gpsTracePoints.length + ' titik') + ' · ' + Math.round(gpsTraceMeters).toLocaleString(loc) + ' m · ' +
+          (Number.isFinite(gpsTraceAccuracy) ? 'GPS ±' + Math.round(gpsTraceAccuracy) + ' m' : trApp('menunggu GPS'));
         if (finish) finish.disabled = false;
       } else if (drawBarMode === 'draw') {
         const points = drawPoints();
         const area = points.length >= 3 ? turfAreaM2(closeRing(points)) : null;
-        stats.textContent = points.length + ' titik' + (points.length >= 3 ? (area ? ' · ±' + (area < 10000 ? Math.round(area).toLocaleString('id-ID') + ' m²' : formatArea(area).split(' (')[0]) : '') : ' · butuh minimal 3');
+        stats.textContent = trApp(points.length + ' titik') + (points.length >= 3 ? (area ? ' · ±' + (area < 10000 ? Math.round(area).toLocaleString(loc) + ' m²' : formatArea(area).split(' (')[0]) : '') : trApp(' · butuh minimal 3'));
         if (finish) finish.disabled = points.length < 3;
       }
     }
@@ -1463,7 +1625,7 @@
       document.getElementById('view-map')?.classList.toggle('is-drawing', !!mode);
       document.getElementById('draw-undo')?.classList.toggle('hidden', mode !== 'draw');
       const finish = document.getElementById('draw-finish');
-      if (finish) finish.textContent = mode === 'gps' ? 'Selesai jalan' : 'Selesai';
+      if (finish) finish.textContent = trApp(mode === 'gps' ? 'Selesai jalan' : 'Selesai');
       updateDrawStats();
     }
     function undoDrawPoint() {
@@ -1473,9 +1635,9 @@
     function finishDrawPoints() {
       if (gpsTraceWatchId !== null) { finishGpsTrace(); return; }
       if (!mapInstance?.pm?.Draw?.Polygon) return;
-      if (drawPoints().length < 3) { showToast('Butuh minimal 3 titik.'); return; }
+      if (drawPoints().length < 3) { showToast(trApp('Butuh minimal 3 titik.')); return; }
       try { mapInstance.pm.Draw.Polygon._finishShape(); }
-      catch (error) { showToast('Petak belum bisa diselesaikan. Ketuk titik pertama untuk menutup.'); }
+      catch (error) { showToast(trApp('Petak belum bisa diselesaikan. Ketuk titik pertama untuk menutup.')); }
     }
 
 
@@ -1485,12 +1647,12 @@
       const titleEl = document.getElementById('farm-modal-title');
       const areaEl = document.getElementById('farm-modal-area');
       const errorEl = document.getElementById('farm-modal-error');
-      if (titleEl) titleEl.innerText = title || 'Simpan petak';
+      if (titleEl) titleEl.innerText = trApp(title || 'Simpan Petak');
       const saveButton = document.getElementById('farm-modal-save');
-      if (saveButton) saveButton.innerText = editingFarmId ? 'Simpan perubahan' : 'Simpan petak';
+      if (saveButton) saveButton.innerText = trApp(editingFarmId ? 'Simpan perubahan' : 'Simpan Petak');
       document.getElementById('farm-edit-geometry')?.classList.toggle('hidden', !editingFarmId);
       if (areaEl) {
-        areaEl.innerText = 'Luas: ' + formatArea(pendingFarmArea) + ' · ' + (ring.length - 1) + ' titik';
+        areaEl.innerText = trApp('Luas: ' + formatArea(pendingFarmArea)) + ' · ' + trApp((ring.length - 1) + ' titik');
       }
       if (errorEl) { errorEl.classList.add('hidden'); errorEl.innerText = ''; }
       setDialogOpen('modal-farm');
@@ -1510,13 +1672,13 @@
       ensureMap();
       closeFarmCrops(); selectedFarmId=null; renderFarmPolygons();
       if (!mapInstance || !mapInstance.pm) {
-        showToast('Alat gambar peta belum siap. Muat ulang halaman.');
+        showToast(trApp('Alat gambar peta belum siap. Muat ulang halaman.'));
         return;
       }
       cancelFarmDraw();
       closeFarmPanel();
       pendingFarmSource = 'peta';
-      setMapHint('Ketuk peta di setiap sudut petak.');
+      setMapHint(trApp('Ketuk peta di setiap sudut petak.'));
       try {
         mapInstance.pm.enableDraw('Polygon', {
           snappable: true, allowSelfIntersection: false, finishOn: 'dblclick',
@@ -1526,7 +1688,7 @@
         });
         setDrawBar('draw');
       } catch (error) {
-        showToast('Gagal memulai gambar petak.');
+        showToast(trApp('Gagal memulai gambar petak.'));
       }
     }
 
@@ -1561,7 +1723,7 @@
       if (name.length < 2) { farmModalError('Beri nama petak minimal 2 huruf.'); return; }
 
       const ring = editingFarmId && editingFarmLayer ? farmLayerRing(editingFarmLayer) : pendingFarmRing;
-      if (!validFarmRing(ring)) { farmModalError('Batas tidak valid. Periksa koordinat atau garis yang berpotongan.'); return; }
+      if (!validFarmRing(ring)) { farmModalError(trApp('Batas tidak valid. Periksa koordinat atau garis yang berpotongan.')); return; }
       farmModalError('');
       const areaM2 = turfAreaM2(ring);
       const editId = editingFarmId;
@@ -1597,12 +1759,12 @@
         renderFarmPolygons();
         refreshAllHistoryViews();
         setMapHint('');
-        showToast('Petak "' + saved.name + '" tersimpan (' + formatArea(saved.areaM2) + ').');
+        showToast(trApp('Petak "' + saved.name + '" tersimpan (' + formatArea(saved.areaM2) + ').'));
         if (mapInstance && (saved.ring || []).length >= 4) {
           mapInstance.fitBounds(L.latLngBounds(saved.ring), { padding: [40, 40] });
         }
       } catch (error) {
-        if (!error.stale && generation === accountGeneration && revision === farmEditRevision) farmModalError('Gagal menyimpan petak: ' + userMessage(error));
+        if (!error.stale && generation === accountGeneration && revision === farmEditRevision) farmModalError(trApp('Gagal menyimpan petak: ') + userMessage(error));
       }
     }
 
@@ -1628,7 +1790,7 @@
         if (path) {
           path.setAttribute('tabindex', '0');
           path.setAttribute('role', 'button');
-          path.setAttribute('aria-label', farm.name || 'Petak');
+          path.setAttribute('aria-label', farm.name || trApp('Petak'));
           path.setAttribute('aria-pressed', String(farm.id === selectedFarmId));
           path.addEventListener('keydown', event => {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -1664,25 +1826,27 @@
       const subEl = document.getElementById('farm-sheet-subtitle');
       if (subEl) {
         subEl.innerText = farmList.length === 0
-          ? 'Belum ada petak tersimpan'
-          : farmList.length + ' petak tersimpan';
+          ? trApp('Belum ada petak tersimpan')
+          : trApp(farmList.length + ' petak tersimpan');
       }
       if (!listEl) return;
       if (farmList.length === 0) {
-        listEl.innerHTML = '<p class="t-body t-muted farm-empty">Belum ada petak. Ketuk ikon segi lima di kanan peta untuk menggambar petak, atau ikon jejak kaki sambil berjalan di batas kebun.</p>';
+        listEl.innerHTML = '<p class="t-body t-muted farm-empty">' + escapeText(trApp('Belum ada petak. Ketuk ikon segi lima di kanan peta untuk menggambar petak, atau ikon jejak kaki sambil berjalan di batas kebun.')) + '</p>';
         return;
       }
       listEl.innerHTML = farmList.map(farm => {
         const related = farmRecords.filter(rec => rec.farmId === farm.id).length;
         const corners = Math.max(0, (farm.ring || []).length - 1);
+        const editLbl = escapeText(trApp('Ubah petak ' + (farm.name || '')));
+        const delLbl = escapeText(trApp('Hapus petak ' + (farm.name || '')));
         return '<div class="card farm-row">' +
           '<button type="button"' + act('focusFarm', String(farm.id ?? '')) + ' class="farm-info">' +
             '<span class="farm-name">' + escapeText(farm.name) + '</span>' +
-            '<span class="farm-sub">' + escapeText(farm.crop || 'Tanaman belum diisi') + ' · ' + escapeText(formatArea(farm.areaM2)) + '</span>' +
-            '<span class="farm-sub">' + related + ' foto · ' + corners + ' sudut</span>' +
+            '<span class="farm-sub">' + escapeText(farm.crop ? trAppCrop(farm.crop) : trApp('Tanaman belum diisi')) + ' · ' + escapeText(formatArea(farm.areaM2)) + '</span>' +
+            '<span class="farm-sub">' + escapeText(trApp(related + ' foto')) + ' · ' + escapeText(trApp('{n} sudut', { n: corners })) + '</span>' +
           '</button>' +
-          '<button type="button"' + act('openFarmEdit', String(farm.id ?? '')) + ' class="btn btn-secondary btn-sm" aria-label="Ubah petak ' + escapeText(farm.name) + '"><span>Ubah</span></button>' +
-          '<button type="button"' + act('deleteFarm', String(farm.id ?? '')) + ' class="btn btn-danger btn-icon btn-sm" title="Hapus petak" aria-label="Hapus petak ' + escapeText(farm.name) + '"><i data-lucide="trash-2"></i></button>' +
+          '<button type="button"' + act('openFarmEdit', String(farm.id ?? '')) + ' class="btn btn-secondary btn-icon btn-sm" title="' + escapeText(trApp('Ubah petak')) + '" aria-label="' + editLbl + '"><i data-lucide="pencil"></i></button>' +
+          '<button type="button"' + act('deleteFarm', String(farm.id ?? '')) + ' class="btn btn-danger btn-icon btn-sm" title="' + escapeText(trApp('Hapus petak')) + '" aria-label="' + delLbl + '"><i data-lucide="trash-2"></i></button>' +
         '</div>';
       }).join('');
       icons();
@@ -1753,7 +1917,7 @@
       document.getElementById('farm-note-input').value = farm.note || '';
       pendingFarmRing = farm.ring.map(point => point.slice());
       pendingFarmArea = turfAreaM2(pendingFarmRing);
-      openFarmModal(pendingFarmRing, 'Ubah petak');
+      openFarmModal(pendingFarmRing, 'Ubah Petak');
     }
 
     function editFarmGeometry() {
@@ -1762,7 +1926,7 @@
       navigateToMenu('map');
       editingFarmLayer.pm.enable({allowSelfIntersection:false, preventMarkerRemoval:true, snappable:false});
       document.getElementById('farm-edit-toolbar')?.classList.remove('hidden');
-      setMapHint('Geser titik sudut untuk mengubah batas. Selesai menggeser membuka formulir; perubahan belum disimpan.');
+      setMapHint(trApp('Geser titik sudut untuk mengubah batas. Selesai menggeser membuka formulir; perubahan belum disimpan.'));
       mapInstance.invalidateSize();
       mapInstance.fitBounds(editingFarmLayer.getBounds(), {paddingTopLeft:[35,200],paddingBottomRight:[70,90],animate:false});
       document.querySelector('#farm-edit-toolbar button')?.focus();
@@ -1776,22 +1940,22 @@
       if (!validFarmRing(ring)) {
               document.getElementById('farm-edit-toolbar')?.classList.add('hidden');
               setDialogOpen('modal-farm');
-              document.getElementById('farm-modal-title').innerText = 'Ubah petak';
-              document.getElementById('farm-modal-area').innerText = 'Batas tidak valid';
-        farmModalError('Batas tidak valid. Periksa koordinat atau garis yang berpotongan.');
+              document.getElementById('farm-modal-title').innerText = trApp('Ubah Petak');
+              document.getElementById('farm-modal-area').innerText = trApp('Batas tidak valid');
+        farmModalError(trApp('Batas tidak valid. Periksa koordinat atau garis yang berpotongan.'));
         return;
       }
       document.getElementById('farm-edit-toolbar')?.classList.add('hidden');
-      openFarmModal(ring, 'Ubah petak');
+      openFarmModal(ring, 'Ubah Petak');
     }
 
     function deleteFarm(farmId) {
       const farm = farmList.find(f => f.id === farmId);
       if (!farm) return;
       confirmAction({
-        title: 'Hapus petak ini?',
-        message: farm.name + ' akan dihapus. Catatan analisis di dalamnya tetap tersimpan.',
-        okLabel: 'Hapus',
+        title: trApp('Hapus Petak Ini?'),
+        message: trApp('{name} akan dihapus. Catatan analisis di dalamnya tetap tersimpan.', { name: farm.name }),
+        okLabel: trApp('Hapus'),
       }).then(async (ok) => {
         if (!ok) return;
         try {
@@ -1800,9 +1964,9 @@
           farmList = farmList.filter(f => f.id !== farmId);
           renderFarmPolygons();
           refreshAllHistoryViews();
-          showToast('Petak dihapus.');
+          showToast(trApp('Petak dihapus.'));
         } catch (error) {
-          showToast('Gagal menghapus petak: ' + userMessage(error));
+          showToast(trApp('Gagal menghapus petak: ') + userMessage(error));
         }
       });
     }
@@ -1811,7 +1975,7 @@
     function centerMapOnMe() {
       if (!ensureMap()) return;
       if (currentCoords.lat === null || currentCoords.lng === null) {
-        showToast('Lokasi belum terbaca. Ketuk tombol perbarui di Beranda.');
+        showToast(trApp('Lokasi belum terbaca. Ketuk tombol perbarui di Beranda.'));
         requestLiveLocation(true);
         return;
       }
@@ -1821,8 +1985,8 @@
 
     function toggleGpsTrace() {
       if (gpsTraceWatchId !== null) { finishGpsTrace(); return; }
-      if (!ensureMap()) { showToast('Peta sedang dimuat. Coba sebentar lagi.'); return; }
-      if (!navigator.geolocation) { showToast('HP ini tidak punya GPS.'); return; }
+      if (!ensureMap()) { showToast(trApp('Peta sedang dimuat. Coba sebentar lagi.')); return; }
+      if (!navigator.geolocation) { showToast(trApp('HP ini tidak punya GPS.')); return; }
       if (!currentAccount) return;
       cancelFarmDraw();
       closeFarmPanel();
@@ -1854,11 +2018,11 @@
         },
         () => {
           if (traceGeneration !== gpsTraceGeneration || ownerGeneration !== accountGeneration || !currentAccount) return;
-          showToast('GPS belum terbaca. Coba di tempat terbuka.'); stopGpsTrace();
+          showToast(trApp('GPS belum terbaca. Coba di tempat terbuka.')); stopGpsTrace();
         },
         { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
       );
-      setMapHint('Berjalanlah di sekeliling batas kebun. Ketuk "Selesai jalan" bila sudah kembali ke titik awal.');
+      setMapHint(trApp('Berjalanlah di sekeliling batas kebun. Ketuk "Selesai jalan" bila sudah kembali ke titik awal.'));
       setDrawBar('gps');
     }
 
@@ -1900,7 +2064,7 @@
       gpsTracePoints = [];
       const ring = closeRing(points);
       if (!ring) {
-        showToast('Jejak terlalu pendek. Berjalanlah mengelilingi batas kebun dulu.');
+        showToast(trApp('Jejak terlalu pendek. Berjalanlah mengelilingi batas kebun dulu.'));
         return;
       }
       pendingFarmLayer = null;
@@ -1938,36 +2102,55 @@
 
     const MAP_PIN_PHOTO_ZOOM = 18;
     const MAP_PIN_STACK_LIMIT = 3;
-    const MAP_PIN_BODY = '<svg class="map-pin-body" viewBox="0 0 48 58" focusable="false">' +
+    const MAP_PIN_BODY_BACK = '<svg class="map-pin-body map-pin-back" viewBox="0 0 48 58" focusable="false">' +
+      '<path d="M24 1.5A22.5 22.5 0 0 1 46.5 24C46.5 35.7 37.1 43.3 26.5 54.8Q24 57.7 21.5 54.8C10.9 43.3 1.5 35.7 1.5 24A22.5 22.5 0 0 1 24 1.5Z"/></svg>';
+    const MAP_PIN_BODY_DEEP = '<svg class="map-pin-body map-pin-back is-deep" viewBox="0 0 48 58" focusable="false">' +
+      '<path d="M24 1.5A22.5 22.5 0 0 1 46.5 24C46.5 35.7 37.1 43.3 26.5 54.8Q24 57.7 21.5 54.8C10.9 43.3 1.5 35.7 1.5 24A22.5 22.5 0 0 1 24 1.5Z"/></svg>';
+    const MAP_PIN_BODY_FRONT = '<svg class="map-pin-body" viewBox="0 0 48 58" focusable="false">' +
       '<path d="M24 1.5A22.5 22.5 0 0 1 46.5 24C46.5 35.7 37.1 43.3 26.5 54.8Q24 57.7 21.5 54.8C10.9 43.3 1.5 35.7 1.5 24A22.5 22.5 0 0 1 24 1.5Z"/></svg>';
     const MAP_PIN_VISIBLE_LIMIT = 40;
     const MAP_PIN_REQUEST_LIMIT = 4;
     const MAP_PIN_CACHE_LIMIT = 96;
-    const MAP_PIN_MAX_BYTES = 16 * 1024;
+    const MAP_PIN_MAX_BYTES = 128 * 1024;
     const mapPinPhotoCache = new Map();
     const mapPinRequests = new Map();
     let visibleMapPhotoPins = new Map();
     const nearbyMapPhotos = new Map();
     let nearbyMapPhotoObserver = null;
 
-    function mapPinMetrics(zoom) {
-      const scale = zoom < MAP_PIN_PHOTO_ZOOM ? 0.74
-        : 1 + 0.10 * Math.min(4, zoom - MAP_PIN_PHOTO_ZOOM);
-      return { scale, width: Math.max(44, 2 * Math.ceil(26 * scale)), height: Math.ceil(71 * scale) };
+    function mapPinSeverityRank(severity) {
+      if (severity === 'Severe') return 0;
+      if (severity === 'Moderate') return 1;
+      return 2;
     }
 
-    function mapPinIcon(metrics, content, stackSize = 0, color = '') {
-      const layers = Math.max(1, Math.min(stackSize, MAP_PIN_STACK_LIMIT));
-      const silhouettes = MAP_PIN_BODY.repeat(layers);
-      const stackClass = stackSize ? ' map-pin-stack' : '';
+    function mapPinMetrics(zoom) {
+      const scale = zoom < MAP_PIN_PHOTO_ZOOM ? 0.86
+        : 1 + 0.08 * Math.min(4, zoom - MAP_PIN_PHOTO_ZOOM);
+      return { scale, width: Math.max(46, 2 * Math.ceil(26 * scale)), height: Math.ceil(71 * scale) };
+    }
+
+    function mapPinIcon(metrics, content, stackColors = [], color = '', stackSize = 0) {
+      let backLayers = '';
+      if (stackSize > 1) {
+        if (stackSize >= 3) backLayers += MAP_PIN_BODY_DEEP;
+        backLayers += MAP_PIN_BODY_BACK;
+      }
+      const stackClass = stackSize > 1 ? ' map-pin-stack' : '';
       const countClass = stackSize >= 100 ? ' map-pin-count-long' : '';
+      const countBadge = stackSize > 1 ? '<span class="map-pin-stack-badge" aria-hidden="true">' + stackSize + '</span>' : '';
+      const vars = [
+        '--pin-scale:' + metrics.scale,
+        color ? '--pin-status:' + color : '',
+        stackColors[0] ? '--pin-back-1:' + stackColors[0] : '',
+        stackColors[1] ? '--pin-back-2:' + stackColors[1] : '',
+      ].filter(Boolean).join(';');
       return L.divIcon({
         className: 'custom-farm-pin',
         iconSize: [metrics.width, metrics.height],
         iconAnchor: [metrics.width / 2, metrics.height],
         html: '<div aria-hidden="true" class="map-pin' + stackClass + countClass +
-          '" style="--pin-scale:' + metrics.scale + (color ? ';--pin-status:' + color : '') +
-          '">' + silhouettes + content + '</div>',
+          '" style="' + vars + '">' + backLayers + MAP_PIN_BODY_FRONT + content + countBadge + '</div>',
       });
     }
 
@@ -2050,27 +2233,44 @@
 
       const countKeys = new Set();
       for (const group of groups) {
-        const first = group[0].marker;
+        group.sort((a, b) =>
+          (a.marker.options.severityRank - b.marker.options.severityRank) ||
+          ((b.marker.options.recordTs || 0) - (a.marker.options.recordTs || 0))
+        );
+        const front = group[0].marker;
         if (group.length === 1) {
-          if (first.options.pinScale !== metrics.scale) {
-            first.setIcon(mapPinIcon(metrics, first.options.pinContent, 0, first.options.pinColor));
-            first.options.pinScale = metrics.scale;
+          if (front.options.pinScale !== metrics.scale) {
+            front.setIcon(mapPinIcon(metrics, front.options.pinContent, [], front.options.pinColor, 0));
+            front.options.pinScale = metrics.scale;
           }
-          displayedMarkers.add(first);
+          front.setZIndexOffset(front.options.pinZIndex || 0);
+          displayedMarkers.add(front);
           continue;
         }
-        const key = first.options.recordId;
+        const backColors = group.slice(1, 3).map(pin => pin.marker.options.pinColor);
+        const key = group.map(pin => pin.marker.options.recordId).sort().join('|');
         countKeys.add(key);
-        const label = group.length + ' Tanaman Berdekatan';
-        const content = '<span class="map-pin-circle map-pin-count">' + group.length + '</span>';
+        const label = trApp(group.length + ' Tanaman Berdekatan');
+        const sig = [
+          metrics.scale, front.options.pinColor, front.options.thumbnailPath || '',
+          front.options.pinContent, backColors.join(','), group.length
+        ].join('|');
         let countMarker = mapPinCountMarkers.get(key);
         if (!countMarker || countMarker.options.title !== label) {
-          countMarker = mapPinMarker(first.getLatLng(), { title: label },
-            event => openNearbyMapPlants(event.target.options.plants));
+          countMarker = mapPinMarker(front.getLatLng(), {
+            title: label,
+            thumbnailPath: front.options.thumbnailPath,
+            recordId: front.options.recordId,
+          }, event => openNearbyMapPlants(event.target.options.plants));
           mapPinCountMarkers.set(key, countMarker);
         }
-        if (countMarker.options.pinScale !== metrics.scale) {
-          countMarker.setIcon(mapPinIcon(metrics, content, group.length));
+        countMarker.setLatLng(front.getLatLng());
+        countMarker.options.thumbnailPath = front.options.thumbnailPath;
+        countMarker.options.recordId = front.options.recordId;
+        countMarker.setZIndexOffset((front.options.pinZIndex || 0) + 50);
+        if (countMarker.options.iconSig !== sig) {
+          countMarker.setIcon(mapPinIcon(metrics, front.options.pinContent, backColors, front.options.pinColor, group.length));
+          countMarker.options.iconSig = sig;
           countMarker.options.pinScale = metrics.scale;
         }
         countMarker.options.plants = group.map(pin => pin.marker.options);
@@ -2091,7 +2291,7 @@
           next.set(photo, path);
           if (next.size >= MAP_PIN_VISIBLE_LIMIT) break;
         }
-        if (mapInstance?.getZoom() >= MAP_PIN_PHOTO_ZOOM && next.size < MAP_PIN_VISIBLE_LIMIT) {
+        if (mapInstance && next.size < MAP_PIN_VISIBLE_LIMIT) {
           const bounds = mapInstance.getBounds();
           for (const marker of mapMarkersLayer.getLayers()) {
             const path = marker.options.thumbnailPath;
@@ -2138,16 +2338,28 @@
     }
 
     async function fetchMapPinThumbnail(path, signal) {
-      if (window.JagaNative?.isNative()) {
+      if (path.startsWith('local:')) {
+        try {
+          const dataUrl = await JagaMedia?.dataUrl?.(path.slice(6));
+          if (!dataUrl || !/^data:image\//i.test(dataUrl)) return null;
+          const res = await fetch(dataUrl, { signal });
+          return res.ok ? await res.blob() : null;
+        } catch (_) { return null; }
+      }
+      if (/^data:image\//i.test(path)) {
+        const res = await fetch(path, { signal });
+        return res.ok ? await res.blob() : null;
+      }
+      if (window.JagaNative?.isNative() && path.startsWith('/api/')) {
         const result = await window.JagaNative.request({ path, method: 'GET' });
         if (result.status !== 200 || result.encoding !== 'base64' || typeof result.body !== 'string'
-          || !/^image\/jpeg(?:;|$)/i.test(result.headers?.['content-type'] || '')
+          || !/^image\/(?:jpeg|png|webp)(?:;|$)/i.test(result.headers?.['content-type'] || '')
           || result.body.length > 4 * Math.ceil(MAP_PIN_MAX_BYTES / 3)) return null;
         const bytes = Uint8Array.from(atob(result.body), character => character.charCodeAt(0));
         return new Blob([bytes], { type: 'image/jpeg' });
       }
       const response = await fetch(path, { signal, credentials: 'same-origin', cache: 'no-store' });
-      if (!response.ok || !/^image\/jpeg(?:;|$)/i.test(response.headers.get('content-type') || '')) return null;
+      if (!response.ok || !/^image\/(?:jpeg|png|webp)(?:;|$)/i.test(response.headers.get('content-type') || '')) return null;
       return response.blob();
     }
 
@@ -2217,12 +2429,16 @@
         if (el.textContent !== value) el.textContent = value;
       });
       if (!mapMarkersLayer) return;
-      if (skipUnchanged('markers', recordsSig() + '|' + mapSeverityFilter)) return;
+      if (skipUnchanged('markers', recordsSig() + '|' + mapSeverityFilter + '|' + (isEnApp() ? 'en' : 'id'))) return;
       mapMarkersLayer.clearLayers();
       mapPinCountMarkers.clear();
       mapPlantMarkers = [];
       const cropsSheet = document.getElementById('farm-crops-sheet');
       if (cropsSheet?.dataset.mode === 'nearby') closeFarmCrops();
+      placed.sort((a, b) =>
+        (mapPinSeverityRank(recSeverity(a.group.latest)) - mapPinSeverityRank(recSeverity(b.group.latest))) ||
+        ((recordMs(b.group.latest) || 0) - (recordMs(a.group.latest) || 0))
+      );
       placed.forEach(({ group, pos }) => {
         const sev = recSeverity(group.latest);
         if (mapSeverityFilter !== 'all' && sev !== mapSeverityFilter) return;
@@ -2230,13 +2446,23 @@
         const letter = escapeText(String(group.cropName || group.latest.crop || '?').charAt(0).toUpperCase());
         const color = sev === 'Moderate' ? '#f3bf31' : meta.pin;
         const content = '<span class="map-pin-circle" style="color:' + meta.pinInk + '">' + letter + '</span>';
-        const photo = group.records.find(record => /^\/api\/photos\/[A-Za-z0-9_-]{1,128}$/.test(record.imageUrl || ''));
-        const label = (group.cropName || group.latest.crop || '?') + ' — ' + meta.label;
+        const photo = group.records.find(record => {
+          const url = record.imageUrl || '';
+          return /^\/api\/photos\/[A-Za-z0-9_-]{1,128}$/.test(url) || /^(?:\/img\/|img\/|crops\/|data:image\/)/.test(url);
+        });
+        const thumbnailPath = photo
+          ? (/^\/api\/photos\//.test(photo.imageUrl) ? photo.imageUrl + '/thumbnail' : photo.imageUrl)
+          : (group.latest?.id ? 'local:' + group.latest.id : null);
+        const severityRank = mapPinSeverityRank(sev);
+        const pinZIndex = sev === 'Severe' ? 300 : (sev === 'Moderate' ? 150 : 0);
+        const label = trAppCrop(group.cropName || group.latest.crop || '?') + ' — ' + meta.label;
         const marker = mapPinMarker([pos.lat, pos.lng], {
           title: label, alt: label, recordId: group.latest.id,
           pinContent: content, pinColor: color,
-          thumbnailPath: photo ? photo.imageUrl + '/thumbnail' : null,
+          severityRank, recordTs: recordMs(group.latest) || 0, pinZIndex,
+          thumbnailPath,
         }, () => openBottomSheet(group.latest.id));
+        marker.setZIndexOffset(pinZIndex);
         mapPlantMarkers.push(marker);
       });
       layoutMapPins();
@@ -2244,7 +2470,7 @@
 
     function openUnlocatedHelp() {
       navigateToMenu('log');
-      showToast('Buka tanamannya, lalu Lainnya → Ubah lokasi untuk menaruhnya di peta.');
+      showToast(trApp('Buka tanamannya, lalu Lainnya → Ubah lokasi untuk menaruhnya di peta.'));
     }
     window.openUnlocatedHelp = openUnlocatedHelp;
 
@@ -2262,9 +2488,9 @@
     let viewerRecordId = null;
 
     function displayElevation(value) {
-      if (value === null || value === undefined || value === '') return 'Ketinggian tidak tersedia';
+      if (value === null || value === undefined || value === '') return trApp('Ketinggian tidak tersedia');
       const number = Number(value);
-      return Number.isFinite(number) ? `${Math.round(number)} meter dpl` : 'Ketinggian tidak tersedia';
+      return Number.isFinite(number) ? trApp(`${Math.round(number)} meter dpl`) : trApp('Ketinggian tidak tersedia');
     }
 
     async function recordPhotoSource(record) {
@@ -2286,19 +2512,19 @@
 
     function openPhotoViewer(imageUrl, title, subtitle, caption, recordId) {
       if (!imageUrl) {
-        showToast('Catatan ini belum punya foto tersimpan.');
+        showToast(trApp('Catatan ini belum punya foto tersimpan.'));
         return;
       }
       viewerRecordId = recordId || null;
       const viewer = document.getElementById('photo-viewer');
       const image = document.getElementById('photo-viewer-image');
       if (image) {
-        image.onerror = () => showToast('Pratinjau foto tidak dapat dimuat. Periksa koneksi atau buka kembali Riwayat.');
+        image.onerror = () => showToast(trApp('Pratinjau foto tidak dapat dimuat. Periksa koneksi atau buka kembali Riwayat.'));
         image.onload = () => { image.onerror = null; };
         image.src = imageUrl;
       }
       const titleEl = document.getElementById('photo-viewer-title');
-      if (titleEl) titleEl.innerText = title || 'Foto Analisis';
+      if (titleEl) titleEl.innerText = title || trApp('Foto Analisis');
       const subEl = document.getElementById('photo-viewer-subtitle');
       if (subEl) subEl.innerText = subtitle || '';
       const capEl = document.getElementById('photo-viewer-caption');
@@ -2306,12 +2532,12 @@
       let assessmentHost = document.getElementById('viewer-assessment');
       if (!assessmentHost && capEl) { assessmentHost = document.createElement('div'); assessmentHost.id='viewer-assessment'; capEl.after(assessmentHost); }
       const assessmentRecord = farmRecords.find(row=>row.id===recordId);
-      if(subEl&&assessmentRecord?.previousCondition)subEl.innerText='Sebelum analisis ulang: '+assessmentRecord.previousCondition+' · '+formatWhenId(recordMs(assessmentRecord));
+      if(subEl&&assessmentRecord?.previousCondition)subEl.innerText=trApp('Sebelum analisis ulang: ') + trAppCond(assessmentRecord.previousCondition)+' · '+formatWhenId(recordMs(assessmentRecord));
       window.JagaAssessment?.render(assessmentHost, assessmentRecord || {},{compact:true});
       if(capEl){capEl.hidden=false;if(assessmentRecord)window.JagaAssessment?.summary(capEl,assessmentRecord);}
       if (viewer) setDialogOpen('photo-viewer');
-      const editLocation = document.getElementById('viewer-edit-location'); if (editLocation) editLocation.textContent = 'Ubah lokasi';
-      const saveGallery = document.getElementById('viewer-save-gallery'); if (saveGallery) saveGallery.textContent = 'Simpan ke galeri';
+      const editLocation = document.getElementById('viewer-edit-location'); if (editLocation) editLocation.textContent = trApp('Ubah lokasi');
+      const saveGallery = document.getElementById('viewer-save-gallery'); if (saveGallery) saveGallery.textContent = trApp('Simpan ke galeri');
       icons();
     }
 
@@ -2322,10 +2548,10 @@
       const rendered=typeof renderRecordPhoto==='function'?await renderRecordPhoto(rec):null;
       const source=rendered?.dataUrl||await recordPhotoSource(rec);
       if(generation!==accountGeneration||owner!==String(currentAccount?.id||''))return;
-      if (!source) { showToast('Pratinjau foto tidak dapat dimuat. Periksa koneksi atau buka kembali Riwayat.'); return; }
+      if (!source) { showToast(trApp('Pratinjau foto tidak dapat dimuat. Periksa koneksi atau buka kembali Riwayat.')); return; }
       openPhotoViewer(
         source,
-        rec.cropName || rec.crop || 'Tanaman',
+        trAppCrop(rec.cropName || rec.crop || 'Tanaman'),
         [recordLabel(rec), formatWhenId(recordMs(rec))].filter(Boolean).join(' · '),
         rec.immediate_action || rec.symptoms || '',
         rec.id
@@ -2360,16 +2586,16 @@
       badge.innerText = meta.label;
       badge.className = meta.badgeClass;
 
-      document.getElementById('sheet-crop-title').innerText = rec.cropName || rec.crop || 'Tanaman';
+      document.getElementById('sheet-crop-title').innerText = trAppCrop(rec.cropName || rec.crop || 'Tanaman');
       document.getElementById('sheet-condition-name').innerText = recordLabel(rec);
       const geo = document.getElementById('sheet-geocorrelation');
       geo.innerText = rec.geocorrelation || '';
       geo.classList.toggle('hidden', !rec.geocorrelation);
       document.getElementById('sheet-meta-time').innerText = formatWhenId(recordMs(rec));
       const hasElevation = rec.elevation !== null && rec.elevation !== undefined && rec.elevation !== '' && Number.isFinite(Number(rec.elevation));
-      document.getElementById('sheet-meta-elev').innerText = hasElevation ? Math.round(Number(rec.elevation)) + ' m dpl' : 'Tidak tersedia';
+      document.getElementById('sheet-meta-elev').innerText = hasElevation ? Math.round(Number(rec.elevation)) + ' ' + trApp('m dpl') : trApp('Tidak tersedia');
       document.getElementById('sheet-meta-elev').closest('.info-row')?.classList.remove('hidden');
-      document.getElementById('sheet-action-text').innerText = rec.assessment?.actions?.[0] || rec.immediate_action || 'Belum ada saran. Foto ulang bila perlu.';
+      document.getElementById('sheet-action-text').innerText = rec.assessment?.actions?.[0] || rec.immediate_action || trApp('Belum ada saran. Foto ulang bila perlu.');
       document.getElementById('sheet-action-text').parentElement.hidden=false;
       window.JagaAssessment?.render(document.getElementById('sheet-assessment'),rec,{compact:true});
       const sheetThumb = document.getElementById('sheet-crop-thumb');
@@ -2377,7 +2603,7 @@
         sheetThumb.classList.remove('is-broken');
         sheetThumb.onerror = () => { sheetThumb.removeAttribute('src'); sheetThumb.classList.add('is-broken'); };
         const photoRecordId = rec.id, photoOwner = String(currentAccount?.id || ''), photoGeneration = accountGeneration;
-        sheetThumb.alt = `Foto ${rec.crop || 'tanaman'}`;
+        sheetThumb.alt = isEnApp() ? 'Photo of ' + trAppCrop(rec.crop || 'tanaman') : `Foto ${rec.crop || 'tanaman'}`;
         sheetThumb.removeAttribute('src');
         recordPhotoSource(rec).then(source => {
           if (!sheetThumb.isConnected || currentDetailRecord?.id !== photoRecordId ||
@@ -2483,16 +2709,6 @@
       document.getElementById('view-log')?.classList.toggle('timeline-open', inTimeline);
     }
 
-    function trendDotsHtml(records) {
-      if (!Array.isArray(records) || records.length === 0) return '';
-      const ordered = [...records].sort((a, b) => (recordMs(a) || 0) - (recordMs(b) || 0)).slice(-3);
-      return '<span class="trend-dots" aria-hidden="true">' + ordered.map(r => {
-        const s = recSeverity(r);
-        const cls = s === 'Severe' ? 'sev' : s === 'Moderate' ? 'mod' : s === 'Healthy' ? 'hl' : '';
-        return '<span class="tdot ' + cls + '"></span>';
-      }).join('') + '</span>';
-    }
-
     function treeCardHtml(g) {
       const rec = g.latest, meta = severityMeta(recSeverity(rec));
       const review = rec.needs_review === true;
@@ -2504,26 +2720,31 @@
         '<span class="tree-thumb"' + open + ' aria-hidden="true">' + thumbHtml(rec.imageUrl, '') + '</span>' +
         '<button type="button" class="tree-main"' + open + '>' +
           '<span class="tree-body">' +
-            '<span class="tree-name">' + escapeText(g.cropName) + trendDotsHtml(g.records) + '</span>' +
-            '<span class="tree-sub">' + escapeText(recordLabel(rec)) + (review ? ' · Perlu dicek' : '') + '</span>' +
-            '<span class="card-status"><span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
-              '<span class="tree-when">' + escapeText(formatWhenId(recordMs(rec))) + ' · ' + g.count + ' foto</span></span>' +
+            '<span class="tree-name">' + escapeText(trAppCrop(g.cropName)) + '</span>' +
+            '<span class="tree-sub">' + escapeText(recordLabel(rec)) + (review ? ' · ' + escapeText(trApp('Perlu dicek')) : '') + '</span>' +
+            '<span class="card-status"><span class="' + meta.badgeClass + ' badge-sm">' + escapeText(meta.label) + '</span>' +
+              '<span class="tree-when">' + escapeText(formatWhenId(recordMs(rec))) + ' · ' + escapeText(trApp(g.count + ' foto')) + '</span></span>' +
           '</span>' +
         '</button>' +
-        '<button type="button" class="btn btn-secondary btn-icon tree-cam" ' + act('startTreeCapture', String(g.cropId ?? '')) + ' title="Foto lagi" aria-label="Foto lagi"><i data-lucide="camera"></i></button>' +
+        '<button type="button" class="btn btn-secondary btn-icon tree-cam" ' + act('startTreeCapture', String(g.cropId ?? '')) + ' title="' + escapeText(trApp('Foto lagi')) + '" aria-label="' + escapeText(trApp('Foto lagi')) + '"><i data-lucide="camera"></i></button>' +
       '</article>';
     }
 
     // A model's self-reported score is not a calibrated probability of a correct diagnosis.
     function confidenceHtml(rec) {
       if (rec.source === 'manual' || !rec.needs_review) return '';
-      return '<p class="tl-confidence is-low">Perlu Pemeriksaan Langsung</p>';
+      return '<p class="tl-confidence is-low">' + escapeText(trApp('Perlu Pemeriksaan Langsung')) + '</p>';
     }
 
     // 0.2.4.17: a species or date the farmer corrected says so, with what the AI first said.
     function correctionHtml(rec) {
       const fields = Array.isArray(rec.correctedFields) ? rec.correctedFields : [];
       if (!fields.length) return '';
+      if (isEnApp()) {
+        const parts = [fields.includes('crop') ? 'crop type' : null, fields.includes('date') ? 'date' : null].filter(Boolean).join(' and ');
+        return '<p class="tl-corrected">' + escapeText(parts.charAt(0).toUpperCase() + parts.slice(1)) + ' edited by you' +
+          (fields.includes('crop') && rec.aiCrop ? ' (AI: ' + escapeText(trAppCrop(rec.aiCrop)) + ')' : '') + '</p>';
+      }
       const parts = [fields.includes('crop') ? 'jenis' : null, fields.includes('date') ? 'tanggal' : null].filter(Boolean).join(' dan ');
       return '<p class="tl-corrected">' + escapeText(parts.charAt(0).toUpperCase() + parts.slice(1)) + ' diubah oleh Anda' +
         (fields.includes('crop') && rec.aiCrop ? ' (AI: ' + escapeText(rec.aiCrop) + ')' : '') + '</p>';
@@ -2535,36 +2756,36 @@
       const rid = String(rec.id ?? '');
       const actionSummary = rec.assessment?.actions?.[0] || rec.immediate_action;
       const action = actionSummary
-        ? '<p class="tl-action"><b>Rekomendasi tindakan:</b> ' + escapeText(actionSummary) + '</p>' : '';
+        ? '<p class="tl-action"><b>' + escapeText(trApp('Rekomendasi tindakan:')) + '</b> ' + escapeText(actionSummary) + '</p>' : '';
       const onMap = validCoordinates(rec.lat, rec.lng)
-        ? '<button type="button" class="btn btn-secondary btn-sm" ' + act('viewRecordInMap', rid) + '><i data-lucide="map-pin"></i><span>Lihat di Peta</span></button>' : '';
+        ? '<button type="button" class="btn btn-secondary btn-sm" ' + act('viewRecordInMap', rid) + '><i data-lucide="map-pin"></i><span>' + escapeText(trApp('Lihat di Peta')) + '</span></button>' : '';
       // A record whose analysis failed has no assessment, so the big "Lihat analisis dan
       // pencegahan" button is hidden. Re-analysis therefore also lives in "Lainnya",
       // shown for every AI record that still owns an unstamped server original.
       let canReanalyze = false;
       try { canReanalyze = window.JagaAssessment?.canReanalyze?.(rec) === true; } catch (_) { canReanalyze = false; }
       const reanalyze = canReanalyze
-        ? '<button type="button" class="btn btn-secondary btn-sm" ' + act('JagaAssessment.reanalyze', rid, '$this') + '><i data-lucide="refresh-cw"></i><span>Analisis Ulang</span></button>' : '';
+        ? '<button type="button" class="btn btn-secondary btn-sm" ' + act('JagaAssessment.reanalyze', rid, '$this') + '><i data-lucide="refresh-cw"></i><span>' + escapeText(trApp('Analisis Ulang')) + '</span></button>' : '';
       return '<article class="tl-entry">' +
         '<div class="tl-rail"><span class="tl-dot ' + meta.dotClass + '"></span>' + (last ? '' : '<span class="tl-line"></span>') + '</div>' +
         '<div class="card tl-card">' +
           '<div class="tl-top">' + thumbHtml(rec.imageUrl, '', act('openViewerForRecord', rid) + ' data-stop') +
             '<div class="min-w-0 flex-1">' +
-              '<div class="tl-meta-row"><span class="' + meta.badgeClass + '">' + meta.label + '</span><span class="t-meta">' + escapeText(formatWhenId(recordMs(rec))) + '</span></div>' +
+              '<div class="tl-meta-row"><span class="' + meta.badgeClass + '">' + escapeText(meta.label) + '</span><span class="t-meta">' + escapeText(formatWhenId(recordMs(rec))) + '</span></div>' +
               '<p class="tl-condition">' + escapeText(recordLabel(rec)) + '</p>' +
               confidenceHtml(rec) + correctionHtml(rec) +
-              (rec.needs_review === true ? '<p class="t-meta">Perlu dicek petugas</p>' : '') +
+              (rec.needs_review === true ? '<p class="t-meta">' + escapeText(trApp('Perlu dicek petugas')) + '</p>' : '') +
             '</div>' +
           '</div>' +
           action +
-          (rec.assessment ? '<button type="button" class="btn btn-secondary btn-sm" ' + act('JagaAssessment.open', rid) + '>Lihat Analisis dan Pencegahan</button>' : '') +
+          (rec.assessment ? '<button type="button" class="btn btn-secondary btn-sm" ' + act('JagaAssessment.open', rid) + '>' + escapeText(trApp('Lihat Analisis dan Pencegahan')) + '</button>' : '') +
           '<div class="btn-row">' +
-            '<button type="button" class="btn btn-secondary btn-sm" ' + act('listenRecord', rid) + '><i data-lucide="volume-2"></i><span>Dengarkan</span></button>' +
-            '<button type="button" class="btn btn-secondary btn-sm" aria-expanded="' + more + '" ' + act('toggleEntryMore', rid) + '><i data-lucide="' + (more ? 'chevron-up' : 'chevron-down') + '"></i><span>Lainnya</span></button>' +
+            '<button type="button" class="btn btn-secondary btn-sm" ' + act('listenRecord', rid) + '><i data-lucide="volume-2"></i><span>' + escapeText(trApp('Dengarkan')) + '</span></button>' +
+            '<button type="button" class="btn btn-secondary btn-sm" aria-expanded="' + more + '" ' + act('toggleEntryMore', rid) + '><i data-lucide="' + (more ? 'chevron-up' : 'chevron-down') + '"></i><span>' + escapeText(trApp('Lainnya')) + '</span></button>' +
           '</div>' +
           '<div class="tl-more btn-stack' + (more ? '' : ' hidden') + '">' + reanalyze + onMap +
-            '<button type="button" class="btn btn-secondary btn-sm" ' + act('openRecordEdit', rid) + '><i data-lucide="square-pen"></i><span>Ubah Data Tanaman</span></button>' +
-            '<button type="button" class="btn btn-danger btn-sm" ' + act('deleteRecord', rid) + '><i data-lucide="trash-2"></i><span>Hapus Catatan</span></button>' +
+            '<button type="button" class="btn btn-secondary btn-sm" ' + act('openRecordEdit', rid) + '><i data-lucide="square-pen"></i><span>' + escapeText(trApp('Ubah Data Tanaman')) + '</span></button>' +
+            '<button type="button" class="btn btn-danger btn-sm" ' + act('deleteRecord', rid) + '><i data-lucide="trash-2"></i><span>' + escapeText(trApp('Hapus Catatan')) + '</span></button>' +
           '</div>' +
         '</div>' +
       '</article>';
@@ -2574,15 +2795,15 @@
       const rec = g.latest, meta = severityMeta(recSeverity(rec));
       const farm = farmList.find(f => f.id === rec.farmId);
       return '<div class="tl-head">' +
-        '<button type="button" class="btn btn-ghost btn-sm tl-back" ' + act('closeTreeTimeline') + '><i data-lucide="chevron-left"></i><span>Semua tanaman</span></button>' +
+        '<button type="button" class="btn btn-ghost btn-sm tl-back" ' + act('closeTreeTimeline') + '><i data-lucide="chevron-left"></i><span>' + escapeText(trApp('Semua tanaman')) + '</span></button>' +
         '<div class="card tl-hero">' +
           '<div class="tl-hero-top">' + thumbHtml(rec.imageUrl, 'thumb-lg', act('openViewerForRecord', String(rec.id ?? ''))) +
-            '<div class="min-w-0 flex-1"><h2 class="t-title tl-title">' + escapeText(g.cropName) + '</h2>' +
-              (farm ? '<p class="t-meta">Petak: ' + escapeText(farm.name) + '</p>' : '') +
-              '<div class="tl-hero-status"><span class="' + meta.badgeClass + '">' + meta.label + '</span><span class="t-meta">' + g.count + ' foto</span></div>' +
+            '<div class="min-w-0 flex-1"><h2 class="t-title tl-title">' + escapeText(trAppCrop(g.cropName)) + '</h2>' +
+              (farm ? '<p class="t-meta">' + escapeText(trApp('Petak')) + ': ' + escapeText(farm.name) + '</p>' : '') +
+              '<div class="tl-hero-status"><span class="' + meta.badgeClass + '">' + escapeText(meta.label) + '</span><span class="t-meta">' + escapeText(trApp(g.count + ' foto')) + '</span></div>' +
             '</div>' +
           '</div>' +
-          '<div class="tree-actions"><button type="button" class="btn btn-primary btn-icon tree-cam" ' + act('startTreeCapture', String(g.cropId ?? '')) + ' title="Foto lagi" aria-label="Foto lagi"><i data-lucide="camera"></i></button></div>' +
+          '<div class="tree-actions"><button type="button" class="btn btn-primary btn-icon tree-cam" ' + act('startTreeCapture', String(g.cropId ?? '')) + ' title="' + escapeText(trApp('Foto lagi')) + '" aria-label="' + escapeText(trApp('Foto lagi')) + '"><i data-lucide="camera"></i></button></div>' +
         '</div>' +
       '</div>' +
       '<div class="tl-list">' + g.records.map((r, i) => entryHtml(r, i === g.records.length - 1)).join('') + '</div>';
@@ -2598,22 +2819,22 @@
       const counts = treeCounts(allGroups);
       updateLogChips(counts);
       updateLogChrome();
-      const signature = ['log', recordsSig(), expandedCropId, logFilter, logQuery, [...entryMoreOpen].join(','), farmList.map(f => f.id + f.name).join(',')].join('|');
+      const signature = ['log', recordsSig(), expandedCropId, logFilter, logQuery, [...entryMoreOpen].join(','), farmList.map(f => f.id + f.name).join(','), isEnApp() ? 'en' : 'id'].join('|');
       if (skipUnchanged('log', signature)) return;
 
       if (open) {
         container.innerHTML = timelineHtml(open);
       } else if (allGroups.length === 0) {
-        container.innerHTML = '<div class="card empty-card"><span class="home-empty-icon"><i data-lucide="leaf"></i></span><h3 class="t-title">Belum ada foto tanaman</h3><p class="t-body t-muted">Foto satu tanaman untuk memulai riwayatnya.</p>' +
-          '<button type="button" class="btn btn-primary btn-block" ' + act('navigateToMenu', 'scan') + '><i data-lucide="camera"></i><span>Foto Tanaman</span></button></div>';
+        container.innerHTML = '<div class="card empty-card"><span class="home-empty-icon"><i data-lucide="leaf"></i></span><h3 class="t-title">' + escapeText(trApp('Belum Ada Foto Tanaman')) + '</h3><p class="t-body t-muted">' + escapeText(trApp('Foto satu tanaman untuk memulai riwayatnya.')) + '</p>' +
+          '<button type="button" class="btn btn-primary btn-block" ' + act('navigateToMenu', 'scan') + '><i data-lucide="camera"></i><span>' + escapeText(trApp('Foto Tanaman')) + '</span></button></div>';
       } else {
         const groups = allGroups
           .filter(g => treeMatchesFilter(g, logFilter) && groupMatchesQuery(g, logQuery))
           .sort((a, b) => attentionRank(a) - attentionRank(b) || (recordMs(b.latest) || 0) - (recordMs(a.latest) || 0));
         container.innerHTML = groups.length
           ? groups.map(treeCardHtml).join('')
-          : '<div class="card empty-card"><h3 class="t-title">Tidak ada tanaman yang cocok</h3><p class="t-body t-muted">Coba pilih status lain atau hapus kata pencarian.</p>' +
-            '<button type="button" class="btn btn-secondary btn-block" ' + act('resetLogFilters') + '><span>Tampilkan semua</span></button></div>';
+          : '<div class="card empty-card"><h3 class="t-title">' + escapeText(trApp('Tidak Ada Tanaman yang Cocok')) + '</h3><p class="t-body t-muted">' + escapeText(trApp('Coba pilih status lain atau hapus kata pencarian.')) + '</p>' +
+            '<button type="button" class="btn btn-secondary btn-block" ' + act('resetLogFilters') + '><span>' + escapeText(trApp('Tampilkan semua')) + '</span></button></div>';
       }
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -2636,15 +2857,20 @@
     function speakRecord(rec) {
       if (!rec) return;
       const status = severityMeta(recSeverity(rec)).label;
-      speakText('Tanaman ' + (rec.cropName || rec.crop || '') + '. Status ' + status + '. ' + recordLabel(rec) + '. ' +
-        (window.JagaAssessment?.text(rec) || rec.immediate_action || ''));
+      if (isEnApp()) {
+        speakText('Crop ' + trAppCrop(rec.cropName || rec.crop || '') + '. Status ' + status + '. ' + recordLabel(rec) + '. ' +
+          (window.JagaAssessment?.text(rec) || rec.immediate_action || ''));
+      } else {
+        speakText('Tanaman ' + (rec.cropName || rec.crop || '') + '. Status ' + status + '. ' + recordLabel(rec) + '. ' +
+          (window.JagaAssessment?.text(rec) || rec.immediate_action || ''));
+      }
     }
     function listenRecord(recordId) { speakRecord(farmRecords.find(r => r.id === recordId)); }
     function speakText(text) {
-      if (!('speechSynthesis' in window)) { showToast('Pembacaan suara belum tersedia di perangkat ini.'); return; }
+      if (!('speechSynthesis' in window)) { showToast(trApp('Pembacaan suara belum tersedia di perangkat ini.')); return; }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(String(text));
-      utterance.lang = 'id-ID'; utterance.rate = 0.95;
+      utterance.lang = isEnApp() ? 'en-US' : 'id-ID'; utterance.rate = 0.95;
       window.speechSynthesis.speak(utterance);
     }
 
@@ -2694,14 +2920,17 @@
     };
 
     function severityMeta(severity) {
-      return SEVERITY_META[severity] || SEVERITY_META.Unknown;
+      const base = SEVERITY_META[severity] || SEVERITY_META.Unknown;
+      return isEnApp() ? { ...base, label: trApp(base.label) } : base;
     }
 
     // ONE short pest/disease name per record, shared by every card, list, map sheet and
     // viewer. assessment-ui.js owns the wording so no screen can drift from another.
     function recordLabel(rec) {
-      try { return window.JagaAssessment?.label?.(rec) || rec?.condition || 'Belum dapat dipastikan'; }
-      catch (_) { return rec?.condition || 'Belum dapat dipastikan'; }
+      let label;
+      try { label = window.JagaAssessment?.label?.(rec) || rec?.condition || 'Belum dapat dipastikan'; }
+      catch (_) { label = rec?.condition || 'Belum dapat dipastikan'; }
+      return trAppCond(label);
     }
 
 
@@ -2716,16 +2945,15 @@
       const metaParts = [];
       if (farm?.name) metaParts.push(farm.name);
       metaParts.push(formatWhenId(recordMs(rec)));
-      if (Number.isFinite(rec.elevation)) metaParts.push(Math.round(rec.elevation) + ' m dpl');
-      const actionPill = action ? '' : '<span class="att-action-pill' + (sev === 'Severe' ? ' is-severe' : '') + '">' + (sev === 'Severe' ? 'Diagnosis' : 'Riwayat') + '</span>';
+      if (Number.isFinite(rec.elevation)) metaParts.push(Math.round(rec.elevation) + ' ' + trApp('m dpl'));
+      const actionPill = action ? '' : '<span class="att-action-pill">' + escapeText(trApp('Lihat Detail')) + '</span>';
       return '<button type="button" class="card card-tap att-item" ' + (action || act('openCropFromHome', String(group.cropId ?? ''))) + '>' +
         thumbHtml(rec.imageUrl, '') +
         '<span class="att-item-body">' +
-          '<span class="att-item-top"><span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
-            '<span class="att-item-name">' + escapeText(group.cropName) + '</span>' +
-            trendDotsHtml(group.records) +
+          '<span class="att-item-top"><span class="' + meta.badgeClass + ' badge-sm">' + escapeText(meta.label) + '</span>' +
+            '<span class="att-item-name">' + escapeText(trAppCrop(group.cropName)) + '</span>' +
           '</span>' +
-          '<span class="att-item-cond">' + escapeText(recordLabel(rec)) + (review ? ' · Perlu dicek' : '') + '</span>' +
+          '<span class="att-item-cond">' + escapeText(recordLabel(rec)) + (review ? ' · ' + escapeText(trApp('Perlu dicek')) : '') + '</span>' +
           '<span class="att-item-meta">' + escapeText(metaParts.join(' · ')) + '</span>' +
         '</span>' +
         actionPill +
@@ -2734,7 +2962,7 @@
 
     function renderHomeSummary() {
       const ready = loadedOnce || farmRecords.length > 0;
-      if (skipUnchanged('home', recordsSig() + '|' + ready + '|' + farmList.length)) return;
+      if (skipUnchanged('home', recordsSig() + '|' + ready + '|' + farmList.length + '|' + (isEnApp() ? 'en' : 'id'))) return;
       const groups = groupRecordsByCrop(farmRecords);
       const counts = treeCounts(groups);
       setText('stat-total-scans', ready ? counts.all : '—');
@@ -2764,7 +2992,7 @@
       const attention = groups.filter(group => attentionRank(group) < 2)
         .sort((a, b) => (recordMs(b.latest) || 0) - (recordMs(a.latest) || 0));
       if (attention.length === 0) {
-        list.innerHTML = '<div class="notice notice-ok"><i data-lucide="circle-check"></i><span>Semua tanaman terakhir terlihat sehat.</span></div>';
+        list.innerHTML = '<div class="notice notice-ok"><i data-lucide="circle-check"></i><span>' + escapeText(trApp('Semua tanaman terakhir terlihat sehat.')) + '</span></div>';
       } else {
         list.innerHTML = attention.slice(0, 4).map(group => attentionItemHtml(group)).join('');
       }
@@ -2775,22 +3003,23 @@
     function renderHomeHistoryCarousel() {
       const container = document.getElementById('home-history-carousel');
       if (!container) return;
-      if (skipUnchanged('carousel', recordsSig())) return;
+      if (skipUnchanged('carousel', recordsSig() + '|' + (isEnApp() ? 'en' : 'id'))) return;
       const groups = groupRecordsByCrop(farmRecords).slice(0, 4);
       if (groups.length === 0) {
-        container.innerHTML = '<div class="card w-full t-body t-muted text-center" style="grid-column:1 / -1;">Belum ada foto tanaman.</div>';
+        container.innerHTML = '<div class="card w-full t-body t-muted text-center" style="grid-column:1 / -1;">' + escapeText(trApp('Belum ada foto tanaman.')) + '</div>';
         updateCarouselNav();
         return;
       }
       container.innerHTML = groups.map(g => {
         const meta = severityMeta(recSeverity(g.latest));
         const src = imageAttribute(g.latest.imageUrl);
-        return '<button type="button" ' + act('openCropFromHome', String(g.cropId ?? '')) + ' class="recent-card" aria-label="' + escapeText(g.cropName) + ', ' + meta.label + '">' +
-          (src ? '<img class="recent-img" src="' + src + '" alt="' + escapeText(g.cropName) + '" loading="lazy" decoding="async">' : '<div class="recent-img"></div>') +
+        const cname = trAppCrop(g.cropName);
+        return '<button type="button" ' + act('openCropFromHome', String(g.cropId ?? '')) + ' class="recent-card" aria-label="' + escapeText(cname) + ', ' + escapeText(meta.label) + '">' +
+          (src ? '<img class="recent-img" src="' + src + '" alt="' + escapeText(cname) + '" loading="lazy" decoding="async">' : '<div class="recent-img"></div>') +
           '<div class="recent-body">' +
             '<div class="recent-body-top">' +
-              '<strong>' + escapeText(g.cropName) + '</strong>' +
-              '<span class="' + meta.badgeClass + ' badge-sm">' + meta.label + '</span>' +
+              '<strong>' + escapeText(cname) + '</strong>' +
+              '<span class="' + meta.badgeClass + ' badge-sm">' + escapeText(meta.label) + '</span>' +
             '</div>' +
             '<span class="recent-sub">' + escapeText(recordLabel(g.latest)) + ' · ' + escapeText(formatWhenId(recordMs(g.latest))) + '</span>' +
           '</div>' +
@@ -2950,11 +3179,11 @@
     function renderFarmLog() {
       const box = document.getElementById('farm-logs-container');
       if (!box) return;
-      if (skipUnchanged('farmlog', recordsSig() + '|' + farmList.map(f => f.id + f.name + f.areaM2).join(','))) return;
+      if (skipUnchanged('farmlog', recordsSig() + '|' + farmList.map(f => f.id + f.name + f.areaM2).join(',') + '|' + (isEnApp() ? 'en' : 'id'))) return;
 
       if (farmList.length === 0) {
-        box.innerHTML = '<div class="card empty-card"><span class="home-empty-icon"><i data-lucide="land-plot"></i></span><h3 class="t-title">Belum ada petak</h3>' +
-          '<p class="t-body t-muted">Gambar batas kebun di menu Peta untuk mengelompokkan riwayat.</p></div>';
+        box.innerHTML = '<div class="card empty-card"><span class="home-empty-icon"><i data-lucide="land-plot"></i></span><h3 class="t-title">' + escapeText(trApp('Belum Ada Petak')) + '</h3>' +
+          '<p class="t-body t-muted">' + escapeText(trApp('Gambar batas kebun di menu Peta untuk mengelompokkan riwayat.')) + '</p></div>';
         icons();
         return;
       }
@@ -2971,11 +3200,11 @@
         return '<button type="button" class="farm-rec" ' + act('openCropFromHome', String(treeKey(rec) ?? '')) + '>' +
           thumbHtml(rec.imageUrl, 'thumb-sm') +
           '<span class="farm-rec-body">' +
-            '<span class="farm-rec-name">' + escapeText(rec.cropName || rec.crop || 'Tanaman') + '</span>' +
+            '<span class="farm-rec-name">' + escapeText(trAppCrop(rec.cropName || rec.crop || 'Tanaman')) + '</span>' +
             '<span class="farm-rec-sub">' + escapeText(recordLabel(rec)) + '</span>' +
             '<span class="farm-rec-sub">' + escapeText(formatWhenId(recordMs(rec))) + ' · ' + escapeText(farmMembershipLabel(rec)) + '</span>' +
           '</span>' +
-          '<span class="' + meta.badgeClass + '">' + meta.label + '</span>' +
+          '<span class="' + meta.badgeClass + '">' + escapeText(meta.label) + '</span>' +
         '</button>';
       };
 
@@ -2984,8 +3213,8 @@
         const sorted = [...records].sort((a, b) => (recordMs(b) || 0) - (recordMs(a) || 0));
         return '<section class="card farm-log-card">' +
           '<div class="farm-log-head"><div class="min-w-0"><h3 class="t-title truncate">' + escapeText(title) + '</h3><p class="t-meta">' + escapeText(subtitle) + '</p></div>' +
-          '<span class="badge badge-info">' + records.length + ' foto</span></div>' +
-          (farmId ? '<button type="button" class="btn btn-secondary btn-sm btn-block farm-log-summary" ' + act('JagaPlotSummary.open', String(farmId)) + '><i data-lucide="clipboard-list"></i><span>Ringkasan dan saran petak</span></button>' : '') +
+          '<span class="badge badge-info">' + escapeText(trApp(records.length + ' foto')) + '</span></div>' +
+          (farmId ? '<button type="button" class="btn btn-secondary btn-sm btn-block farm-log-summary" ' + act('JagaPlotSummary.open', String(farmId)) + '><i data-lucide="clipboard-list"></i><span>' + escapeText(trApp('Ringkasan dan Saran Petak')) + '</span></button>' : '') +
           sorted.map(recordRow).join('') +
         '</section>';
       };
@@ -2994,15 +3223,15 @@
         const records = buckets.get(farm.id) || [];
         const crops = [...new Set(records.map(r => r.crop).filter(Boolean))];
         const subtitle = [
-          farm.crop || 'Tanaman belum diisi',
+          farm.crop ? trAppCrop(farm.crop) : trApp('Tanaman belum diisi'),
           formatArea(farm.areaM2),
-          crops.length > 1 ? crops.length + ' jenis' : null,
+          crops.length > 1 ? trApp(crops.length + ' jenis') : null,
         ].filter(Boolean).join(' · ');
         return section(farm.name, subtitle, records, farm.id);
       }).join('');
 
       box.innerHTML = sections
-        + section('Belum masuk petak', 'Lokasi kosong atau di luar batas petak', loose);
+        + section(trApp('Belum masuk petak'), trApp('Lokasi kosong atau di luar batas petak'), loose);
       icons();
     }
 
@@ -3020,7 +3249,7 @@
       pendingStatusRecordId = recordId;
       const rec = farmRecords.find(r => r.id === recordId);
       const sub = document.getElementById('status-modal-subtitle');
-      if (sub && rec) sub.innerText = `${rec.cropName || rec.crop} · ${formatWhenId(recordMs(rec))}`;
+      if (sub && rec) sub.innerText = `${trAppCrop(rec.cropName || rec.crop)} · ${formatWhenId(recordMs(rec))}`;
       openRecordEdit(recordId);
     }
     function closeStatusModal() {
@@ -3030,7 +3259,7 @@
     async function confirmStatusChange(severity) {
       const recordId = pendingStatusRecordId;
       if (!recordId) return;
-      const label = severity === 'Severe' ? 'Kritis' : severity === 'Moderate' ? 'Waspada' : 'Sehat';
+      const label = trApp(severity === 'Severe' ? 'Kritis' : severity === 'Moderate' ? 'Waspada' : 'Sehat');
       closeStatusModal();
       try {
         const record = farmRecords.find(r => r.id === recordId);
@@ -3038,10 +3267,10 @@
           { method: 'PUT', body: { observedSeverity: severity } });
         const index = farmRecords.findIndex(r => r.id === saved.id);
         if (index >= 0) farmRecords[index] = saved;
-        showToast('Status diperbarui: ' + label);
+        showToast(trApp('Status diperbarui: ') + label);
         refreshAllHistoryViews();
       } catch (error) {
-        showToast('Gagal memperbarui status: ' + userMessage(error));
+        showToast(trApp('Gagal memperbarui status: ') + userMessage(error));
       }
     }
 
@@ -3082,26 +3311,26 @@
         crop: plainSpecies(rec.crop || rec.cropName), date: dateInputValue(recordMs(rec)),
         severity: rec.observedSeverity || rec.severity || '', problems };
       document.getElementById('record-edit-crop').value = recordEdit.crop;
-      document.querySelector('#record-edit-status option[value=""]').textContent = rec.source === 'ai'
-        ? 'Ikuti hasil AI' : (rec.observedSeverity && rec.severity ? 'Ikuti status awal' : 'Belum dinilai');
+      document.querySelector('#record-edit-status option[value=""]').textContent = trApp(rec.source === 'ai'
+        ? 'Ikuti hasil AI' : (rec.observedSeverity && rec.severity ? 'Ikuti status awal' : 'Belum dinilai'));
       document.getElementById('record-edit-status').value = recordEdit.severity;
       document.getElementById('record-edit-disease').value = problems.disease;
       document.getElementById('record-edit-pest').value = problems.pest;
       const aiCrop = rec.aiCrop || (rec.source === 'ai' ? rec.crop : null);
       const ai = document.getElementById('record-edit-ai');
-      ai.textContent = aiCrop ? 'Dikenali AI sebagai: ' + aiCrop : '';
+      ai.textContent = aiCrop ? trApp('Dikenali AI sebagai: ' + aiCrop) : '';
       ai.hidden = !aiCrop;
       document.getElementById('record-edit-all').checked = true;
-      document.getElementById('record-edit-all-text').textContent = 'Terapkan ke semua ' + siblings + ' foto tanaman ini';
+      document.getElementById('record-edit-all-text').textContent = trApp('Terapkan ke semua ' + siblings + ' foto tanaman ini');
       document.getElementById('record-edit-all-row').hidden = siblings < 2;
       const date = document.getElementById('record-edit-date');
       date.value = recordEdit.date;
       date.max = dateInputValue(Date.now());
       document.getElementById('record-edit-location').textContent = rec.locationName ||
-        (validCoordinates(rec.lat, rec.lng) ? Number(rec.lat).toFixed(5) + ', ' + Number(rec.lng).toFixed(5) : 'Belum ada lokasi');
-      document.getElementById('record-edit-hint').textContent = rec.source === 'ai'
+        (validCoordinates(rec.lat, rec.lng) ? Number(rec.lat).toFixed(5) + ', ' + Number(rec.lng).toFixed(5) : trApp('Belum ada lokasi'));
+      document.getElementById('record-edit-hint').textContent = trApp(rec.source === 'ai'
         ? 'Status dan dugaan hama/penyakit berlaku untuk foto ini. Rincian analisis AI tetap tersimpan. Bila jenis tanaman diubah, Anda bisa meminta analisis ulang dengan jenis yang benar.'
-        : 'Status dan dugaan hama/penyakit berlaku untuk foto ini.';
+        : 'Status dan dugaan hama/penyakit berlaku untuk foto ini.');
       document.getElementById('record-edit-hint').hidden = false;
       const error = document.getElementById('record-edit-error');
       error.textContent = ''; error.classList.add('hidden');
@@ -3113,7 +3342,7 @@
     // A location saved from inside this dialog shows here at once.
     JagaHooks.on('history-shown', () => {
       const rec = recordEdit && farmRecords.find(r => r.id === recordEdit.id), label = document.getElementById('record-edit-location');
-      if (rec && label) label.textContent = rec.locationName || (validCoordinates(rec.lat, rec.lng) ? Number(rec.lat).toFixed(5) + ', ' + Number(rec.lng).toFixed(5) : 'Belum ada lokasi');
+      if (rec && label) label.textContent = rec.locationName || (validCoordinates(rec.lat, rec.lng) ? Number(rec.lat).toFixed(5) + ', ' + Number(rec.lng).toFixed(5) : trApp('Belum ada lokasi'));
     });
     async function saveRecordEdit() {
       const target = recordEdit, rec = target && farmRecords.find(r => r.id === target.id);
@@ -3125,7 +3354,7 @@
       const severity = document.getElementById('record-edit-status').value;
       const disease = document.getElementById('record-edit-disease').value.trim().replace(/\s+/g, ' ');
       const pest = document.getElementById('record-edit-pest').value.trim().replace(/\s+/g, ' ');
-      if (!crop) { fail('Isi jenis tanaman.'); return; }
+      if (!crop) { fail(trApp('Isi jenis tanaman.')); return; }
       const body = {};
       if (crop !== target.crop) body.correctedCrop = crop;
       if (severity !== target.severity) {
@@ -3138,8 +3367,8 @@
       if (date && date !== target.date) {
         const [y, m, d] = date.split('-').map(Number), base = new Date(recordMs(rec) || Date.now());
         const next = new Date(y, m - 1, d, base.getHours(), base.getMinutes(), base.getSeconds()).getTime();
-        if (!Number.isFinite(next) || y < 2000) { fail('Tanggal foto tidak valid.'); return; }
-        if (next > Date.now() + 36e5) { fail('Tanggal foto tidak boleh setelah hari ini.'); return; }
+        if (!Number.isFinite(next) || y < 2000) { fail(trApp('Tanggal foto tidak valid.')); return; }
+        if (next > Date.now() + 36e5) { fail(trApp('Tanggal foto tidak boleh setelah hari ini.')); return; }
         body.correctedTimestampMs = next;
       }
       if (!Object.keys(body).length) { closeRecordEdit(); return; }
@@ -3161,14 +3390,14 @@
         if (currentDetailRecord?.id === saved.id) openBottomSheet(saved.id);
         let canReanalyze = false;
         try { canReanalyze = body.correctedCrop && window.JagaAssessment?.canReanalyze?.(saved) === true; } catch (_) { canReanalyze = false; }
-        if (!canReanalyze) { showToast('Data tanaman disimpan.'); return; }
-        const again = await confirmAction({ title: 'Analisis ulang dengan jenis baru?',
-          message: 'Diagnosis sekarang dibuat saat AI mengira tanaman ini ' + (rec.aiCrop || rec.crop || 'jenis lain') + '. Analisis ulang memakai foto yang sama dengan jenis ' + saved.crop + '.',
-          okLabel: 'Analisis ulang', danger: false });
+        if (!canReanalyze) { showToast(trApp('Data tanaman disimpan.')); return; }
+        const again = await confirmAction({ title: trApp('Analisis ulang dengan jenis baru?'),
+          message: trApp('Diagnosis sekarang dibuat saat AI mengira tanaman ini {prev}. Analisis ulang memakai foto yang sama dengan jenis {next}.', { prev: trAppCrop(rec.aiCrop || rec.crop || trApp('jenis lain')), next: trAppCrop(saved.crop) }),
+          okLabel: trApp('Analisis ulang'), danger: false });
         if (again && String(currentAccount?.id || '') === target.owner) JagaAssessment.reanalyze(saved.id);
-        else showToast('Data tanaman disimpan.');
+        else showToast(trApp('Data tanaman disimpan.'));
       } catch (err) {
-        if (recordEdit === target) { button.disabled = false; fail('Gagal menyimpan: ' + userMessage(err)); }
+        if (recordEdit === target) { button.disabled = false; fail(trApp('Gagal menyimpan: ') + userMessage(err)); }
       }
     }
 
@@ -3176,9 +3405,9 @@
       const rec = farmRecords.find(r => r.id === recordId);
       if (!rec) return;
       confirmAction({
-        title: 'Hapus Catatan ini?',
-        message: `Foto ${rec.cropName || rec.crop} (${formatWhenId(recordMs(rec))}) akan dihapus dari riwayat. Tidak bisa dibatalkan.`,
-        okLabel: 'Hapus'
+        title: trApp('Hapus Catatan ini?'),
+        message: trApp('Foto {crop} ({when}) akan dihapus dari riwayat. Tidak bisa dibatalkan.', { crop: trAppCrop(rec.cropName || rec.crop), when: formatWhenId(recordMs(rec)) }),
+        okLabel: trApp('Hapus')
       }).then(async (ok) => {
         if (!ok) return;
         try {
@@ -3186,19 +3415,19 @@
           farmRecords = farmRecords.filter(r => r.id !== recordId);
           // Contract 5.6 (WEB): the private original on this phone goes with the record.
           if (window.JagaMedia) window.JagaMedia.deleteQuietly({ photoId: recordId });
-          showToast("Catatan dihapus dari riwayat.");
+          showToast(trApp("Catatan dihapus dari riwayat."));
           refreshAllHistoryViews();
         } catch (error) {
-          showToast('Gagal menghapus: ' + userMessage(error));
+          showToast(trApp('Gagal menghapus: ') + userMessage(error));
         }
       });
     }
 
     function deleteDaily(dailyId) {
       confirmAction({
-        title: 'Hapus Catatan harian?',
-        message: 'Catatan ini akan dihapus dari arsip harian secara permanen.',
-        okLabel: 'Hapus'
+        title: trApp('Hapus Catatan harian?'),
+        message: trApp('Catatan ini akan dihapus dari arsip harian secara permanen.'),
+        okLabel: trApp('Hapus')
       }).then(async (ok) => {
         if (!ok) return;
         try {
@@ -3206,9 +3435,9 @@
           dailyRecommendations = dailyRecommendations.filter(d => d.id !== dailyId);
           renderDailyRecommendations();
           renderDailyList();
-          showToast("Catatan harian dihapus.");
+          showToast(trApp("Catatan harian dihapus."));
         } catch (error) {
-          showToast('Gagal menghapus: ' + userMessage(error));
+          showToast(trApp('Gagal menghapus: ') + userMessage(error));
         }
       });
     }
@@ -3226,8 +3455,8 @@
       const records = farmRecords.map(rec => ({...rec, condition:window.JagaAssessment?.label(rec)||rec.condition,
         severity:recSeverity(rec), observedSeverity:null}));
       const derived = window.JagaDailyLog.build(records, now, timeZone);
-      const label=value=>({Severe:'kritis',Moderate:'waspada',Healthy:'sehat'})[value]||'status tidak dicatat';
-      const lines = derived.crops.length ? derived.crops.map(crop => `${crop.crop}: ${label(crop.severity)}`) : ['Belum ada foto tanaman diunggah hari ini.'];
+      const label=value=>trApp(({Severe:'kritis',Moderate:'waspada',Healthy:'sehat'})[value]||'status tidak dicatat');
+      const lines = derived.crops.length ? derived.crops.map(crop => `${trAppCrop(crop.crop)}: ${label(crop.severity)}`) : [trApp('Belum ada foto tanaman diunggah hari ini.')];
       return {...derived, lines, zones:[], counts:{}, summary: window.JagaDailyLog.narrative(derived)};
     }
     function openDailyModal() {
@@ -3235,7 +3464,7 @@
       const box = document.getElementById('daily-draft-summary');
       if (box) box.textContent = draft.summary;
       const date = document.getElementById('daily-source-date');
-      if (date) date.textContent = 'Untuk hari ini, ' + window.JagaDailyLog.labelDate(draft.date, true);
+      if (date) date.textContent = trApp('Untuk hari ini') + ', ' + window.JagaDailyLog.labelDate(draft.date, true);
       const title = document.getElementById('daily-title-input'), summary = document.getElementById('daily-summary-input');
       if (title) title.value = '';
       if (summary) summary.value = '';
@@ -3260,16 +3489,16 @@
       feedback.hidden = true;
       const owner = String(currentAccount?.id || ''), generation = accountGeneration, draft = buildDailyDraft();
       const summary = document.getElementById('daily-summary-input')?.value.trim() || String(draft.summary || '').trim();
-      const title = document.getElementById('daily-title-input')?.value.trim() || ('Catatan ' + window.JagaDailyLog.shortDate(draft.date));
+      const title = document.getElementById('daily-title-input')?.value.trim() || ('Catatan ' + window.JagaDailyLog.shortDate(draft.date, 'id'));
       const actionsRaw = document.getElementById('daily-actions-input')?.value.trim();
       if (!summary) {
-        feedback.textContent = 'Tulis catatan dulu, atau ketuk "Pakai ringkasan".';
+        feedback.textContent = trApp('Tulis catatan dulu, atau ketuk "Pakai ringkasan".');
         feedback.hidden = false;
         return;
       }
       button.disabled = true;
       button.setAttribute('aria-busy', 'true');
-      button.textContent = 'Menyimpan…';
+      button.textContent = trApp('Menyimpan…');
       try {
         const saved = await api('/api/daily', {method:'POST', body:{
           date:`${draft.date} (${draft.timeZone})`, timestampMs:Date.now(), title, summary,
@@ -3284,17 +3513,17 @@
         closeDailyModal();
         renderDailyRecommendations();
         renderDailyList();
-        showToast('Catatan tersimpan di Riwayat > Harian.');
+        showToast(trApp('Catatan tersimpan di Riwayat > Harian.'));
       } catch (error) {
         if (generation === accountGeneration && owner === String(currentAccount?.id || '')) {
-          feedback.textContent = 'Catatan belum tersimpan: ' + userMessage(error);
+          feedback.textContent = trApp('Catatan belum tersimpan: ') + userMessage(error);
           feedback.hidden = false;
           feedback.scrollIntoView({block:'nearest'});
         }
       } finally {
         button.disabled = false;
         button.removeAttribute('aria-busy');
-        button.textContent = 'Simpan catatan';
+        button.textContent = trApp('Simpan catatan');
       }
     }
 
@@ -3307,9 +3536,98 @@
       midnight.setHours(24,0,0,50);
       dailyRefreshTimer = setTimeout(() => {
         dailyRefreshTimer = null;
-        if (currentAccount && !document.hidden) { renderDailyRecommendations(); scheduleDailyRefresh(); }
+        if (currentAccount && !document.hidden) {
+          void syncAutoDailyArchive();
+          renderDailyRecommendations();
+          scheduleDailyRefresh();
+        }
       }, Math.max(50,midnight.getTime()-now.getTime()));
     }
+
+    async function syncAutoDailyArchive() {
+      if (!currentAccount || !window.JagaDailyLog || !Array.isArray(farmRecords) || !farmRecords.length) return;
+      if (dailyArchiveRunning || navigator.onLine === false) return;
+      const generation = accountGeneration;
+      const owner = String(currentAccount.id || '');
+      if (!owner) return;
+      dailyArchiveRunning = true;
+      try {
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const todayKey = window.JagaDailyLog.dateKey(Date.now(), timeZone);
+        const existingDates = new Set();
+        for (const d of dailyRecommendations || []) {
+          const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(d?.date || ''));
+          if (m) existingDates.add(m[1]);
+        }
+        const serverRecords = farmRecords.filter(rec =>
+          rec && !(rec.source === 'manual' && !rec.imageUrl) && !rec.offline && !rec.pending && !rec.localOnly
+        );
+        const pastKeys = new Set();
+        for (const rec of serverRecords) {
+          const saved = rec.uploadedMs ?? rec.createdMs;
+          const at = saved == null || saved === '' ? NaN : Number(saved);
+          if (!Number.isFinite(at) || !Number.isFinite(new Date(at).getTime())) continue;
+          const k = window.JagaDailyLog.dateKey(at, timeZone);
+          if (k && k < todayKey) pastKeys.add(k);
+        }
+        const missing = [...pastKeys]
+          .filter(k => !existingDates.has(k) && !autoDailyAttemptedKeys.has(k))
+          .sort().reverse().slice(0, 14);
+        if (!missing.length) return;
+        const normalized = serverRecords.map(rec => ({
+          ...rec,
+          condition: window.JagaAssessment?.label(rec) || rec.condition,
+          severity: recSeverity(rec),
+          observedSeverity: null
+        }));
+        const ownerSlug = owner.replace(/[^A-Za-z0-9_-]/g, '');
+        let changed = false;
+        for (const dateKey of missing) {
+          if (generation !== accountGeneration || String(currentAccount?.id || '') !== owner) return;
+          autoDailyAttemptedKeys.add(dateKey);
+          const derived = window.JagaDailyLog.build(normalized, Date.now(), timeZone, dateKey);
+          if (!derived || !derived.crops || !derived.crops.length) continue;
+          const heading = window.JagaDailyLog.labelDate(dateKey, true, 'id');
+          const summary = window.JagaDailyLog.narrative(derived, heading, 'id');
+          const title = 'Ringkasan ' + window.JagaDailyLog.shortDate(dateKey, 'id');
+          const parts = dateKey.split('-').map(Number);
+          const timestampMs = Date.UTC(parts[0], parts[1] - 1, parts[2], 15, 0, 0);
+          const autoId = ('auto-daily-' + ownerSlug + '-' + dateKey).slice(0, 120);
+          try {
+            const saved = await api('/api/daily', {
+              method: 'POST',
+              body: {
+                id: autoId,
+                date: `${dateKey} (${timeZone})`,
+                timestampMs,
+                title,
+                summary,
+                actions: [],
+                sourceRecordIds: derived.sourceRecordIds || [],
+                zones: []
+              }
+            });
+            if (generation !== accountGeneration || String(currentAccount?.id || '') !== owner) return;
+            if (saved && saved.id) {
+              const idx = dailyRecommendations.findIndex(x => x.id === saved.id);
+              if (idx >= 0) dailyRecommendations[idx] = saved;
+              else dailyRecommendations.unshift(saved);
+              changed = true;
+            }
+          } catch (err) {
+            if (err && (err.offline || (err.status && err.status >= 500))) autoDailyAttemptedKeys.delete(dateKey);
+          }
+        }
+        if (changed && generation === accountGeneration && String(currentAccount?.id || '') === owner) {
+          dailyRecommendations.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+          await cacheAccountData(owner, 'daily', dailyRecommendations).catch(() => undefined);
+          renderDailyRecommendations();
+        }
+      } finally {
+        dailyArchiveRunning = false;
+      }
+    }
+
     function renderDailyRecommendations() {
       renderHomeDaily();
       if (activeLogTab === 'daily') renderDailyList();
@@ -3317,7 +3635,7 @@
       if (modal && !modal.classList.contains('hidden')) {
         pendingDailyDraft = buildDailyDraft();
         document.getElementById('daily-draft-summary').textContent = pendingDailyDraft.summary;
-        document.getElementById('daily-source-date').textContent = 'Untuk hari ini, ' + window.JagaDailyLog.labelDate(pendingDailyDraft.date,true);
+        document.getElementById('daily-source-date').textContent = trApp('Untuk hari ini') + ', ' + window.JagaDailyLog.labelDate(pendingDailyDraft.date,true);
         // A farmer's typed note is never replaced when new photos arrive.
       }
     }
@@ -3328,13 +3646,13 @@
       const box = document.getElementById('home-daily-card');
       if (!box) return;
       const draft = buildDailyDraft();
-      if (skipUnchanged('homeDaily', draft.summary + '|' + dailyRecommendations.length)) return;
+      if (skipUnchanged('homeDaily', draft.summary + '|' + dailyRecommendations.length + '|' + (isEnApp() ? 'en' : 'id'))) return;
       homeDailyText = draft.summary;
       box.innerHTML = '<article class="card daily-home">' +
         '<p class="daily-narrative daily-clamp">' + escapeText(draft.summary) + '</p>' +
         '<div class="btn-row">' +
-          '<button type="button" class="btn btn-secondary btn-sm" ' + act('speakHomeDaily') + '><i data-lucide="volume-2"></i><span>Dengarkan</span></button>' +
-          '<button type="button" class="btn btn-secondary btn-sm" ' + act('switchLogTabFromHome', 'daily') + '><span>Lihat semua</span></button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" ' + act('speakHomeDaily') + '><i data-lucide="volume-2"></i><span>' + escapeText(trApp('Dengarkan')) + '</span></button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" ' + act('switchLogTabFromHome', 'daily') + '><span>' + escapeText(trApp('Lihat Semua')) + '</span></button>' +
         '</div>' +
       '</article>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3347,16 +3665,16 @@
     function editCurrentDetailRecord() { if (currentDetailRecord) openRecordEdit(currentDetailRecord.id); }
 
     function speakDailySummary(text) {
-      if (!('speechSynthesis' in window)) { showToast('Pembacaan suara belum tersedia di perangkat ini.'); return; }
+      if (!('speechSynthesis' in window)) { showToast(trApp('Pembacaan suara belum tersedia di perangkat ini.')); return; }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(String(text));
-      utterance.lang = 'id-ID'; utterance.rate = 0.95;
+      utterance.lang = isEnApp() ? 'en-US' : 'id-ID'; utterance.rate = 0.95;
       window.speechSynthesis.speak(utterance);
     }
 
     function listenDailyEntry(id) {
       const entry = dailyRecommendations.find(item => item.id === id);
-      if (entry) speakDailySummary(entry.summary);
+      if (entry) speakDailySummary(trAppMultiline(plainDateText(entry.summary)));
     }
 
     function switchLogTabFromHome(tab) {
@@ -3368,30 +3686,34 @@
     function dailyDateLabel(entry) {
       const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(entry.date || ''));
       if (m && window.JagaDailyLog) return window.JagaDailyLog.labelDate(m[1], true);
-      return Number.isFinite(entry.timestampMs) && entry.timestampMs > 0 ? formatDateId(entry.timestampMs, true) : plainDateText(entry.date);
+      if (Number.isFinite(entry.timestampMs) && entry.timestampMs > 0) return formatDateId(entry.timestampMs, true);
+      const plain = plainDateText(entry.date);
+      return isEnApp() && window.JagaI18n?.dateTokens ? window.JagaI18n.dateTokens(plain) : plain;
     }
     function renderDailyList() {
       const box = document.getElementById('daily-container');
       if (!box) return;
       const draft = buildDailyDraft();
-      if (skipUnchanged('dailylist', draft.summary + '|' + JSON.stringify(dailyRecommendations.map(d => [d.id, d.title, d.summary, d.date, d.timestampMs, (d.actions || []).length])))) return;
+      if (skipUnchanged('dailylist', draft.summary + '|' + JSON.stringify(dailyRecommendations.map(d => [d.id, d.title, d.summary, d.date, d.timestampMs, (d.actions || []).length])) + '|' + (isEnApp() ? 'en' : 'id'))) return;
       const today = '<article class="card daily-item daily-live">' +
-        '<div><h3 class="t-title">Ringkasan hari ini</h3><p class="t-meta">' + escapeText(window.JagaDailyLog.labelDate(draft.date,true)) + '</p></div>' +
+        '<div><h3 class="t-title">' + escapeText(trApp('Ringkasan Hari Ini')) + '</h3><p class="t-meta">' + escapeText(window.JagaDailyLog.labelDate(draft.date,true)) + '</p></div>' +
         '<p class="daily-narrative t-body">' + escapeText(draft.summary) + '</p>' +
-        '<div class="btn-row"><button type="button" class="btn btn-secondary btn-sm" ' + act('openDailyModal') + '><i data-lucide="plus"></i><span>Tulis catatan</span></button></div></article>';
+        '<div class="btn-row"><button type="button" class="btn btn-secondary btn-sm" ' + act('openDailyModal') + '><i data-lucide="plus"></i><span>' + escapeText(trApp('Tulis Catatan')) + '</span></button></div></article>';
       box.innerHTML = today + [...dailyRecommendations]
         .sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0))
         .map(d => {
           const actions = Array.isArray(d.actions) ? d.actions : [];
           const zones = Array.isArray(d.zones) ? d.zones : [];
+          const dTitle = trApp(plainDateText(d.title));
+          const dSummary = trAppMultiline(plainDateText(d.summary));
           return '<article class="card daily-item">' +
-            '<div class="min-w-0"><h3 class="t-title">' + escapeText(plainDateText(d.title)) + '</h3><p class="t-meta">' + escapeText(dailyDateLabel(d)) + '</p></div>' +
-            (zones.length ? '<div class="flex flex-wrap gap-2">' + zones.map(z => '<span class="badge badge-info">' + escapeText(z) + '</span>').join('') + '</div>' : '') +
-            '<p class="daily-narrative t-body">' + escapeText(plainDateText(d.summary)) + '</p>' +
-            (actions.length ? '<div class="info-box">' + actions.map(a => '<div class="daily-action"><i data-lucide="check"></i><span>' + escapeText(a) + '</span></div>').join('') + '</div>' : '') +
+            '<div class="min-w-0"><h3 class="t-title">' + escapeText(dTitle) + '</h3><p class="t-meta">' + escapeText(dailyDateLabel(d)) + '</p></div>' +
+            (zones.length ? '<div class="flex flex-wrap gap-2">' + zones.map(z => '<span class="badge badge-info">' + escapeText(trApp(z)) + '</span>').join('') + '</div>' : '') +
+            '<p class="daily-narrative t-body">' + escapeText(dSummary) + '</p>' +
+            (actions.length ? '<div class="info-box">' + actions.map(a => '<div class="daily-action"><i data-lucide="check"></i><span>' + escapeText(trApp(a)) + '</span></div>').join('') + '</div>' : '') +
             '<div class="btn-row">' +
-              '<button type="button" class="btn btn-secondary btn-sm" ' + act('listenDailyEntry', String(d.id ?? '')) + '><i data-lucide="volume-2"></i><span>Dengarkan</span></button>' +
-              '<button type="button" class="btn btn-danger btn-sm" ' + act('deleteDaily', String(d.id ?? '')) + '><i data-lucide="trash-2"></i><span>Hapus</span></button>' +
+              '<button type="button" class="btn btn-secondary btn-sm" ' + act('listenDailyEntry', String(d.id ?? '')) + '><i data-lucide="volume-2"></i><span>' + escapeText(trApp('Dengarkan')) + '</span></button>' +
+              '<button type="button" class="btn btn-danger btn-sm" ' + act('deleteDaily', String(d.id ?? '')) + '><i data-lucide="trash-2"></i><span>' + escapeText(trApp('Hapus')) + '</span></button>' +
             '</div>' +
           '</article>';
         }).join('');
@@ -3412,20 +3734,20 @@
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      showToast("Data tersimpan ke file.");
+      showToast(trApp("Data tersimpan ke file."));
     }
 
     function weatherNote(rh) {
-      if (typeof rh !== 'number') return 'Menunggu data cuaca';
-      if (rh >= 80) return 'Lembap, waspada jamur';
-      if (rh <= 60) return 'Udara kering';
-      return 'Kelembapan sedang';
+      if (typeof rh !== 'number') return trApp('Menunggu data cuaca');
+      if (rh >= 80) return trApp('Lembap, waspada jamur');
+      if (rh <= 60) return trApp('Udara kering');
+      return trApp('Kelembapan sedang');
     }
 
-    function setAccuracyDot(meters, status = 'Lokasi belum tersedia') {
+    function setAccuracyDot(meters, status) {
       const value = Number.isFinite(meters) && meters >= 0 ? meters : null;
       const kind = value === null ? 'unknown' : value < 50 ? 'good' : value <= 100 ? 'fair' : 'poor';
-      const label = value === null ? status : `Akurasi GPS ${kind === 'good' ? 'baik' : kind === 'fair' ? 'sedang' : 'rendah'}`;
+      const label = value === null ? (status ? trApp(status) : trApp('Lokasi belum tersedia')) : trApp(`Akurasi GPS ${kind === 'good' ? 'baik' : kind === 'fair' ? 'sedang' : 'rendah'}`);
       ['home-accuracy-tag', 'header-gps-indicator'].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -3462,9 +3784,9 @@
       const metaEl = document.getElementById('home-map-meta');
       if (metaEl) {
         if (farmList.length || groups.length) {
-          metaEl.textContent = `${farmList.length} petak aktif · ${groups.length} tanaman tercatat`;
+          metaEl.textContent = trApp(`${farmList.length} petak aktif · ${groups.length} tanaman tercatat`);
         } else {
-          metaEl.textContent = 'Ketuk untuk menandai batas petak di peta';
+          metaEl.textContent = trApp('Ketuk untuk menandai batas petak di peta');
         }
       }
 
@@ -3488,7 +3810,7 @@
         ctx.fillStyle = '#475569';
         ctx.font = '600 13px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Belum ada poligon atau pin kebun', W / 2, H / 2 + 4);
+        ctx.fillText(trApp('Belum ada poligon atau pin kebun'), W / 2, H / 2 + 4);
         return;
       }
 
@@ -3545,14 +3867,14 @@
       document.getElementById('farm-crops-count').hidden = true;
       stopNearbyMapPhotos();
       sheet.dataset.mode = 'plot';
-      sheet.setAttribute('aria-label', 'Tanaman dalam petak');
+      sheet.setAttribute('aria-label', trApp('Tanaman dalam petak'));
       sheet.dataset.farmId = farm.id;
       const teaser = document.getElementById('farm-crops-summary');
       if (teaser && window.JagaPlotSummary) teaser.innerHTML = JagaPlotSummary.teaserHtml(farm);
       const groups = groupRecordsByCrop(farmRecords.filter(r => r.farmId === farm.id))
         .sort((a, b) => (attentionRank(a) - attentionRank(b)) || ((recordMs(b.latest) || 0) - (recordMs(a.latest) || 0)));
       if (!groups.length) {
-        list.innerHTML = '<p class="t-body t-muted">Belum ada tanaman tercatat di petak ini.</p>';
+        list.innerHTML = '<p class="t-body t-muted">' + escapeText(trApp('Belum ada tanaman tercatat di petak ini.')) + '</p>';
       } else {
         list.innerHTML = groups.map(group => attentionItemHtml(group, 'data-farm-record="' + escapeText(group.latest.id) + '"')).join('');
         list.querySelectorAll('[data-farm-record]').forEach(card => card.addEventListener('click', () => {
@@ -3576,18 +3898,19 @@
     function openNearbyMapPlants(plants) {
       const sheet = document.getElementById('farm-crops-sheet');
       const list = document.getElementById('farm-crops-list');
+      const byId = new Map(farmRecords.map(record => [record.id, record]));
       const paths = new Map(plants.map(plant => [plant.recordId, plant.thumbnailPath]));
-      const records = farmRecords.filter(record => paths.has(record.id));
+      const records = plants.map(plant => byId.get(plant.recordId)).filter(Boolean);
       if (!records.length) return;
       closeBottomSheet();
       closeFarmPanel();
       stopNearbyMapPhotos();
       delete sheet.dataset.farmId;
       sheet.dataset.mode = 'nearby';
-      sheet.setAttribute('aria-label', 'Pilih Tanaman');
-      document.getElementById('farm-crops-title').textContent = 'Pilih Tanaman';
+      sheet.setAttribute('aria-label', trApp('Pilih Tanaman'));
+      document.getElementById('farm-crops-title').textContent = trApp('Pilih Tanaman');
       const count = document.getElementById('farm-crops-count');
-      count.textContent = records.length + ' tanaman berdekatan';
+      count.textContent = isEnApp() ? (records.length + ' nearby ' + (records.length === 1 ? 'plant' : 'plants')) : (records.length + ' tanaman berdekatan');
       count.hidden = false;
       list.replaceChildren();
       const photos = new Map();
@@ -3600,7 +3923,7 @@
         thumb.setAttribute('aria-hidden', 'true');
         const name = document.createElement('span');
         name.className = 'map-nearby-name';
-        name.textContent = record.cropName || record.crop || 'Tanaman';
+        name.textContent = trAppCrop(record.cropName || record.crop || 'Tanaman');
         thumb.textContent = name.textContent.charAt(0).toUpperCase();
         const path = paths.get(record.id);
         if (path) photos.set(thumb, path);
@@ -3646,8 +3969,7 @@
     });
     function updateDashboardTelemetry() { updateDashboardTelemetryCore(); JagaHooks.run('telemetry-shown'); }
     function updateDashboardTelemetryCore() {
-      const snapshotMoved = telemetrySnapshot && !nearbyFix(telemetrySnapshot,currentCoords.lat,currentCoords.lng);
-      const home = snapshotMoved ? currentCoords : (telemetrySnapshot || currentCoords);
+      const home = telemetrySnapshot || currentCoords;
       const elev = home.elevation;
       const hasElev = typeof elev === 'number' && isFinite(elev);
       const elevEl = document.getElementById('home-elev-val');
@@ -3656,18 +3978,18 @@
 
       if (elevEl) elevEl.innerText = hasElev ? String(Math.round(elev)) : '—';
 
-      if (liveMsl) liveMsl.innerText = Number.isFinite(currentCoords.elevation) ? Math.round(currentCoords.elevation) + ' m dpl' : '— m dpl';
+      if (liveMsl) liveMsl.innerText = Number.isFinite(currentCoords.elevation) ? Math.round(currentCoords.elevation) + ' ' + trApp('m dpl') : '— ' + trApp('m dpl');
       if (zoneLabel) {
-        if (!hasElev) zoneLabel.innerText = telemetryRequest?.pending ? 'Memuat zona…' : telemetrySnapshot ? 'Zona tidak tersedia' : 'Menunggu GPS';
-        else if (elev < 400) zoneLabel.innerText = 'Zona Dataran Rendah';
-        else if (elev <= 800) zoneLabel.innerText = 'Zona Dataran Menengah';
-        else zoneLabel.innerText = 'Zona Dataran Tinggi';
+        if (!hasElev) zoneLabel.innerText = trApp(telemetryRequest?.pending ? 'Memuat zona…' : telemetrySnapshot ? 'Zona tidak tersedia' : 'Menunggu GPS');
+        else if (elev < 400) zoneLabel.innerText = trApp('Zona Dataran Rendah');
+        else if (elev <= 800) zoneLabel.innerText = trApp('Zona Dataran Menengah');
+        else zoneLabel.innerText = trApp('Zona Dataran Tinggi');
       }
       const coordStatusEl = document.getElementById('home-coord-status');
       if (coordStatusEl) {
         coordStatusEl.innerText = validCoordinates(currentCoords.lat, currentCoords.lng)
-          ? (gpsFailure ? 'Koordinat Terakhir' : 'Koordinat Terkunci')
-          : (gpsFailure || 'Menunggu GPS');
+          ? trApp(gpsFailure ? 'Koordinat Terakhir' : 'Koordinat Terkunci')
+          : trApp(gpsFailure || 'Menunggu GPS');
       }
 
       const tempEl = document.getElementById('home-temp-val');
@@ -3679,9 +4001,9 @@
         ? Math.round(home.rh) + '%' : '—';
       if (noteEl) {
         if (home.rh === null) {
-          noteEl.textContent = telemetryRequest?.pending ? 'Memuat cuaca lokal…' : telemetrySnapshot ? 'Data cuaca tidak tersedia.' : 'Menunggu data cuaca lokal untuk peringatan kelembapan & jamur.';
+          noteEl.textContent = trApp(telemetryRequest?.pending ? 'Memuat cuaca lokal…' : telemetrySnapshot ? 'Data cuaca tidak tersedia.' : 'Menunggu data cuaca lokal untuk peringatan kelembapan & jamur.');
         } else if (home.rh >= 75) {
-          noteEl.innerHTML = '<strong>Lembap tinggi: Waspada Jamur &amp; Antraknosa.</strong> ' + escapeText(weatherNote(home.rh));
+          noteEl.innerHTML = '<strong>' + escapeText(trApp('Lembap tinggi: Waspada Jamur & Antraknosa.')) + '</strong> ' + escapeText(weatherNote(home.rh));
         } else {
           noteEl.textContent = weatherNote(home.rh);
         }
@@ -3694,7 +4016,7 @@
       updateTopPageSub(currentMenuName);
 
       const liveCoordinates = document.getElementById('home-live-coordinates');
-      if(liveCoordinates) liveCoordinates.textContent = validCoordinates(currentCoords.lat,currentCoords.lng) ? `Koordinat ${gpsFailure ? 'terakhir' : 'GPS (WGS84)'}: ${currentCoords.lat.toFixed(6)}, ${currentCoords.lng.toFixed(6)}` : (gpsFailure || 'Koordinat: menunggu GPS');
+      if(liveCoordinates) liveCoordinates.textContent = validCoordinates(currentCoords.lat,currentCoords.lng) ? trApp(`Koordinat ${gpsFailure ? 'terakhir' : 'GPS (WGS84)'}: ${currentCoords.lat.toFixed(6)}, ${currentCoords.lng.toFixed(6)}`) : trApp(gpsFailure || 'Koordinat: menunggu GPS');
       const coordsStamp = document.getElementById('live-coords-stamp');
       if (coordsStamp) {
         coordsStamp.innerText = (typeof currentCoords.lat === 'number' && typeof currentCoords.lng === 'number')
@@ -3703,26 +4025,20 @@
       const weatherStamp = document.getElementById('live-weather-stamp');
       if (weatherStamp) weatherStamp.innerText = currentCoords.weather || '—';
 
-      // One source of truth for every place-name surface: the home card, the
-      // camera HUD and therefore the burned-in stamp.
-      const movedNow = telemetrySnapshot && !nearbyFix(telemetrySnapshot,currentCoords.lat,currentCoords.lng);
-      const coordinateLabel = validCoordinates(currentCoords.lat,currentCoords.lng) ? currentCoords.lat.toFixed(5)+', '+currentCoords.lng.toFixed(5) : (gpsFailure || 'Lokasi belum terbaca');
-      const placeLabel = movedNow ? coordinateLabel : ((telemetrySnapshot || currentCoords).locationName ? (telemetrySnapshot || currentCoords).locationName : coordinateLabel);
+      // One source of truth for the location card, HUD, and capture stamp (30-min cadence unless manually refreshed).
+      const coordinateLabel = validCoordinates(currentCoords.lat,currentCoords.lng) ? currentCoords.lat.toFixed(5)+', '+currentCoords.lng.toFixed(5) : trApp(gpsFailure || 'Lokasi belum terbaca');
+      const placeLabel = home.locationName || coordinateLabel;
       const homeLocEl = document.getElementById('home-location-text');
       const liveLocEl = document.getElementById('live-location-name');
       if (homeLocEl) homeLocEl.innerText = placeLabel;
-      if (liveLocEl) liveLocEl.innerText = currentCoords.locationName || 'Lokasi berubah — menunggu pembaruan';
+      if (liveLocEl) liveLocEl.innerText = currentCoords.locationName || home.locationName || trApp('Menunggu lokasi…');
       const statusEl = document.getElementById('home-telemetry-status');
       if (statusEl) {
-        if (gpsFailure && !validCoordinates(currentCoords.lat,currentCoords.lng)) statusEl.innerText = gpsFailure + '. Aktifkan izin lokasi lalu ketuk Perbarui. Foto galeri dapat diberi pin secara manual.';
-        else if (telemetryRequest?.pending) statusEl.innerText = 'Memperbarui lokasi dan cuaca…';
-        else if (telemetryError) statusEl.innerText = 'Data belum dapat diperbarui. Koordinat tetap tersedia; coba tombol perbarui.';
-        else if (!telemetrySnapshot) statusEl.innerText = 'Menunggu data lokasi dan cuaca';
-        else {
-          const moved = !nearbyFix(telemetrySnapshot, currentCoords.lat, currentCoords.lng);
-          const updated = new Date(telemetrySnapshot.updatedMs).toLocaleString();
-          statusEl.innerText = moved ? 'Data terakhir ' + updated + ' • perangkat berpindah; diperbarui otomatis sebentar lagi' : 'Diperbarui ' + updated;
-        }
+        if (gpsFailure && !validCoordinates(currentCoords.lat,currentCoords.lng)) statusEl.innerText = trApp(gpsFailure) + trApp('. Aktifkan izin lokasi lalu ketuk Perbarui. Foto galeri dapat diberi pin secara manual.');
+        else if (telemetryRequest?.pending) statusEl.innerText = trApp('Memperbarui lokasi dan cuaca…');
+        else if (telemetryError) statusEl.innerText = trApp('Data belum dapat diperbarui. Koordinat tetap tersedia; coba tombol perbarui.');
+        else if (!telemetrySnapshot) statusEl.innerText = trApp('Menunggu data lokasi dan cuaca');
+        else statusEl.innerText = trApp('Diperbarui ' + formatWhenId(telemetrySnapshot.updatedMs));
       }
 
     }
@@ -3741,14 +4057,14 @@
     }
     if (typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', () => {
       if (document.hidden) { if (dailyRefreshTimer) { clearTimeout(dailyRefreshTimer); dailyRefreshTimer = null; } if (watchId !== null) stopLiveLocationWatcher(true); }
-      else if (currentAccount) { renderDailyRecommendations(); scheduleDailyRefresh(); if (watchWanted && watchId === null) startLiveLocationWatcher(); }
+      else if (currentAccount) { void syncAutoDailyArchive(); renderDailyRecommendations(); scheduleDailyRefresh(); if (watchWanted && watchId === null) startLiveLocationWatcher(); }
     });
     function startLiveLocationWatcher() {
       watchWanted = true;
       if (watchId !== null || document.hidden) return;
       if (!('geolocation' in navigator)) {
         const tag = document.getElementById('home-accuracy-tag');
-        setAccuracyDot(null, 'GPS tidak didukung');
+        setAccuracyDot(null, trApp('GPS tidak didukung'));
         gpsFailure = 'GPS tidak didukung'; updateDashboardTelemetry();
         return;
       }
@@ -3761,7 +4077,7 @@
             // reading, which made a photo with no fix look properly geotagged.
             console.warn('GPS unavailable:', err.message);
             const tag = document.getElementById('home-accuracy-tag');
-            setAccuracyDot(null, err.code === 1 ? 'Izin lokasi ditolak' : 'GPS tidak tersedia');
+            setAccuracyDot(null, trApp(err.code === 1 ? 'Izin lokasi ditolak' : 'GPS tidak tersedia'));
             gpsFailure = err.code === 1 ? 'Izin lokasi ditolak' : 'GPS tidak tersedia'; updateDashboardTelemetry();
           },
           { enableHighAccuracy: true, maximumAge: 2000, timeout: 7000 }
@@ -3779,8 +4095,7 @@
     let telemetryError = false;
     let telemetryLastAttemptMs = null;
     let telemetryAttemptGeneration = null;
-    const TELEMETRY_REFRESH_MS = 60 * 60 * 1000;
-    const TELEMETRY_MOVED_REFRESH_MS = 60 * 1000;   // moved > 50 m from the last sample: refresh, at most once a minute
+    const TELEMETRY_REFRESH_MS = 30 * 60 * 1000;   // refresh location/weather card every 30 min unless manually requested
     function nearbyFix(first, lat, lng) {
       if (!first) return false;
       const radians = Math.PI / 180;
@@ -3793,7 +4108,7 @@
     function submitPlaceSearch() {
       const hint = document.getElementById('home-place-search')?.value.trim();
       if (!hint || !currentAccount) return;
-      if (!validCoordinates(currentCoords.lat,currentCoords.lng)) { showToast('Aktifkan GPS sebelum mencari nama tempat di sekitar lokasi.'); return; }
+      if (!validCoordinates(currentCoords.lat,currentCoords.lng)) { showToast(trApp('Aktifkan GPS sebelum mencari nama tempat di sekitar lokasi.')); return; }
       if (telemetryRequest?.pending) {
         queuedPlaceSearch = {hint,lat:currentCoords.lat,lng:currentCoords.lng,generation:accountGeneration,owner:String(currentAccount.id)};
         return;
@@ -3811,8 +4126,8 @@
       currentCoords.lng = lng;
       currentCoords.accuracy = typeof accuracyMeters === 'number' ? accuracyMeters : null;
       if (queuedPlaceSearch && !nearbyFix(queuedPlaceSearch,lat,lng)) queuedPlaceSearch = null;
-      const reuse = telemetrySample?.generation === generation && nearbyFix(telemetrySample,lat,lng);
-      if (!reuse) {
+      const hasSnapshot = telemetrySnapshot && telemetrySample?.generation === generation;
+      if (!hasSnapshot && forceTelemetry) {
         currentCoords.elevation = null;
         currentCoords.locationName = null;
         currentCoords.weather = null;
@@ -3834,8 +4149,8 @@
         telemetryAttemptGeneration = generation;
         telemetryLastAttemptMs = null;
       }
-      const refreshAfter = reuse ? TELEMETRY_REFRESH_MS : TELEMETRY_MOVED_REFRESH_MS;
-      if (!forceTelemetry && telemetryLastAttemptMs !== null && now - telemetryLastAttemptMs < refreshAfter) return;
+      if (!forceTelemetry && hasSnapshot && telemetryLastAttemptMs !== null && now - telemetryLastAttemptMs < TELEMETRY_REFRESH_MS) return;
+      if (!forceTelemetry && !hasSnapshot && telemetryLastAttemptMs !== null && now - telemetryLastAttemptMs < 60 * 1000) return;
       if (telemetryRequest?.pending) return;
       const fix = ++locationGeneration;
       const request = telemetryRequest = {lat,lng,generation,startedMs:now,pending:true};
@@ -3848,7 +4163,6 @@
       api('/api/telemetry?lat=' + lat + '&lng=' + lng + (placeHint ? '&placeHint=' + encodeURIComponent(placeHint) : ''))
         .then((data) => {
           if (!data || fix !== locationGeneration || generation !== accountGeneration) return;
-          if (!nearbyFix(request,currentCoords.lat,currentCoords.lng)) return;
           telemetrySample = {lat,lng,generation,receivedMs:Date.now()};
           const elev = Array.isArray(data.elevation) ? data.elevation[0] : data.elevation;
           const fresh = {
@@ -3895,7 +4209,7 @@
 
       if (!("geolocation" in navigator)) {
         gpsFailure = 'GPS tidak didukung'; updateDashboardTelemetry();
-        if (isManualClick) showToast("GPS tidak didukung perangkat.");
+        if (isManualClick) showToast(trApp("GPS tidak didukung perangkat."));
         return;
       }
 
@@ -3904,19 +4218,19 @@
           if (generation !== accountGeneration || !currentAccount) return;
           applyLiveGpsReading(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy), isManualClick, gpsFixTime(pos));
           if (isManualClick) {
-            showToast('Lokasi GPS diperbarui.');
+            showToast(trApp('Lokasi GPS diperbarui.'));
           }
         },
         (err) => {
           if (generation !== accountGeneration || !currentAccount) return;
           // No fabrication: say what happened instead of inventing a position.
           const tag = document.getElementById('home-accuracy-tag');
-          setAccuracyDot(null, err.code === 1 ? 'Izin lokasi ditolak' : 'GPS tidak tersedia');
+          setAccuracyDot(null, trApp(err.code === 1 ? 'Izin lokasi ditolak' : 'GPS tidak tersedia'));
           gpsFailure = err.code === 1 ? 'Izin lokasi ditolak' : 'GPS tidak tersedia'; updateDashboardTelemetry();
           if (!isManualClick) return;
-          showToast(err.code === 1
+          showToast(trApp(err.code === 1
             ? 'Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini di pengaturan browser.'
-            : 'Lokasi belum tersedia. Coba lagi di tempat terbuka.');
+            : 'Lokasi belum tersedia. Coba lagi di tempat terbuka.'));
         },
         { enableHighAccuracy: true, timeout: 8000 }
       );
@@ -3950,11 +4264,11 @@
     let activeDialog = null;
     const dialogStack = [];
     const dialogInert = new Map();
-    const dialogNames = {'modal-account':'Akun saya','modal-crop-assign':'Pilih tanaman',
-      'modal-daily':'Catatan harian','modal-status':'Ubah status pengamatan',
-      'modal-date-picker':'Waktu pengambilan foto','modal-farm':'Simpan petak',
-      'modal-confirm':'Konfirmasi','photo-viewer':'Foto pengamatan',
-      'modal-reanalysis-progress':'Analisis ulang'};
+    const dialogNames = {'modal-account':'Akun Saya','modal-crop-assign':'Pilih Tanaman',
+      'modal-daily':'Catatan Harian','modal-status':'Ubah Status Pengamatan',
+      'modal-date-picker':'Waktu Pengambilan Foto','modal-farm':'Simpan Petak',
+      'modal-confirm':'Konfirmasi','photo-viewer':'Foto Pengamatan',
+      'modal-reanalysis-progress':'Analisis Ulang'};
     function dialogFocusable(modal) {
       const selector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], summary, [tabindex]:not([tabindex="-1"])';
       return [...modal.querySelectorAll(selector)].filter(node => {
@@ -3994,7 +4308,7 @@
       activeDialog = modal;
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
-      modal.setAttribute('aria-label', dialogNames[id] || 'Dialog');
+      modal.setAttribute('aria-label', trApp(dialogNames[id] || 'Dialog'));
       modal.classList.remove('hidden');
       syncDialogInert();
       const focusable = dialogFocusable(modal)[0];
@@ -4049,13 +4363,13 @@
       else closeDialog(id);
     }
 
-    function confirmAction({ title, message, okLabel = 'Hapus', danger = true }) {
+    function confirmAction({ title, message, okLabel, danger = true }) {
       const titleEl = document.getElementById('confirm-title');
       const msgEl = document.getElementById('confirm-message');
       const okBtn = document.getElementById('confirm-ok-btn');
-      if (titleEl) titleEl.innerText = title || 'Konfirmasi';
+      if (titleEl) titleEl.innerText = title || trApp('Konfirmasi');
       if (msgEl) msgEl.innerText = message || '';
-      if (okBtn) { okBtn.innerText = okLabel; okBtn.className = 'btn ' + (danger ? 'btn-danger-solid' : 'btn-primary'); }
+      if (okBtn) { okBtn.innerText = okLabel || trApp('Hapus'); okBtn.className = 'btn ' + (danger ? 'btn-danger-solid' : 'btn-primary'); }
       setDialogOpen('modal-confirm');
       return new Promise(resolve => { _confirmResolver = resolve; });
     }
@@ -4081,3 +4395,59 @@
         return false;
       },
     };
+
+    function refreshAppLanguageUi() {
+      for (const key of Object.keys(renderSigs)) delete renderSigs[key];
+      if (typeof applyMapDrawLang === 'function') applyMapDrawLang();
+      if (activeDialog && activeDialog.id && dialogNames[activeDialog.id]) {
+        activeDialog.setAttribute('aria-label', trApp(dialogNames[activeDialog.id]));
+      }
+      const authGate = document.getElementById('auth-gate');
+      if (authGate && !authGate.classList.contains('hidden') && typeof showAuthTab === 'function') {
+        showAuthTab(authMode);
+      }
+      const menuKey = currentMenuName || 'home';
+      const title = document.getElementById('desktop-page-title');
+      if (title) title.textContent = trApp(({ home: 'Beranda', map: 'Peta', scan: 'Foto Tanaman', log: 'Riwayat' })[menuKey] || 'Beranda');
+      const topTitle = document.getElementById('top-page-title');
+      if (topTitle) {
+        topTitle.textContent = trApp(({
+          home: 'Beranda',
+          scan: 'Foto & Analisis Tanaman',
+          map: 'Peta Kebun Interaktif',
+          log: 'Riwayat Tanaman & Petak'
+        })[menuKey] || 'Beranda');
+      }
+      applyDesktopNav(document.documentElement.classList.contains('jk-nav-collapsed'));
+      updateTopPageSub(menuKey);
+      syncSidebarAccountUi();
+      syncSidebarSyncBox();
+      renderFastQuota();
+      const accountModal = document.getElementById('modal-account');
+      if (currentAccount && accountModal && !accountModal.classList.contains('hidden')) {
+        const roleEl = document.getElementById('account-role');
+        if (roleEl) roleEl.innerText = trApp(currentAccount.role === 'admin' ? 'Admin' : currentAccount.role === 'priority' ? 'Prioritas' : 'Normal');
+        const quotaEl = document.getElementById('account-quota');
+        if (quotaEl) quotaEl.innerText = fastQuotaShort(currentAccount);
+        const recordsEl = document.getElementById('account-records');
+        if (recordsEl) recordsEl.innerText = trApp(farmRecords.length + ' foto');
+        syncAccountModalAvatarUi();
+      }
+      if (!currentAccount) return;
+      renderHomeSummary();
+      renderHomeHistoryCarousel();
+      renderFarmPolygons();
+      renderFarmList();
+      renderMapMarkers();
+      renderLogRecords();
+      renderFarmLog();
+      renderDailyRecommendations();
+      updateDashboardTelemetryCore();
+      updateMapOfflineNote();
+      const cropsSheet = document.getElementById('farm-crops-sheet');
+      if (cropsSheet && !cropsSheet.classList.contains('hidden') && cropsSheet.dataset.mode === 'plot' && cropsSheet.dataset.farmId) {
+        const farm = farmList.find(f => String(f.id) === String(cropsSheet.dataset.farmId));
+        if (farm) renderSelectedFarmCrops(farm);
+      }
+    }
+    window.addEventListener('jk:langchange', refreshAppLanguageUi);

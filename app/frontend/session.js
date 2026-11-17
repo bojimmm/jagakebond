@@ -19,36 +19,38 @@ let revalidating = false;              // lastDataRefreshMs is declared in app.j
 const isNativeApp = () => !!(window.JagaNative && window.JagaNative.isNative());
 
 /* ---------------------------------------------------------------- messages */
+const trSession = (s, v) => (typeof window !== 'undefined' && window.JagaI18n && typeof window.JagaI18n.t === 'function') ? window.JagaI18n.t(s, v) : s;
+const isEnSession = () => !!(typeof window !== 'undefined' && window.JagaI18n && typeof window.JagaI18n.isEn === 'function' && window.JagaI18n.isEn());
 function httpMessage(status, detail) {
-  if (typeof detail === 'string' && detail.trim()) return detail.trim();
-  if (status === 401) return 'Sesi berakhir. Silakan masuk lagi.';
-  if (status === 403) return 'Akses ditolak.';
-  if (status === 404) return 'Data tidak ditemukan.';
-  if (status === 409) return 'Data bentrok dengan perubahan lain. Muat ulang lalu coba lagi.';
-  if (status === 413) return 'Berkas terlalu besar.';
-  if (status === 422 || status === 400) return 'Data yang dikirim tidak lengkap atau tidak valid.';
-  if (status === 429) return 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.';
-  if (status >= 500) return 'Server sedang bermasalah. Coba lagi nanti.';
-  return 'Permintaan gagal (kode ' + status + ').';
+  if (typeof detail === 'string' && detail.trim()) return trSession(detail.trim());
+  if (status === 401) return trSession('Sesi berakhir. Silakan masuk lagi.');
+  if (status === 403) return trSession('Akses ditolak.');
+  if (status === 404) return trSession('Data tidak ditemukan.');
+  if (status === 409) return trSession('Data bentrok dengan perubahan lain. Muat ulang lalu coba lagi.');
+  if (status === 413) return trSession('Berkas terlalu besar.');
+  if (status === 422 || status === 400) return trSession('Data yang dikirim tidak lengkap atau tidak valid.');
+  if (status === 429) return trSession('Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.');
+  if (status >= 500) return trSession('Server sedang bermasalah. Coba lagi nanti.');
+  return isEnSession() ? ('Request failed (code ' + status + ').') : ('Permintaan gagal (kode ' + status + ').');
 }
 function networkProblem(timedOut) {
-  const error = new Error(timedOut ? 'Koneksi terlalu lambat. Coba lagi.' : 'Tidak dapat menghubungi server. Periksa koneksi Anda.');
+  const error = new Error(trSession(timedOut ? 'Koneksi terlalu lambat. Coba lagi.' : 'Tidak dapat menghubungi server. Periksa koneksi Anda.'));
   error.offline = true;
   error.timedOut = !!timedOut;
   return error;
 }
 /* Anything shown to a farmer: keep our own Bahasa text, replace raw English platform errors (audit L5). */
 function userMessage(error, fallback) {
-  const generic = fallback || 'Terjadi masalah. Coba lagi.';
+  const generic = trSession(fallback || 'Terjadi masalah. Coba lagi.');
   if (!error) return generic;
   const text = String(error.message || error);
-  if (error.reason === 'quota' || error.name === 'QuotaExceededError' || /quota/i.test(text)) return 'Penyimpanan HP penuh. Hapus foto lama atau kirim foto yang menunggu, lalu coba lagi.';
-  if (error.name === 'AbortError' || error.name === 'TimeoutError') return 'Koneksi terlalu lambat. Coba lagi.';
-  if (error.offline) return text;
-  if (/failed to fetch|networkerror|load failed|network request failed/i.test(text)) return 'Tidak dapat menghubungi server. Periksa koneksi Anda.';
+  if (error.reason === 'quota' || error.name === 'QuotaExceededError' || /quota/i.test(text)) return trSession('Penyimpanan HP penuh. Hapus foto lama atau kirim foto yang menunggu, lalu coba lagi.');
+  if (error.name === 'AbortError' || error.name === 'TimeoutError') return trSession('Koneksi terlalu lambat. Coba lagi.');
+  if (error.offline) return trSession(text);
+  if (/failed to fetch|networkerror|load failed|network request failed/i.test(text)) return trSession('Tidak dapat menghubungi server. Periksa koneksi Anda.');
   const english = /\b(the|failed|error|cannot|unable|undefined|null|invalid|unexpected|network|request|response|timeout|denied|not found|permission)\b/i.test(text);
   const bahasa = /\b(tidak|gagal|foto|akun|server|sinyal|coba|tanaman|draf|perlu|silakan|petak|lokasi|kamera|masuk|keluar|simpan|hapus)\b/i.test(text);
-  return english && !bahasa ? generic : text;
+  return english && !bahasa ? generic : trSession(text);
 }
 
 /* ---------------------------------------------------------------- API client */
@@ -102,7 +104,7 @@ async function api(path, options = {}) {
   }
   if (response.status === 409 && payload && payload.code === 'account_mismatch' && !options.ignoreMismatch) {
     handleAccountMismatch(payload.detail);
-    const error = new Error(typeof payload.detail === 'string' ? payload.detail : 'Akun di perangkat ini sudah berganti. Muat ulang aplikasi.');
+    const error = new Error(typeof payload.detail === 'string' ? trSession(payload.detail) : trSession('Akun di perangkat ini sudah berganti. Muat ulang aplikasi.'));
     error.accountMismatch = true;
     error.stale = true;
     error.status = 409;
@@ -110,8 +112,8 @@ async function api(path, options = {}) {
   }
   // Only 401 means "signed out" (audit M1). A 403 is an ordinary refusal for that one request.
   if (response.status === 401 && !options.anonymous) {
-    forceSignOut('Sesi Anda berakhir. Silakan masuk lagi.');
-    throw new Error('Sesi berakhir');
+    forceSignOut(trSession('Sesi Anda berakhir. Silakan masuk lagi.'));
+    throw new Error(trSession('Sesi berakhir'));
   }
   if (!response.ok) {
     const error = new Error(httpMessage(response.status, payload && payload.detail));
@@ -124,7 +126,7 @@ async function api(path, options = {}) {
   if (method === 'POST' && /^\/api\/auth\/(login|register)$/.test(path) &&
       (!payload || typeof payload !== 'object' || !payload.account ||
        typeof payload.account.id !== 'string' || !payload.account.id)) {
-    throw new Error('Respons masuk dari server tidak valid. Periksa koneksi atau perbarui aplikasi; akun belum dibuka.');
+    throw new Error(trSession('Respons masuk dari server tidak valid. Periksa koneksi atau perbarui aplikasi; akun belum dibuka.'));
   }
   return payload;
 }
@@ -138,7 +140,7 @@ function noteServerClock(response) {
     serverClockOffsetMs = server - Date.now();
     if (!clockWarned && Math.abs(serverClockOffsetMs) > CLOCK_WARN_MS) {
       clockWarned = true;
-      showToast('Jam di HP Anda berbeda dari jam server. Periksa tanggal dan jam di pengaturan HP.');
+      showToast(trSession('Jam di HP Anda berbeda dari jam server. Periksa tanggal dan jam di pengaturan HP.'));
     }
   } catch (_) { /* informational only */ }
 }
@@ -146,7 +148,7 @@ window.JagaClockOffset = () => serverClockOffsetMs;
 window.onOfflineClockSkew = function () {
   if (clockWarned) return;
   clockWarned = true;
-  showToast('Jam di HP Anda sepertinya salah. Periksa tanggal dan jam di pengaturan HP.');
+  showToast(trSession('Jam di HP Anda sepertinya salah. Periksa tanggal dan jam di pengaturan HP.'));
 };
 
 /* ---------------------------------------------------------------- account markers (non-secret, IndexedDB meta) */
@@ -169,10 +171,10 @@ if (jkAccountChannel) {
     const message = event.data || {};
     if (message.tab === jkTabId) return;
     if (message.type === 'logout' && currentAccount) {
-      forceSignOut('Anda sudah keluar di jendela lain.', { broadcast: false });
+      forceSignOut(trSession('Anda sudah keluar di jendela lain.'), { broadcast: false });
     } else if (message.type === 'login') {
       if (currentAccount && String(message.accountId) !== String(currentAccount.id)) {
-        forceSignOut('Akun di perangkat ini sudah berganti. Muat ulang aplikasi.', { broadcast: false });
+        forceSignOut(trSession('Akun di perangkat ini sudah berganti. Muat ulang aplikasi.'), { broadcast: false });
         setTimeout(() => { try { location.reload(); } catch (_) { /* ignore */ } }, 1500);
       } else if (!currentAccount) {
         const gate = document.getElementById('auth-gate');
@@ -184,7 +186,7 @@ if (jkAccountChannel) {
 function handleAccountMismatch(detail) {
   if (mismatchHandled) return;
   mismatchHandled = true;
-  forceSignOut(typeof detail === 'string' && detail ? detail : 'Akun di perangkat ini sudah berganti. Muat ulang aplikasi.', { broadcast: false });
+  forceSignOut(typeof detail === 'string' && detail ? trSession(detail) : trSession('Akun di perangkat ini sudah berganti. Muat ulang aplikasi.'), { broadcast: false });
   setTimeout(() => { try { location.reload(); } catch (_) { /* ignore */ } }, 1500);
 }
 window.JagaAccountMismatch = handleAccountMismatch;
@@ -256,6 +258,7 @@ async function afterSignIn(account, options = {}) {
   if (typeof startLiveLocationWatcher === 'function') startLiveLocationWatcher();   // GPS only once signed in
   const chip = document.getElementById('account-chip-label');
   if (chip) chip.innerText = account.name || String(account.email || 'Akun').split('@')[0];
+  if (typeof syncSidebarAccountUi === 'function') syncSidebarAccountUi();
   loadedOnce = false;
   expandedCropId = null;
   if (!offline) {
@@ -311,12 +314,12 @@ async function logout(options = {}) {
   await flag;
   const done = await endingSession;
   if (done || isNativeApp()) await metaDelete('pendingLogout');
-  else showToast('Anda sudah keluar di HP ini. Sesi di server ditutup otomatis saat ada sinyal.');
+  else showToast(trSession('Anda sudah keluar di HP ini. Sesi di server ditutup otomatis saat ada sinyal.'));
   if (options.wipe && accountId) {
     try {
       if (isNativeApp()) await wipeNativeAccount(accountId);
       else if (metaStore()) await window.JagaOfflineStore.wipeAccount(accountId);
-    } catch (error) { showToast('Data di HP belum bisa dihapus: ' + userMessage(error)); }
+    } catch (error) { showToast(trSession('Data di HP belum bisa dihapus: ') + userMessage(error)); }
   }
 }
 /* The account sheet's two buttons. Unsent photos are never lost silently: a plain logout keeps them on the phone
@@ -333,13 +336,15 @@ async function confirmLogout(wipe) {
   if (!same()) return;
   let ok = true;
   if (wipe) {
-    ok = await confirmAction({ title: 'Keluar dan hapus data HP?',
-      message: (unsent ? unsent + ' foto belum terkirim akan ikut terhapus. ' : '') + 'Foto, draf dan data akun ini dihapus dari HP ini. Data di server tetap aman.',
-      okLabel: 'Hapus dan keluar' });
+    ok = await confirmAction({ title: trSession('Keluar dan hapus data HP?'),
+      message: (unsent ? (isEnSession() ? `${unsent} unsent photo${unsent === 1 ? '' : 's'} will also be deleted. ` : `${unsent} foto belum terkirim akan ikut terhapus. `) : '') + trSession('Foto, draf dan data akun ini dihapus dari HP ini. Data di server tetap aman.'),
+      okLabel: trSession('Hapus dan keluar') });
   } else if (unsent) {
-    ok = await confirmAction({ title: 'Keluar dari akun?',
-      message: unsent + ' foto belum terkirim. Foto tetap tersimpan di HP ini dan dikirim setelah Anda masuk lagi dengan akun yang sama.',
-      okLabel: 'Keluar', danger: false });
+    ok = await confirmAction({ title: trSession('Keluar dari akun?'),
+      message: isEnSession()
+        ? `${unsent} unsent photo${unsent === 1 ? '' : 's'}. Photos remain saved on this device and will upload once you sign back in to the same account.`
+        : `${unsent} foto belum terkirim. Foto tetap tersimpan di HP ini dan dikirim setelah Anda masuk lagi dengan akun yang sama.`,
+      okLabel: trSession('Keluar'), danger: false });
   }
   if (!ok || !same()) return;
   if (typeof closeAccountModal === 'function') closeAccountModal();
@@ -384,7 +389,7 @@ async function boot() {
       if (pending && !isNativeApp()) {
         if (String(pending.accountId) === String(payload.account.id)) {
           const closed = await finishPendingLogout(pending);
-          showAuthGate(closed ? '' : 'Anda sudah keluar di HP ini. Masuk lagi saat ada sinyal.');
+          showAuthGate(closed ? '' : trSession('Anda sudah keluar di HP ini. Masuk lagi saat ada sinyal.'));
           return;
         }
         await metaDelete('pendingLogout');
@@ -395,9 +400,9 @@ async function boot() {
     if (pending) await metaDelete('pendingLogout');
   } catch (error) {
     if (error && error.offline) {
-      if (pending && !isNativeApp()) { showAuthGate('Anda sudah keluar di HP ini. Masuk lagi saat ada sinyal.'); return; }
+      if (pending && !isNativeApp()) { showAuthGate(trSession('Anda sudah keluar di HP ini. Masuk lagi saat ada sinyal.')); return; }
       if (await openOfflineFromMarker()) return;
-      showAuthGate('Tidak dapat menghubungi server. Periksa koneksi lalu muat ulang.');
+      showAuthGate(trSession('Tidak dapat menghubungi server. Periksa koneksi lalu muat ulang.'));
       return;
     }
   }
@@ -413,7 +418,7 @@ async function openOfflineFromMarker() {
     await afterSignIn({ ...marker, offlineMarker: true }, { offline: true });
     return true;
   } catch (error) {
-    forceSignOut('Tidak ada sinyal dan akun belum bisa dibuka. Masuk saat sinyal tersedia; foto di HP tetap aman.', { broadcast: false });
+    forceSignOut(trSession('Tidak ada sinyal dan akun belum bisa dibuka. Masuk saat sinyal tersedia; foto di HP tetap aman.'), { broadcast: false });
     return true;
   }
 }
@@ -436,13 +441,13 @@ async function revalidateSession() {
       if (window.JagaOfflineSync) window.JagaOfflineSync.run();
       if (window.JagaShell) window.JagaShell.refresh();
     } else if (me && me.ok && me.account) {
-      forceSignOut('Akun di perangkat ini sudah berganti. Masuk lagi; foto yang belum terkirim tetap tersimpan.');
+      forceSignOut(trSession('Akun di perangkat ini sudah berganti. Masuk lagi; foto yang belum terkirim tetap tersimpan.'));
     } else {
-      forceSignOut('Sesi Anda berakhir. Masuk lagi; foto yang belum terkirim tetap tersimpan.');
+      forceSignOut(trSession('Sesi Anda berakhir. Masuk lagi; foto yang belum terkirim tetap tersimpan.'));
     }
   } catch (error) {
     if (generation === accountGeneration && error && error.status === 401) {
-      forceSignOut('Sesi Anda berakhir. Masuk lagi; foto yang belum terkirim tetap tersimpan.');
+      forceSignOut(trSession('Sesi Anda berakhir. Masuk lagi; foto yang belum terkirim tetap tersimpan.'));
     }
     // still offline or the server hiccuped: stay in offline mode, try again on the next "online" event
   } finally { revalidating = false; }
@@ -468,7 +473,7 @@ async function checkStorageHealth() {
     const estimate = await store.storageEstimate();
     if (!window.JagaShell) return;
     if (estimate && estimate.ratio > 0.8) {
-      window.JagaShell.setAttention('storage', 'Penyimpanan HP hampir penuh (' + Math.round(estimate.ratio * 100) + '%). Kirim foto yang menunggu atau hapus foto lama.', { tone: 'warn' });
+      window.JagaShell.setAttention('storage', trSession('Penyimpanan HP hampir penuh (' + Math.round(estimate.ratio * 100) + '%). Kirim foto yang menunggu atau hapus foto lama.'), { tone: 'warn' });
     } else window.JagaShell.clearAttention('storage');
   } catch (_) { /* informational */ }
 }

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="1200" height="520"
+     role="img" aria-label="Kebun bertingkat saat matahari terbit">
+  <title>Lahan pertanian saat matahari terbit</title>
+  <desc>Ilustrasi abstrak kebun bertingkat. Dipakai sebagai hiasan halaman masuk.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#dcfce7"/>
+    </linearGradient>
+    <linearGradient id="sunGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#fef3c7" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="520" fill="url(#sky)"/>
+
+  <!-- Early-morning light. This is deliberately the only warm note in an otherwise
+       green palette: the app asks farmers to shoot in good light, and the AI's
+       confidence is measurably better on photos taken in this hour. -->
+  <circle cx="930" cy="150" r="150" fill="url(#sunGlow)"/>
+  <circle cx="930" cy="150" r="62" fill="#fde68a" opacity="0.7"/>
+
+  <!-- Terraced beds, back to front. Each band is a single curve closed to the bottom,
+       so a crop to any aspect ratio still reads as land rather than a sliced shape. -->
+  <path d="M0 300 C 220 268 420 320 640 296 C 860 272 1020 318 1200 292 L1200 520 L0 520 Z"
+        fill="#86efac"/>
+  <path d="M0 352 C 260 318 500 372 760 344 C 980 320 1100 360 1200 344 L1200 520 L0 520 Z"
+        fill="#4ade80"/>
+  <path d="M0 412 C 300 378 560 432 860 400 C 1040 380 1140 410 1200 400 L1200 520 L0 520 Z"
+        fill="#22c55e"/>
+
+  <!-- Planted rows on the mid terrace, barely visible: texture without noise. -->
+  <g fill="none" stroke="#15803d" stroke-width="3" opacity="0.18">
+    <path d="M40 428 C 320 398 560 444 840 416"/>
+    <path d="M40 446 C 320 416 560 462 840 434"/>
+    <path d="M40 464 C 320 434 560 480 840 452"/>
+  </g>
+
+  <path d="M0 472 C 340 442 640 494 960 462 C 1100 448 1160 468 1200 462 L1200 520 L0 520 Z"
+        fill="#16a34a"/>
+</svg>

@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light">
-<title>Konsol Admin — JagaKebond</title>
+<title>Konsol Admin | JagaKebond</title>
 <link rel="icon" type="image/png" href="/icons/favicon-32.png?v=3">
 <!-- Everything is served from this origin (strict CSP: script-src 'self', no CDN, no web fonts). -->
 <link rel="stylesheet" href="design-tokens.css?v=1">
-  <link rel="stylesheet" href="/vendor/tailwind.generated.css?v=26">
+  <link rel="stylesheet" href="/vendor/tailwind.generated.css?v=27">
 <link rel="stylesheet" href="/ui-kit.css?v=4">
 <style>
   /* Admin-only layout. Buttons, badges, chips, cards, inputs and notices come from /ui-kit.css. */
@@ -19,8 +19,14 @@
   [hidden] { display: none !important; }
   *, *::before, *::after { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: #f3f7f4; color: #0d1f12; font-size: 15px; line-height: 1.5;
+  body { position: relative; overflow-x: clip; margin: 0; background: #f3f7f4; color: #0d1f12; font-size: 15px; line-height: 1.5;
     font-family: 'Google Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body::before, body::after { content: ""; position: fixed; pointer-events: none; z-index: 0; background-repeat: no-repeat; background-size: contain; }
+  body::before { right: 0; bottom: 0; width: clamp(200px, 26vw, 340px); height: clamp(160px, 21vw, 275px);
+    background-image: url('/img/ornament-botanical-sprig.svg?v=1'); background-position: bottom right; opacity: 0.14; }
+  body::after { top: 24px; left: 0; width: clamp(180px, 22vw, 280px); height: clamp(144px, 18vw, 224px);
+    background-image: url('/img/ornament-leaf-cascade.svg?v=1'); background-position: top right; transform: scaleX(-1); opacity: 0.11; }
+  #app { position: relative; z-index: 1; }
   body.modal-open { overflow: hidden; }
   h1, h2, h3, p, ul, dl, dd, figure { margin: 0; }
   ul { padding: 0; list-style: none; }
@@ -168,7 +174,6 @@
 .tab:hover { background: #eef5f0; }
 .tnum { font-variant-numeric: tabular-nums; }
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid transparent; line-height: 1.3; white-space: nowrap; }
-.badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
 .badge-healthy { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
 .badge-moderate { background: #fffbeb; border-color: #fde68a; color: #b45309; }
 .badge-severe { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
@@ -196,7 +201,7 @@
 .quota-fill.is-bad { background: #dc2626; }
 </style>
 <script src="/vendor/lucide-0.468.0.umd.min.js" defer></script>
-<script src="/admin.js?v=4" defer></script>
+<script src="/admin.js?v=5" defer></script>
 </head>
 <body>
 
@@ -240,7 +245,7 @@
   <main id="denied-view" class="a-center" hidden>
     <div class="card a-narrow a-stack-16">
       <div>
-        <h1 class="t-title">Akses ditolak</h1>
+        <h1 class="t-title">Akses Ditolak</h1>
         <p class="t-body mt2">Halaman ini hanya untuk admin. Akun Anda masuk sebagai pengguna biasa.</p>
       </div>
       <div class="btn-stack">

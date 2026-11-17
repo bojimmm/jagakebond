@@ -242,7 +242,7 @@ def scenario_migration() -> None:
               failed and db.query_one("SELECT version FROM schema_version")["version"] == 8
               and not ({"photo_cleanup", "storage_objects", "storage_meta"} & tables()) and "release_count" not in columns)
 
-        check("migrate() reaches the current schema (11)", db.migrate() == 11 == db.SCHEMA_VERSION)
+        check("migrate() reaches the current schema (12)", db.migrate() == 12 == db.SCHEMA_VERSION)
         registry = {r["name"]: r for r in db.query("SELECT * FROM storage_objects")}
         valid = ("photo_aaaaaaaaaaaa.jpg", "photo_bbbbbbbbbbbb.jpg", "photo_job_cccccccccccc.jpg")
         check("every existing photo file is registered as published (6 distinct names)",
@@ -264,7 +264,7 @@ def scenario_migration() -> None:
         check("migration never touches an existing file (bytes, inode, mtime)", before == after)
         check("photo rows and tickets: nothing deleted or queued",
               db.query_one("SELECT COUNT(*) n FROM photos")["n"] == 8 and not sb.tickets())
-        check("migrate() is idempotent", db.migrate() == 11 and db.query_one("SELECT COUNT(*) n FROM storage_objects")["n"] == 6)
+        check("migrate() is idempotent", db.migrate() == 12 and db.query_one("SELECT COUNT(*) n FROM storage_objects")["n"] == 6)
         with db.transaction() as tx:
             again = storage.backfill_registry(tx)
         check("re-running the backfill registers nothing twice", again["registered"] == 0)

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400"
+     role="img" aria-label="Arahkan kamera ke daun">
+  <title>Arahkan kamera ke tanaman</title>
+  <desc>Bingkai bidik kamera dengan sehelai daun. Untuk halaman masuk dan panduan foto.</desc>
+
+  <rect width="400" height="400" rx="72" ry="72" fill="#f0fdf4"/>
+
+  <!-- Viewfinder brackets: the one instruction the app repeats is "point the camera
+       at the affected part", so the frame carries that meaning without any text. -->
+  <g fill="none" stroke="#16a34a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M52 132 V52 H132"/>
+    <path d="M268 52 H348 V132"/>
+    <path d="M52 268 V348 H132"/>
+    <path d="M268 348 H348 V268"/>
+  </g>
+
+  <!-- Leaf, nearly upright, with a lighter midrib so it stays readable at small sizes. -->
+  <path d="M200 296 Q240 202 196 110 Q156 203 200 296 Z" fill="#16a34a"/>
+  <path d="M200 296 L196 110" fill="none" stroke="#dcfce7" stroke-width="7" stroke-linecap="round"/>
+  <path d="M200 296 V334" fill="none" stroke="#16a34a" stroke-width="14" stroke-linecap="round"/>
+</svg>

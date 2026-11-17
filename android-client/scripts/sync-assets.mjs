@@ -47,6 +47,7 @@ const html = await readFile(path.join(target, 'index.html'), 'utf8');
 for (const match of html.matchAll(/(?:src|href)="([^"#]+)"/g)) {
   const ref = match[1].split('?')[0];
   if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(ref) || ref.startsWith('data:')) continue;
+  if (ref.startsWith('/downloads/') || ref.startsWith('downloads/')) continue;
   const relative = ref.replace(/^\//, '');
   if (relative && !(await exists(path.join(target, relative)))) missing.push(`${relative} (referenced by index.html)`);
 }

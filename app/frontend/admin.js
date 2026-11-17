@@ -483,14 +483,14 @@ function errorsCard(o) {
   const status = count ? badge(num(count) + ' dalam 24 jam', count >= 10 ? 'badge-severe' : 'badge-moderate') : badge('Tidak ada', 'badge-healthy');
   const list = recent.map((r) => '<li class="mt2"><span class="t-meta">' + esc(fmtAgo(r.tsMs)) + ' · ' + esc(r.actor || '—') + '</span><br>'
     + '<span class="break">' + esc(String(r.detail || '').slice(0, 220)) + '</span></li>').join('');
-  return '<section class="card" aria-labelledby="card-errors"><div class="a-row a-between"><h3 id="card-errors" class="t-title">Kesalahan aplikasi</h3>' + status + '</div>'
+  return '<section class="card" aria-labelledby="card-errors"><div class="a-row a-between"><h3 id="card-errors" class="t-title">Kesalahan Aplikasi</h3>' + status + '</div>'
     + (list ? '<ul class="mt2">' + list + '</ul>' : '<p class="t-body t-muted mt2">Belum ada laporan kesalahan dari HP pengguna.</p>')
-    + (recent.length ? '<button type="button" class="btn btn-secondary btn-block mt3" data-action="audit-errors">' + icon('list') + '<span class="btn-label">Lihat semua di Audit</span></button>' : '')
+    + (recent.length ? '<button type="button" class="btn btn-secondary btn-block mt3" data-action="audit-errors">' + icon('list') + '<span class="btn-label">Lihat Semua di Audit</span></button>' : '')
     + '</section>';
 }
 
 function routerCard(h) {
-  return '<section class="card" aria-labelledby="card-router"><h3 id="card-router" class="t-title">Router dan model</h3><div class="mt2">'
+  return '<section class="card" aria-labelledby="card-router"><h3 id="card-router" class="t-title">Router dan Model</h3><div class="mt2">'
     + kv([['Alamat', h.routerUrl || '—', true], ['Kunci router', h.routerKeyConfigured ? 'Sudah diisi' : 'Belum diisi'],
       ['Model triase', h.triageModel || '—', true], ['Model diagnosis', h.diagnoseModel || '—', true]]) + '</div>'
     + (h.routerUrlProblem ? '<div class="notice notice-error mt3" role="alert">' + icon('circle-alert') + '<span>' + esc(h.routerUrlProblem) + '</span></div>' : '')
@@ -503,7 +503,7 @@ function queueCard(o) {
   const rows = [['Menunggu', num(by.queued || 0)], ['Sedang dikerjakan', num(by.claimed || 0)]];
   if (o.delayedJobs) rows.push(['Ditunda sementara', num(o.delayedJobs)]);
   rows.push(['Foto tertua menunggu', o.oldestQueuedMs ? fmtAgo(o.oldestQueuedMs).replace(' lalu', '') : 'tidak ada']);
-  return '<section class="card" aria-labelledby="card-queue"><h3 id="card-queue" class="t-title">Antrean analisis</h3><div class="mt2">' + kv(rows) + '</div>'
+  return '<section class="card" aria-labelledby="card-queue"><h3 id="card-queue" class="t-title">Antrean Analisis</h3><div class="mt2">' + kv(rows) + '</div>'
     + '<button type="button" class="btn btn-secondary btn-block mt3" data-action="goto-tab" data-tab="queue">Buka Antrean</button></section>';
 }
 
@@ -528,7 +528,7 @@ function storageCard(s) {
     const reasons = Object.keys(s.blockedReasons || {}).map((k) => '<li class="t-meta">' + esc(k) + ': ' + num(s.blockedReasons[k]) + '</li>').join('');
     body = '<div class="mt2">' + kv(rows) + '</div>' + (reasons ? '<ul class="mt2">' + reasons + '</ul>' : '');
   }
-  return '<section class="card" id="storage-card" tabindex="-1" aria-labelledby="card-storage"><h3 id="card-storage" class="t-title">Foto di server</h3>' + body
+  return '<section class="card" id="storage-card" tabindex="-1" aria-labelledby="card-storage"><h3 id="card-storage" class="t-title">Foto di Server</h3>' + body
     + '<button type="button" class="btn btn-secondary btn-block mt3" data-action="storage-inventory"' + (s && s.unavailable ? ' disabled' : '') + '>' + icon('folder-search') + '<span class="btn-label">Periksa foto tanpa catatan</span></button>'
     + '<div id="inventory-result" role="status" aria-live="polite">' + inventoryHtml(OVERVIEW.inventory) + '</div></section>';
 }
@@ -584,13 +584,13 @@ function renderOverview() {
     + '<div class="kpi-card"><span class="kpi-label">Antrean &amp; Basis Data</span><span class="kpi-val">' + num((by.queued || 0) + (by.claimed || 0)) + '</span><span class="kpi-sub">' + esc(fmtBytes(o.dbBytes)) + ' · skema v' + esc(o.schemaVersion || '?') + '</span></div>'
     + '</div>'
     + quotaOverviewCard(d.quotaAccounts)
-    + '<section class="card" aria-labelledby="quick-title"><h3 id="quick-title" class="section-title">Pekerjaan cepat</h3>'
+    + '<section class="card" aria-labelledby="quick-title"><h3 id="quick-title" class="section-title">Pekerjaan Cepat</h3>'
     + '<div class="btn-stack quick"><button type="button" class="btn btn-primary" data-action="quick-create-account">' + icon('user-plus') + '<span class="btn-label">Buat akun petani</span></button>'
     + '<button type="button" class="btn btn-secondary" data-action="quick-problem-queue">' + icon('rotate-ccw') + '<span class="btn-label">Lihat foto bermasalah</span></button>'
     + (o.pendingRegistrations ? '<button type="button" class="btn btn-secondary" data-action="goto-tab" data-tab="accounts">' + icon('user-check') + '<span class="btn-label">Pendaftaran menunggu: ' + num(o.pendingRegistrations) + '</span></button>' : '')
     + '</div></section>'
     + '<div class="a-cards">' + workerCard(o) + routerCard(h) + queueCard(o) + storageCard(d.storage) + errorsCard(o) + '</div>'
-    + '<div><h3 class="section-title">Ringkasan 24 jam</h3><div class="a-grid2 a-grid4">'
+    + '<div><h3 class="section-title">Ringkasan 24 Jam</h3><div class="a-grid2 a-grid4">'
     + tile('Akun', num(o.accounts), num(o.activeAccounts) + ' aktif') + tile('Sesi aktif', num(o.activeSessions), 'sedang masuk')
     + tile('Foto 24 jam', num(o.jobs24h), num(o.jobs24hDone) + ' selesai') + tile('Ditolak', num(o.jobs24hRejected), Math.round((o.rejectRate || 0) * 100) + '% dari 24 jam')
     + tile('Basis data', fmtBytes(o.dbBytes), 'skema v' + (o.schemaVersion || '?')) + tile('Selesai (semua)', num(by.done || 0), num((by.rejected || 0) + (by.failed || 0)) + ' ditolak/gagal')
@@ -765,7 +765,7 @@ function decideRegistration(id, decision) {
   if (!r) return;
   const approve = decision === 'approve';
   openModal('<form data-form="registration" data-id="' + esc(r.id) + '" data-decision="' + (approve ? 'approve' : 'reject') + '" class="a-stack-16" novalidate>'
-    + '<h2 id="modal-title" class="t-title">' + (approve ? 'Setujui pendaftaran?' : 'Tolak pendaftaran?') + '</h2>'
+    + '<h2 id="modal-title" class="t-title">' + (approve ? 'Setujui Pendaftaran?' : 'Tolak Pendaftaran?') + '</h2>'
     + '<div><p class="bold break">' + esc(r.email) + '</p>' + (r.name ? '<p class="t-meta break mt1">' + esc(r.name) + '</p>' : '') + '</div>'
     + '<p class="t-body">' + (approve ? 'Akun petani dibuat dan orang ini bisa langsung masuk dengan Google. Masuk dengan kata sandi baru bisa setelah Anda mengatur kata sandinya.'
       : 'Orang ini tidak bisa masuk dengan akun Google ini.') + '</p>'
@@ -800,7 +800,7 @@ function roleOptions(selected) {
 function passwordMinimum(role) { return role === 'admin' ? 12 : 8; }
 
 function createAccount() {
-  openModal('<form data-form="create-account" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Buat akun</h2>'
+  openModal('<form data-form="create-account" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Buat Akun</h2>'
     + field({ id: 'na-email', label: 'Email', type: 'email', autocomplete: 'off', inputmode: 'email' })
     + field({ id: 'na-name', label: 'Nama', autocomplete: 'off', maxlength: 120 })
     + '<div><label class="label" for="na-role">Peran</label><select id="na-role" class="input" data-change="role-select" data-prefix="na">' + roleOptions('user') + '</select><p class="hint">' + esc(TIER_NOTE) + '</p></div>'
@@ -834,7 +834,7 @@ async function submitCreateAccount(form) {
 function editAccount(id) {
   const a = ACCOUNTS.find((x) => x.id === id);
   if (!a) return;
-  openModal('<form data-form="edit-account" data-id="' + esc(a.id) + '" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Ubah akun</h2>'
+  openModal('<form data-form="edit-account" data-id="' + esc(a.id) + '" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Ubah Akun</h2>'
     + field({ id: 'ea-name', label: 'Nama', value: a.name || '', maxlength: 120, autocomplete: 'off' })
     + field({ id: 'ea-email', label: 'Email', type: 'email', value: a.email, autocomplete: 'off', inputmode: 'email' })
     + '<div><label class="label" for="ea-role">Peran</label><select id="ea-role" class="input" data-change="role-select" data-prefix="ea">' + roleOptions(a.role) + '</select><p class="hint">' + esc(TIER_NOTE) + '</p></div>'
@@ -893,7 +893,7 @@ function resetPassword(id) {
   const own = ME && a.id === ME.id;
   const note = own ? 'Ini akun Anda sendiri. Anda tetap masuk di perangkat ini; perangkat lain akan keluar.'
     : 'Pemilik akun akan keluar dari semua perangkat dan harus masuk dengan kata sandi baru.';
-  openModal('<form data-form="reset-password" data-id="' + esc(a.id) + '" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Atur ulang kata sandi</h2>'
+  openModal('<form data-form="reset-password" data-id="' + esc(a.id) + '" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Atur Ulang Kata Sandi</h2>'
     + '<div><p class="bold break">' + esc(a.email) + '</p><p class="t-meta mt1">' + esc(note) + '</p></div>'
     + newPasswordFields('rp', passwordMinimum(a.role)) + (a.role === 'admin' ? reauthBox('rp-reauth', 'Mengubah kata sandi admin perlu kata sandi Anda.') : '')
     + '<div id="modal-error" class="notice notice-error" role="alert" hidden></div>' + dialogButtons('Simpan') + '</form>', { dismissOnBackdrop: false });
@@ -924,7 +924,7 @@ async function submitResetPassword(form) {
 function deleteAccount(id) {
   const a = ACCOUNTS.find((x) => x.id === id);
   if (!a) return;
-  openModal('<form data-form="delete-account" data-id="' + esc(a.id) + '" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Hapus akun</h2>'
+  openModal('<form data-form="delete-account" data-id="' + esc(a.id) + '" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Hapus Akun</h2>'
     + '<p class="t-body">Semua data akun ini akan dihapus permanen: ' + num(a.recordCount) + ' catatan, ' + num(a.jobCount) + ' foto analisis, ' + num(a.farmCount) + ' petak. Foto di server dibersihkan otomatis.</p>'
     + '<div><label class="label" for="del-confirm">Ketik <b class="break">' + esc(a.email) + '</b> untuk menghapus</label>'
     + '<input id="del-confirm" class="input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="' + esc(a.email) + '" data-input="delete-confirm" data-email="' + esc(a.email) + '"></div>'
@@ -1217,7 +1217,7 @@ function renderQueue() {
 }
 
 function showJobTrace(jobId) {
-  openModal('<h2 id="modal-title" class="t-title">Jejak pekerjaan</h2><p class="t-meta mono break mt1">' + esc(jobId) + '</p>'
+  openModal('<h2 id="modal-title" class="t-title">Jejak Pekerjaan</h2><p class="t-meta mono break mt1">' + esc(jobId) + '</p>'
     + '<div id="trace-body" class="mt3" role="status"><p class="t-meta">Memuat…</p></div>'
     + '<div class="mt6"><button type="button" class="btn btn-secondary btn-block" data-action="close-modal">Tutup</button></div>');
   api('/api/admin/jobs/' + encodeURIComponent(jobId)).then((job) => {
@@ -1246,7 +1246,7 @@ async function requeueJob(id) {
 }
 
 function cancelJob(id) {
-  openModal('<form data-form="cancel-job" data-id="' + esc(id) + '" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Batalkan pekerjaan</h2>'
+  openModal('<form data-form="cancel-job" data-id="' + esc(id) + '" class="a-stack-16" novalidate><h2 id="modal-title" class="t-title">Batalkan Pekerjaan</h2>'
     + '<p class="t-meta mono break">' + esc(id) + '</p>'
     + '<div><label class="label" for="cancel-reason">Alasan (terlihat oleh pemilik)</label><input id="cancel-reason" class="input" maxlength="300" value="Dibatalkan oleh admin" autocomplete="off"><p class="hint">Maksimal 300 huruf.</p></div>'
     + '<div id="modal-error" class="notice notice-error" role="alert" hidden></div>'

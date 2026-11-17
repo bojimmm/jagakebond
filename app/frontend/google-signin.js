@@ -19,6 +19,8 @@
     noAccount: 'Belum ada akun Google di HP ini. Tambahkan akun Google di Setelan HP, lalu coba lagi.',
     unavailable: 'Masuk dengan Google belum bisa di HP ini. Masuk dengan email dan kata sandi.',
   };
+  const tr = (s, v) => (root.JagaI18n && typeof root.JagaI18n.t === 'function') ? root.JagaI18n.t(s, v) : s;
+  const isEn = () => !!(root.JagaI18n && typeof root.JagaI18n.isEn === 'function' && root.JagaI18n.isEn());
   const state = { config: null, configLoading: null, gsi: null, nonce: null, nonceAt: 0, timer: null, busy: false, gateOpen: false };
 
   const $ = id => document.getElementById(id);
@@ -32,7 +34,7 @@
     const box = $('google-notice');
     if (!box) return;
     box.className = 'notice ' + (kind === 'info' ? 'notice-info' : kind === 'ok' ? 'notice-ok' : 'notice-error');
-    box.textContent = text || '';
+    box.textContent = text ? tr(text) : '';
     box.hidden = !text;
   }
   function setVisible(on) {
@@ -98,7 +100,7 @@
     host.textContent = '';
     const width = Math.max(200, Math.min(400, Math.round(host.clientWidth || 320)));
     gsi.renderButton(host, { type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill',
-      logo_alignment: 'center', width, locale: 'id' });
+      logo_alignment: 'center', width, locale: isEn() ? 'en' : 'id' });
     scheduleRefresh();
   }
   function scheduleRefresh() {
@@ -185,6 +187,9 @@
     const button = $('google-native-button');
     if (button) button.addEventListener('click', () => { nativeSignIn(); });
     root.addEventListener('online', () => { if (state.gateOpen && !state.config) onGate(true); });
+    root.addEventListener('jk:langchange', () => {
+      if (!isNative() && state.gateOpen && state.config && state.config.enabled) renderWebButton().catch(() => {});
+    });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
 

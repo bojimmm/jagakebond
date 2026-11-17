@@ -62,15 +62,15 @@ with tempfile.TemporaryDirectory(prefix="jk-petak-0257-", ignore_cleanup_errors=
 
     saved = update("rec-b", {"correctedCrop": "Kopi Arabika"}, farmer)
     check(saved["crop"] == "Kopi Arabika" and saved["cropName"] == "Kopi Arabika", "the species and the plant name change")
-    check(saved["aiCrop"] == "Kopi (Coffee)" and saved["correctedFields"] == ["crop"], "the AI's species is kept beside the correction")
+    check(saved["aiCrop"] == "Kopi" and saved["correctedFields"] == ["crop"], "the AI's species is kept beside the correction")
     check(saved["condition"] == "Karat daun" and saved["severity"] == "Moderate" and saved["confidence"] == 0.8
           and saved["assessment"] is not None, "the AI diagnosis is untouched")
     sibling = db.row_record(db.query_one("SELECT * FROM records WHERE id='rec-a'"))
-    check(sibling["crop"] == "Kopi Arabika" and sibling["aiCrop"] == "Kopi (Coffee)" and sibling["correctedFields"] == ["crop"],
+    check(sibling["crop"] == "Kopi Arabika" and sibling["aiCrop"] == "Kopi" and sibling["correctedFields"] == ["crop"],
           "the plant's other photo follows the species")
-    check(db.row_record(db.query_one("SELECT * FROM records WHERE id='rec-c'"))["crop"] == "Kopi (Coffee)", "another plant is untouched")
+    check(db.row_record(db.query_one("SELECT * FROM records WHERE id='rec-c'"))["crop"] == "Kopi", "another plant is untouched")
     audit = db.query("SELECT target, detail, actor_email FROM audit_log WHERE action='record.correct'")
-    check(len(audit) == 1 and audit[0]["target"] == "rec-b" and "Kopi (Coffee) → Kopi Arabika" in audit[0]["detail"]
+    check(len(audit) == 1 and audit[0]["target"] == "rec-b" and "Kopi → Kopi Arabika" in audit[0]["detail"]
           and "+1 foto lain" in audit[0]["detail"] and audit[0]["actor_email"] == farmer["email"], "the correction is audited")
 
     observed = update("rec-b", {"observedSeverity": "Severe",
@@ -125,7 +125,7 @@ with tempfile.TemporaryDirectory(prefix="jk-petak-0257-", ignore_cleanup_errors=
     # A later photo of the corrected plant inherits the species.
     later = api_app.create_record({"id": "rec-d", "cropId": "plant-1", "crop": "Kopi (Coffee)", "condition": "Sehat",
                                    "severity": "Healthy", "timestampMs": now, "source": "manual"}, farmer)
-    check(later["crop"] == "Kopi Arabika" and later["aiCrop"] == "Kopi (Coffee)" and later["correctedFields"] == ["crop"],
+    check(later["crop"] == "Kopi Arabika" and later["aiCrop"] == "Kopi" and later["correctedFields"] == ["crop"],
           "a new photo of the plant keeps the farmer's species")
     changed_manual = update("rec-d", {"severity": "Severe"}, farmer)
     check(changed_manual["severity"] == "Severe", "a manual photo status can be edited")

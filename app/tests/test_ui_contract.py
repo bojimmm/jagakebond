@@ -27,9 +27,9 @@ class UiContractTests(unittest.TestCase):
     def test_auth_uses_local_farm_assets_and_brand_copy(self):
         from PIL import Image
         self.assertIn("img/landing-farmer.webp?v=1", HTML)
-        self.assertIn("img/landing-app-home.png?v=3", HTML)
-        self.assertIn("img/landing-app-map.png?v=2", HTML)
-        self.assertIn("img/landing-app-history.png?v=6", HTML)
+        self.assertIn("img/landing-app-home.png?v=5", HTML)
+        self.assertIn("img/landing-app-map.png?v=4", HTML)
+        self.assertIn("img/landing-app-history.png?v=8", HTML)
         self.assertNotIn('src="/img/crops/', HTML)
         with Image.open(ROOT / "frontend/img/landing-app-history.png") as preview:
             self.assertGreater(preview.width, 500, 'Preview must retain readable app detail')
@@ -97,6 +97,90 @@ class UiContractTests(unittest.TestCase):
         for modal_id in ("modal-crop-assign", "modal-status", "modal-daily", "photo-viewer"):
             self.assertRegex(HTML, rf'id="{modal_id}" class="hidden\b')
         self.assertLess(len(compiled), 350_000, "compiled CSS should not contain broad color safelists")
+
+    def test_landing_revisions_and_bilingual_contract(self):
+        landing_css = (ROOT / "frontend/landing.css").read_text()
+        i18n_js = (ROOT / "frontend/i18n.js").read_text()
+
+        # Hero fills viewport so the lower band does not peek at initial load, and header CTA stays compact.
+        self.assertIn("min-height: 100svh;", landing_css)
+        self.assertRegex(landing_css, r"#auth-gate \.topbar-cta\s*\{[^}]*min-height:\s*36px;")
+
+        # Eyebrow headings removed in favor of direct section headlines.
+        for removed_eyebrow in ("VIDEO PANDUAN 20 DETIK", "MANFAAT UTAMA", "MASALAH DI LAPANGAN", "Tutorial interaktif 3D"):
+            self.assertNotIn(removed_eyebrow, HTML)
+        for direct_heading in (
+            "Lihat cara kerja JagaKebond dari kebun hingga peta.",
+            "Yang Anda dapat dari setiap foto.",
+            "Catatan kebun sering tercecer di galeri.",
+            "Langkah penggunaan JagaKebond secara visual.",
+            "Pertanyaan yang sering muncul.",
+        ):
+            self.assertIn(direct_heading, HTML)
+
+        # Problem comparison + proof pills + Android offline footnote + borderless autoplay video.
+        self.assertIn("Tanpa JagaKebond", HTML)
+        self.assertNotIn("Tanpa catatan terstruktur", HTML)
+        for pill in (
+            "Aplikasi Web",
+            "Aplikasi Android",
+            "Antarmuka Bilingual",
+            "Data Tersimpan di Cloud",
+            "Aplikasi Bekerja Offline*",
+            "*fitur ini bekerja di aplikasi native Android",
+        ):
+            self.assertIn(pill, HTML)
+        self.assertIn('data-lucide="cloud"', HTML)
+        video_match = re.search(r'<video\s+id="explainer-video"[^>]*>', HTML)
+        self.assertIsNotNone(video_match)
+        self.assertIn("autoplay", video_match.group(0))
+        self.assertIn("muted", video_match.group(0))
+        self.assertIn("loop", video_match.group(0))
+        self.assertIn("playsinline", video_match.group(0))
+        self.assertNotIn("controls", video_match.group(0))
+        self.assertNotIn("video-chapters", HTML)
+        self.assertRegex(landing_css, r"#auth-gate \.video-shell\s*\{[^}]*border:\s*0;[^}]*padding:\s*0;")
+
+        # Bilingual switch & i18n module across landing, account modal, and legal pages.
+        self.assertRegex(HTML, r'src="i18n\.js\?v=\d+"')
+        self.assertIn('/i18n.js?v=', SW)
+        self.assertIn("STORAGE_KEY = 'jk_lang'", i18n_js)
+        for page_name in ("index.html", "privacy.html", "terms.html"):
+            page = (ROOT / "frontend" / page_name).read_text()
+            self.assertIn('data-lang-choice="id"', page, page_name)
+            self.assertIn('data-lang-choice="en"', page, page_name)
+        self.assertIn('class="info-row info-row-lang"', HTML)
+
+        # APK downloads, Tutorial top nav rename, SVG ornaments, borderless 3D tour controls, #fitur thumbnails, and ` | ` <title>.
+        self.assertIn('href="#cara">Tutorial</a>', HTML)
+        self.assertNotIn('href="#cara">Tutorial 3D</a>', HTML)
+        self.assertEqual(HTML.count('href="/downloads/jagakebond-latest.apk"'), 2)
+        self.assertIn("'/downloads/'", SW)
+        self.assertNotIn("tutorial-3d.html", HTML)
+        self.assertNotIn("island-progress-label", HTML)
+        self.assertNotIn("Putar kanvas", HTML)
+        self.assertNotIn("gulir di layar desktop", HTML.lower())
+        for el_id in ("tour-fullscreen", "tour-prev", "tour-next"):
+            self.assertIn(f'id="{el_id}"', HTML)
+        for img_name in (
+            "ornament-botanical-sprig.svg",
+            "ornament-leaf-cascade.svg",
+            "ornament-contour-hills.svg",
+            "feature-diagnosis.webp",
+            "feature-history.webp",
+            "feature-map.webp",
+            "feature-offline.webp",
+        ):
+            self.assertIn(img_name, HTML)
+            self.assertIn(f"/img/{img_name}", SW)
+            self.assertTrue((ROOT / "frontend" / "img" / img_name).exists(), img_name)
+        for page_name in ("index.html", "admin.html", "privacy.html", "terms.html"):
+            page = (ROOT / "frontend" / page_name).read_text()
+            title_match = re.search(r"<title>([^<]+)</title>", page)
+            self.assertIsNotNone(title_match, page_name)
+            self.assertIn(" | ", title_match.group(1), page_name)
+            self.assertNotIn("—", title_match.group(1), page_name)
+            self.assertNotIn("·", title_match.group(1), page_name)
 
 
 if __name__ == "__main__":

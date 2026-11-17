@@ -18,10 +18,15 @@ One process only: SQLite allows a single writer, so run exactly one uvicorn work
 from __future__ import annotations
 
 import importlib
+import json
 import logging
+import mimetypes
 import os
 import threading
 from contextlib import asynccontextmanager
+
+mimetypes.init()
+mimetypes.add_type("image/webp", ".webp")
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -37,9 +42,10 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 DATA_DIR = BASE_DIR / "data"
+DOWNLOADS_DIR = DATA_DIR / "downloads"
 DB_PATH = DATA_DIR / "db.sqlite3"
 
-for _d in (DATA_DIR, DATA_DIR / "uploads"):
+for _d in (DATA_DIR, DATA_DIR / "uploads", DOWNLOADS_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 
 
@@ -99,7 +105,7 @@ except ModuleNotFoundError as _missing:  # pragma: no cover - depends on the tre
         raise
     storage_module = None
 
-from .version import APP_VERSION  # noqa: E402
+from .version import APP_VERSION, RELEASE_VERSION  # noqa: E402
 
 logger = logging.getLogger("jagakebond")
 
@@ -131,7 +137,8 @@ ADMIN_CSP = (
 APP_CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org "
-    "https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self' data: blob:; "
+    "https://server.arcgisonline.com https://*.googleusercontent.com https://*.ggpht.com; "
+    "font-src 'self' data:; connect-src 'self' data: blob:; "
     "media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; "
     "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 )
@@ -141,7 +148,7 @@ APP_CSP_GOOGLE = (
     "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; "
     "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; "
     "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org "
-    "https://server.arcgisonline.com; font-src 'self' data:; "
+    "https://server.arcgisonline.com https://*.googleusercontent.com https://*.ggpht.com; font-src 'self' data:; "
     "connect-src 'self' data: blob: https://accounts.google.com/gsi/; "
     "frame-src 'self' https://accounts.google.com/gsi/; "
     "media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; "
@@ -624,6 +631,75 @@ def privacy_policy() -> FileResponse:
 @app.get("/terms")
 def terms_of_service() -> FileResponse:
     return _frontend_file("terms.html", "text/html")
+
+
+def _resolve_latest_apk() -> Path | None:
+    """Return the newest hosted Android APK under DOWNLOADS_DIR (or BASE_DIR/downloads)."""
+    for directory in (DOWNLOADS_DIR, BASE_DIR / "downloads"):
+        preferred = directory / "jagakebond-latest.apk"
+        if preferred.is_file():
+            return preferred
+        if directory.is_dir():
+            candidates = sorted(
+                (p for p in directory.glob("*.apk") if p.is_file()),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if candidates:
+                return candidates[0]
+    return None
+
+
+@app.get("/downloads/latest.json")
+def android_apk_metadata() -> JSONResponse:
+    apk_path = _resolve_latest_apk()
+    meta: dict[str, Any] = {
+        "available": apk_path is not None,
+        "version": RELEASE_VERSION,
+        "url": "/downloads/jagakebond-latest.apk",
+    }
+    meta_file = DOWNLOADS_DIR / "latest.json"
+    if meta_file.is_file():
+        try:
+            stored = json.loads(meta_file.read_text(encoding="utf-8"))
+            if isinstance(stored, dict):
+                for key in ("version", "versionCode", "sha256", "filename"):
+                    if stored.get(key) is not None:
+                        meta[key] = stored[key]
+        except Exception:  # noqa: BLE001 - corrupt optional metadata must not break landing
+            pass
+    if apk_path is not None:
+        size_bytes = apk_path.stat().st_size
+        meta["sizeBytes"] = size_bytes
+        meta["sizeMb"] = round(size_bytes / 1_000_000, 1)
+    return JSONResponse(meta, headers={"Cache-Control": "no-cache"})
+
+
+@app.api_route("/downloads/jagakebond-latest.apk", methods=["GET", "HEAD"])
+def download_latest_apk() -> FileResponse:
+    apk_path = _resolve_latest_apk()
+    if apk_path is None:
+        raise HTTPException(status_code=404, detail="Berkas APK belum tersedia.")
+    version = str(RELEASE_VERSION)
+    meta_file = DOWNLOADS_DIR / "latest.json"
+    if meta_file.is_file():
+        try:
+            stored = json.loads(meta_file.read_text(encoding="utf-8"))
+            if isinstance(stored, dict) and stored.get("version"):
+                version = str(stored["version"]).strip() or version
+        except Exception:  # noqa: BLE001
+            pass
+    download_name = (
+        apk_path.name
+        if apk_path.name != "jagakebond-latest.apk"
+        else f"JagaKebond-{version}.apk"
+    )
+    return FileResponse(
+        apk_path,
+        media_type="application/vnd.android.package-archive",
+        filename=download_name,
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.get("/admin")

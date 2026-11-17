@@ -34,7 +34,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 _local = threading.local()
 _write_lock = threading.Lock()
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 
 def now_ms() -> int:
@@ -484,6 +484,10 @@ ALTER TABLE jobs ADD COLUMN lease_expires_ms INTEGER;
 UPDATE jobs SET status='queued', worker=NULL, claimed_ms=NULL WHERE status='claimed';
 """
 
+SCHEMA_V12_SQL = """
+ALTER TABLE accounts ADD COLUMN avatar_url TEXT NOT NULL DEFAULT '';
+"""
+
 MIGRATIONS: list[tuple[int, str]] = [
     (1, SCHEMA_SQL),
     (2, SCHEMA_V2_SQL),
@@ -496,6 +500,7 @@ MIGRATIONS: list[tuple[int, str]] = [
     (9, SCHEMA_V9_SQL),
     (10, SCHEMA_V10_SQL),
     (11, SCHEMA_V11_SQL),
+    (12, SCHEMA_V12_SQL),
 ]
 
 # Python steps that run inside the SAME transaction as the version they belong to, right
@@ -582,6 +587,7 @@ def row_record(row: dict[str, Any]) -> dict[str, Any]:
         "lat": row["lat"],
         "lng": row["lng"],
         "elevation": row["elevation"],
+        "weather": extra.get("weather") if isinstance(extra.get("weather"), str) else None,
         "locationName": row["location_name"],
         "accuracy": row["accuracy"],
         "date": row["date"],
@@ -655,14 +661,27 @@ def row_job(row: dict[str, Any], include_image: bool = False) -> dict[str, Any]:
     return job
 
 
+def public_avatar_url(stored: Any) -> str | None:
+    """Return a displayable avatar URL, hiding opted-out ('hidden:...') values."""
+    text = str(stored or "").strip()
+    if not text or text.startswith("hidden:"):
+        return None
+    if text.startswith("https://") and len(text) <= 512:
+        return text
+    return None
+
+
 def row_account(row: dict[str, Any]) -> dict[str, Any]:
     from . import queue
     tier = queue.fast_quota_snapshot(row)
+    stored_avatar = str(row.get("avatar_url") or "")
     return {
         "id": row["id"],
         "email": row["email"],
         "name": row["name"],
         "role": row["role"],
+        "avatarUrl": public_avatar_url(stored_avatar),
+        "canRestoreGoogleAvatar": stored_avatar.startswith("hidden:https://"),
         "isActive": bool(row["is_active"]),
         "dailyQuota": tier["fastQuota"] or 0,
         **tier,
